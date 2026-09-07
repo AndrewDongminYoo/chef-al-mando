@@ -173,7 +173,7 @@ func _new_service() -> void:
 	if not simulation.errors.is_empty():
 		return
 	if duty_buttons.is_empty():
-		for index: int in definitions.employees.size():
+		for employee: Dictionary in simulation.snapshot().employees:
 			var column := VBoxContainer.new()
 			column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			employee_controls.add_child(column)
@@ -186,7 +186,7 @@ func _new_service() -> void:
 			button.custom_minimum_size = Vector2(64, 64)
 			for title: String in DUTY_TEXT:
 				button.add_item(title)
-			button.item_selected.connect(_set_duty.bind(definitions.employees[index].id))
+			button.item_selected.connect(_set_duty.bind(employee.id))
 			column.add_child(button)
 			duty_buttons.append(button)
 

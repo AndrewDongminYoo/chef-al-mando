@@ -68,3 +68,23 @@ func run(tree: SceneTree) -> void:
 	expect(screen.get("board").definitions == null, "the error screen does not draw rejected content")
 	screen.queue_free()
 	await tree.process_frame
+	await _test_reordered_employees(tree)
+
+
+func _test_reordered_employees(tree: SceneTree) -> void:
+	var data: Resource = load("res://content/m1_first_service.tres")
+	data.get("employees").reverse()
+	var screen := boot_main(tree)
+	await tree.process_frame
+	var sim: RefCounted = screen.get("simulation")
+	var displayed: Dictionary = screen.get("latest_view").employees[0]
+	var duty: OptionButton = screen.get("duty_buttons")[0]
+	duty.item_selected.emit(1)
+	expect(sim.call("snapshot").commands[0].target_id == displayed.id, "a duty control targets its displayed employee after resource reordering")
+	screen.get("start_button").pressed.emit()
+	screen.call("advance", 0.1)
+	var employees: Array = sim.call("snapshot").employees
+	expect(employees[0].duty == "cold" and employees[1].duty == "all", "a duty change applies only to the displayed employee after resource reordering")
+	screen.queue_free()
+	await tree.process_frame
+	data.get("employees").reverse()
