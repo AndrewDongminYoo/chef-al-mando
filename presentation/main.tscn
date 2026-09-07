@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://platform/app_lifecycle.gd" id="2_lifecycle"]
+[ext_resource type="Script" path="res://platform/safe_area.gd" id="3_safe_area"]
 
 [sub_resource type="SystemFont" id="SystemFont_korean"]
 font_names = PackedStringArray("Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR")
@@ -23,6 +24,9 @@ script = ExtResource("1_main")
 [node name="Lifecycle" type="Node" parent="."]
 script = ExtResource("2_lifecycle")
 
+[node name="SafeAreaSource" type="Node" parent="."]
+script = ExtResource("3_safe_area")
+
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -40,6 +44,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="Layout" type="VBoxContainer" parent="SafeArea"]
 layout_mode = 2
@@ -55,7 +63,6 @@ text = "Chef al Mando · M0"
 
 [node name="Counter" type="Label" parent="SafeArea/Layout/Header"]
 layout_mode = 2
-text = "000.0초"
 
 [node name="Kitchen" type="PanelContainer" parent="SafeArea/Layout"]
 layout_mode = 2
