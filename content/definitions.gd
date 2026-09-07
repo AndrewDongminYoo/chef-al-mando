@@ -60,8 +60,15 @@ func validate() -> Array[String]:
 			if not ingredient_ids.has(ingredient_id) or recipe.ingredients[ingredient_id] < 0:
 				errors.append("invalid recipe ingredient: " + ingredient_id)
 		_check_ids(recipe.processes, "process", errors)
-		if recipe.ordered_processes().is_empty():
+		var ordered_processes := recipe.ordered_processes()
+		if ordered_processes.is_empty():
 			errors.append("processes must form one complete linear chain: " + recipe.id)
+		else:
+			var process_ids: Array[String] = []
+			for process: RecipeDef.ProcessDef in ordered_processes:
+				process_ids.append(process.id)
+			if process_ids != ["pickup", "cook", "serve"]:
+				errors.append("M1 processes must follow pickup, cook, serve: " + recipe.id)
 		for process: RecipeDef.ProcessDef in recipe.processes:
 			if process == null:
 				continue

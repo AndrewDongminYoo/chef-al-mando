@@ -42,6 +42,34 @@ func run(_tree: SceneTree) -> void:
 	changed_seed.set("seed", 43)
 	expect(changed_seed.call("order_schedule")[0].recipe_id == "soup", "seed changes the starting menu")
 	_test_invalid_content()
+	_test_m1_process_chain()
+
+
+func _test_m1_process_chain() -> void:
+	var data := fresh()
+	for recipe: Resource in data.get("recipes"):
+		var processes: Array = recipe.get("processes")
+		processes[1].set("id", "chop")
+		processes[0].set("next_id", "chop")
+	expect(not data.call("validate").is_empty(), "an unsupported process ID must be rejected even when its references match")
+	data = fresh()
+	for recipe: Resource in data.get("recipes"):
+		var processes: Array = recipe.get("processes")
+		recipe.set("first_process_id", "cook")
+		processes[1].set("next_id", "pickup")
+		processes[0].set("next_id", "serve")
+	expect(not data.call("validate").is_empty(), "supported process IDs in the wrong chain order must be rejected")
+	data = fresh()
+	for recipe: Resource in data.get("recipes"):
+		var processes: Array = recipe.get("processes")
+		processes[0].set("next_id", "serve")
+		processes.remove_at(1)
+	expect(not data.call("validate").is_empty(), "a complete chain that skips cooking must be rejected")
+	data = fresh()
+	var recipe: Resource = data.get("recipes")[0]
+	var processes: Array = recipe.get("processes")
+	processes.reverse()
+	expect(data.call("validate").is_empty(), "process references determine chain order independently of the resource array")
 
 
 func _test_invalid_content() -> void:
