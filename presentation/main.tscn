@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://platform/app_lifecycle.gd" id="2_lifecycle"]
 [ext_resource type="Script" path="res://platform/safe_area.gd" id="3_safe_area"]
+[ext_resource type="Script" path="res://presentation/kitchen_board.gd" id="4_board"]
 
 [sub_resource type="SystemFont" id="SystemFont_korean"]
 font_names = PackedStringArray("Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR")
@@ -59,7 +60,11 @@ layout_mode = 2
 [node name="Title" type="Label" parent="SafeArea/Layout/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Chef al Mando · M0"
+text = "Chef al Mando · 첫 영업"
+
+[node name="Remaining" type="Label" parent="SafeArea/Layout/Header"]
+layout_mode = 2
+text = "남은 시간 300.0초  ·  "
 
 [node name="Counter" type="Label" parent="SafeArea/Layout/Header"]
 layout_mode = 2
@@ -68,16 +73,86 @@ layout_mode = 2
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Floor" type="ColorRect" parent="SafeArea/Layout/Kitchen"]
+[node name="Body" type="HBoxContainer" parent="SafeArea/Layout/Kitchen"]
 layout_mode = 2
-mouse_filter = 2
-color = Color(0.15, 0.22, 0.22, 1)
+theme_override_constants/separation = 20
 
-[node name="Description" type="Label" parent="SafeArea/Layout/Kitchen"]
+[node name="KitchenView" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body"]
 layout_mode = 2
-text = "빈 주방\n\n배치와 영업은 다음 단계에서 시작합니다"
-horizontal_alignment = 1
-vertical_alignment = 1
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Summary" type="Label" parent="SafeArea/Layout/Kitchen/Body/KitchenView"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 2
+
+[node name="Board" type="Control" parent="SafeArea/Layout/Kitchen/Body/KitchenView"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("4_board")
+
+[node name="Employees" type="HBoxContainer" parent="SafeArea/Layout/Kitchen/Body/KitchenView"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Side" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body"]
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Heading" type="Label" parent="SafeArea/Layout/Kitchen/Body/Side"]
+layout_mode = 2
+text = "주문 · 탭하여 선택"
+
+[node name="OrdersScroll" type="ScrollContainer" parent="SafeArea/Layout/Kitchen/Body/Side"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Orders" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body/Side/OrdersScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DetailsToggle" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+text = "주문 상세 접기"
+
+[node name="Details" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body/Side"]
+layout_mode = 2
+
+[node name="Selected" type="Label" parent="SafeArea/Layout/Kitchen/Body/Side/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 2
+text = "주문을 선택하세요"
+
+[node name="Actions" type="HBoxContainer" parent="SafeArea/Layout/Kitchen/Body/Side/Details"]
+layout_mode = 2
+
+[node name="PriorityDown" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side/Details/Actions"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "우선 −"
+
+[node name="PriorityUp" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side/Details/Actions"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "우선 +"
+
+[node name="Cancel" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side/Details/Actions"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "취소"
+
+[node name="Feedback" type="Label" parent="SafeArea/Layout/Kitchen/Body/Side"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
 autowrap_mode = 2
 
 [node name="Status" type="Label" parent="SafeArea/Layout"]
@@ -106,3 +181,24 @@ custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "재개"
+
+[node name="Speed1" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(72, 64)
+layout_mode = 2
+text = "1×"
+
+[node name="Speed2" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(72, 64)
+layout_mode = 2
+text = "2×"
+
+[node name="Speed4" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(72, 64)
+layout_mode = 2
+text = "4×"
+
+[node name="Restart" type="Button" parent="SafeArea/Layout/Controls"]
+visible = false
+custom_minimum_size = Vector2(160, 64)
+layout_mode = 2
+text = "다시 준비"
