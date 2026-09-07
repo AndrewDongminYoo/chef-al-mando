@@ -1,6 +1,10 @@
 version: "0.2"
 ignorePaths:
   - "**/*.uid"
+  - "**/*.import"
+  - export_presets.cfg
+  - build/**
+  - .godot/**
 dictionaryDefinitions:
   - name: cucciolo-dictionary
     path: ./.cspell/cucciolo-dictionary.txt
@@ -11,10 +15,6 @@ dictionaries:
   - shellscript
   - fonts
   - cpp-compound-words
-words:
-  - cucciolo
-  - mando
-  - chefalmando
-  - chefalmandodev
+words: []
 ignoreWords: []
 import: []
