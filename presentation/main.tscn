@@ -1,0 +1,101 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://presentation/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://platform/app_lifecycle.gd" id="2_lifecycle"]
+
+[sub_resource type="SystemFont" id="SystemFont_korean"]
+font_names = PackedStringArray("Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR")
+
+[sub_resource type="Theme" id="Theme_main"]
+default_font = SubResource("SystemFont_korean")
+default_font_size = 26
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_main")
+script = ExtResource("1_main")
+
+[node name="Lifecycle" type="Node" parent="."]
+script = ExtResource("2_lifecycle")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.055, 0.085, 0.09, 1)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Layout" type="VBoxContainer" parent="SafeArea"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Header" type="HBoxContainer" parent="SafeArea/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="SafeArea/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Chef al Mando · M0"
+
+[node name="Counter" type="Label" parent="SafeArea/Layout/Header"]
+layout_mode = 2
+text = "000.0초"
+
+[node name="Kitchen" type="PanelContainer" parent="SafeArea/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Floor" type="ColorRect" parent="SafeArea/Layout/Kitchen"]
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.15, 0.22, 0.22, 1)
+
+[node name="Description" type="Label" parent="SafeArea/Layout/Kitchen"]
+layout_mode = 2
+text = "빈 주방\n\n배치와 영업은 다음 단계에서 시작합니다"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="Status" type="Label" parent="SafeArea/Layout"]
+layout_mode = 2
+autowrap_mode = 2
+text = "준비 완료"
+
+[node name="Controls" type="HBoxContainer" parent="SafeArea/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Start" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "시작"
+
+[node name="Pause" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "일시정지"
+
+[node name="Resume" type="Button" parent="SafeArea/Layout/Controls"]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "재개"
