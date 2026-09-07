@@ -353,10 +353,11 @@ M2의 사용자 5명 검증은 방향성 검증입니다.
 버튼 신호의 중복 여부는 별도 계측이 필요하므로 iPhone 입력 횟수 검증은 추가로 진행합니다.
 이 예외는 M1 구현과 가용한 로컬·export·iPhone 검증을 허용하며 M0 전체 통과나 M1의 Android 실기기 수용 기준을 면제하지 않습니다.
 
-현재 저장소에는 M0 검증 runner와 Android·iOS export preset이 있습니다.
+현재 저장소에는 M0·M1 검증 runner와 Android·iOS export preset이 있습니다.
 M0와 M1의 검증 명령 계약은 [구현 명세](../specs/m0-m1.md)에 정의했습니다.
 M0 로컬 검사와 실제 기기 검증 결과는 [M0 실행 기록](../notes/m0-verification.md)에 구분하여 기록합니다.
-M1 runner는 아직 구현하지 않았습니다.
+M1은 `bash scripts/check.sh m1`으로 콘텐츠·규칙·결정론·화면 명령을 검사하며, `bash scripts/check-export.sh`로 내보낸 팩의 준비 화면과 첫 주문 실행을 확인합니다.
+M1의 설치 빌드와 남은 실기기 수용 기준은 [M1 실행 기록](../notes/m1-verification.md)에 구분하여 기록합니다.
 M2부터 M5의 정확한 검증 명령은 현재 `[UNKNOWN]`입니다.
 Android 실기기는 구매 예정이며 Android 기종·OS 확정과 실제 실행은 대기 상태입니다.
 각 후속 단계의 구현 명세도 해당 단계의 코드 작업 전에 정확한 명령, fixture, 수동 증거 형식을 고정해야 합니다.
