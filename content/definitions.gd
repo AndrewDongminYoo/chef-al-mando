@@ -30,6 +30,8 @@ func validate() -> Array[String]:
 		errors.append("invalid scenario values")
 	if order_count <= 0 or first_arrival_tick <= 0 or arrival_interval_ticks <= 0:
 		errors.append("invalid arrival schedule")
+	elif first_arrival_tick + arrival_interval_ticks * (order_count - 1) > closing_tick:
+		errors.append("orders must arrive no later than closing")
 	_check_ids(ingredients, "ingredient", errors)
 	_check_ids(recipes, "recipe", errors)
 	_check_ids(stations, "station", errors)

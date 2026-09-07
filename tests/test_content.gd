@@ -43,6 +43,21 @@ func run(_tree: SceneTree) -> void:
 	expect(changed_seed.call("order_schedule")[0].recipe_id == "soup", "seed changes the starting menu")
 	_test_invalid_content()
 	_test_m1_process_chain()
+	_test_arrival_cutoff()
+
+
+func _test_arrival_cutoff() -> void:
+	var data := fresh()
+	data.set("first_arrival_tick", 341)
+	expect(not data.call("validate").is_empty(), "a final arrival after closing must be rejected")
+	data = fresh()
+	data.set("first_arrival_tick", 340)
+	expect(data.call("validate").is_empty(), "a final arrival on the closing tick must remain valid")
+	var sim: RefCounted = load("res://sim/service_sim.gd").new(data)
+	for tick: int in range(3000):
+		sim.call("step")
+	var orders: Array = sim.call("snapshot").orders
+	expect(orders.size() == 20 and orders[-1].terminal_reason == "service_closed", "closing records all configured arrivals, including the order arriving on that tick")
 
 
 func _test_m1_process_chain() -> void:
