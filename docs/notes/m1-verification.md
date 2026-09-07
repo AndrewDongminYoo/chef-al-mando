@@ -26,13 +26,15 @@ iPhone M1 완주와 Android 실기기 검증은 아직 수행하지 않았습니
 export GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot
 bash scripts/check.sh m0
 bash scripts/check.sh m1
+bash scripts/check-export.sh
 "$GODOT_BIN" --path . --script tests/capture_m1.gd
 ```
 
 | 검사               | 실제로 읽는 대상                                                               | 결과                                                          |
 | ------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | M0 회귀            | 주 화면 시작·정지·재개, 생명주기 어댑터, 안전 영역 좌표, 입력 호출 횟수        | 25개 통과                                                     |
-| M1 headless        | 잘못된 콘텐츠, 원재료·배정·이동·마감 상태, 실제 tick 공급기, 주 화면 명령 경로 | 159개 통과                                                    |
+| M1 headless        | 잘못된 콘텐츠, 원재료·배정·이동·마감 상태, 실제 tick 공급기, 주 화면 명령 경로 | 163개 통과                                                    |
+| M1 export 팩       | 변환된 콘텐츠를 담은 팩의 검증 결과, 준비 화면의 시작 버튼, 첫 주문 도착       | 통과; 이전 실패 팩은 같은 검사에서 실패                       |
 | M1 렌더링          | 실제 창의 버튼 좌표와 입력 이벤트, 준비·정지·마감 화면                         | 입력 실패 0건                                                 |
 | 잘못된 렌더링 배치 | 시작 버튼을 안전 영역 밖으로 이동한 fixture                                    | `rendered control must remain in the safe area: Start`로 실패 |
 
@@ -96,11 +98,23 @@ headless 검사와 데스크톱 창 입력은 실제 모바일 터치, 안전 �
 이후 hosted 리뷰에서 설비와 공정이 같은 빈 역할을 사용할 때 검증을 통과하는 문제를 확인했습니다.
 빈 역할과 지원하지 않는 역할을 두 필드에 함께 넣은 fixture는 수정 전 2개 assertion을 실패시켰습니다.
 M1의 네 가지 설비 역할만 등록하도록 수정한 뒤 M1 159개와 M0 25개 검사가 통과했습니다.
+이후 운영자 검토에서 `cook`과 연결 참조를 함께 `chop`으로 바꾸면 검증을 통과하고 화면에서 오류가 발생하는 문제를 확인했습니다.
+세 메뉴가 공유하는 공정의 참조를 함께 변경한 회귀는 지원하지 않는 ID, 잘못된 순서, 조리 생략의 세 경우에서 수정 전 실패했습니다.
+M1의 `pickup → cook → serve` 연결을 강제한 뒤 M1 163개가 통과했으며, 배열 저장 순서만 바뀐 정상 연결은 계속 허용합니다.
+
+iPhone에 이 수정본을 설치하자 메뉴 목록이 빈 배열로 내보내져 시작할 수 없는 문제가 드러났습니다.
+같은 iOS 앱의 팩을 데스크톱에서 읽었을 때도 `scenario menus must not be empty`로 실패했습니다.
+`menu_ids`의 기본값 `[]`는 일반 실행에서는 정상 데이터로 읽혔지만 편집기 로드에서는 빈 배열이 됐습니다.
+기본값을 `PackedStringArray()`로 명시한 뒤 편집기 로드와 바이너리 저장에서 세 메뉴가 유지됐습니다.
+기존 변환 캐시는 `build/check/export-cache-before-menu-fix/`에 보존한 뒤 다시 생성했습니다.
+새 팩과 실제 iOS 앱의 팩은 준비 화면에서 영업을 시작하고 첫 주문이 도착하는 검사까지 통과했습니다.
+`scripts/check-export.sh`는 독립된 작업 디렉터리에서 팩을 읽고, 변환된 리소스·엔진 오류·필수 완료 표지를 검사합니다.
+CI에도 같은 검사를 추가했습니다.
 개인 계정의 프로젝트 Oracle 조회는 `[no precedent found]`였으며 선례를 가정하지 않았습니다.
 
 ## 5. 모바일 export와 남은 실기기 증거
 
-구현 소스는 `6c8363b16e0485dbb56d75078a10ae529af889d2`입니다.
+구현 소스는 `d6731e209fe9c4e263e1af5cd5cd9f371c5ed809`입니다.
 이 커밋 이후 아래 산출물을 생성했으며 문서 변경은 앱 소스를 변경하지 않습니다.
 M0와 같은 로컬 Android debug keystore와 기존 Apple 개발 서명을 사용했습니다.
 서명 비밀은 기록하거나 커밋하지 않았습니다.
@@ -113,6 +127,8 @@ xcodebuild -project build/ios/chef_al_mando.xcodeproj -scheme chef_al_mando \
   -derivedDataPath build/ios-derived -jobs 2 build
 codesign --verify --deep --strict \
   build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
+GODOT_BIN="$GODOT_BIN" bash scripts/check-export.sh \
+  "$PWD/build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando.pck"
 ```
 
 두 export, Xcode 빌드와 서명 검사는 종료 코드 0으로 끝났습니다.
@@ -122,10 +138,10 @@ Android Build Tools 36.0.0의 `apksigner verify --verbose`는 v2·v3 서명을 �
 
 | 산출물                               | SHA-256                                                            |
 | ------------------------------------ | ------------------------------------------------------------------ |
-| `build/android/chef-al-mando.apk`    | `1d35377d777d9f349b5c8e27b54d3ab73ec39865c4dc306933d990153b86377b` |
-| `build/ios/chef-al-mando-m1.app.zip` | `3cde73fe4a7eca09e2b9554cb3efd1063b3acf1df9c2c352782ed3925f0db450` |
-| `.app/chef_al_mando` 실행 파일       | `038c09804fa79d8969e24e13e51a83015ba8810c96d852428c8fbda2f649b31d` |
-| `.app/chef_al_mando.pck` 리소스      | `84a82eb58bcb7986c957fd72ddb96dde630f492d242a7e1f2cee7e21b4e413c7` |
+| `build/android/chef-al-mando.apk`    | `8c22bfb756b202b469ed5ca101cffe21b6c059a7f9f239ab4b1f1181724ea2ba` |
+| `build/ios/chef-al-mando-m1.app.zip` | `1a385ca4d2c11e0192ae930211dc42f1185dc8e4475de20e55221dc7d46411a3` |
+| `.app/chef_al_mando` 실행 파일       | `9b377f43bce240969884aed105e2cec45e56971266ac2961572e9a2b5bee2197` |
+| `.app/chef_al_mando.pck` 리소스      | `91d35b12f08a12a1d002b9bbdd5764d44297f9dd649c4bebd1417bbb774ab917` |
 
 | 대상                 | 상태                                         |
 | -------------------- | -------------------------------------------- |
@@ -135,6 +151,11 @@ Android Build Tools 36.0.0의 `apksigner verify --verbose`는 v2·v3 서명을 �
 | Android M1-12        | 실기기 구매 후 검증하도록 명시적으로 보류    |
 | hosted CI·리뷰       | PR에서 현재 head를 기준으로 별도 확인        |
 
-M0의 실제 입력 횟수 검증을 먼저 마칠 수 있도록 iPhone에는 M0 진단 빌드를 유지했습니다.
-M1 빌드는 아직 기기에 설치하거나 실행하지 않았습니다.
-기기 실행 결과는 실제 확인 후 기록하며 PR의 현재 head CI·리뷰는 GitHub에서 별도로 확인합니다.
+M0 진단 빌드의 콘솔 실행은 성공했지만 입력 로그는 수집되지 않았습니다.
+운영자가 이미 확인한 양 가로 방향·탭 반응·복귀 후 정지·수동 재개 결과를 다시 요구하지 않고, M1 완주 중 입력 횟수도 함께 확인하도록 전환했습니다.
+M1 `d7264e6`을 설치하고 `--log-file user://m1-acceptance.log`로 실행했으나 위의 메뉴 손실로 시작이 차단됐습니다.
+파일 로그 수집은 성공했으며, 시작 시 엔진의 `Mouse is not supported by this display server.` 오류도 기록됐습니다.
+이 로그만으로 화면 조작이나 완주 통과를 주장하지 않습니다.
+수정본 `d6731e2`의 설치 시도는 기기 연결이 끊겨 CoreDevice 오류 1011로 실패했고, 조회 결과는 `tunnelState: unavailable`이었습니다.
+따라서 현재 기기에는 오류가 난 `d7264e6` 빌드가 남아 있으며 수정본의 설치·입력 계측·한 판 완주는 대기 중입니다.
+PR의 현재 head CI·리뷰는 GitHub에서 별도로 확인합니다.
