@@ -41,6 +41,7 @@ func run() -> void:
 	screen.pause_button.pressed.connect(func() -> void: touch_actions += 1)
 	await tap(screen_point(screen.pause_button), _touch_event)
 	checks.expect(touch_actions == 1 and not screen.is_running(), "one touch pauses exactly once (actions=%d)" % touch_actions)
+	checks.expect(screen.get("input_actions") == 4, "the installed diagnostic reader counts each rendered button action once")
 	print("Touch actions=%d" % touch_actions)
 	print("Rendered input failures=%d" % checks.failures)
 	screen.queue_free()

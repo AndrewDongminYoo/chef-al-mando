@@ -1,12 +1,15 @@
 # M0 실행 기록
 
-작성일: 2026-09-07 · 상태: 로컬 구현 검증, 양 플랫폼 실기기 통과 미완료
+<!-- cspell:words aapt androiddebugkey apksigner -->
+
+작성일: 2026-09-07 · 상태: 로컬 통과, iPhone 입력 횟수 추가 검증 대기, Android 실기기 대기
 
 ## 범위와 소스
 
 명세·계획의 기준 커밋은 `505ad0a`이며 M0 구현은 그 이후의 관심사별 커밋으로 기록합니다.
 명세 승인에는 Android 구매 전 데스크톱·iPhone·export 준비 예외가 포함됩니다.
-Android 실기기를 구매하고 M0 기기 검증을 통과하기 전에는 M1을 시작하지 않습니다.
+2026-09-07 iPhone 수동 관찰 후 운영자가 Android 실기기 검증을 구매 뒤로 미루고 M1 구현에 바로 착수하도록 추가 승인했습니다.
+M1 착수는 허용하되 Android 검증과 M0 전체 통과는 보류합니다.
 Oracle 조회 결과는 `[no precedent found]`입니다.
 
 ## 환경
@@ -55,50 +58,137 @@ Android SDK나 JDK를 새로 설치하지 않았습니다.
 `build/check/m0-ready.png`와 `build/check/m0-paused.png`에서 한국어 라벨과 화면 배치를 확인했습니다.
 이 이미지는 데스크톱 렌더링 증거이며 iPhone·Android 화면 증거가 아닙니다.
 
+PR #1 머지 후 새 worktree에서 `bash scripts/check.sh m0`를 다시 실행했고 `PASS: m0 checks=20 failures=0`을 확인했습니다.
+GitHub hosted CI의 `m0`는 [PR #1 실행](https://github.com/AndrewDongminYoo/chef-al-mando/actions/runs/34109482325)(head `db2d969`)과 [머지 후 실행](https://github.com/AndrewDongminYoo/chef-al-mando/actions/runs/34111924984)(`e5df74d`)에서 성공했으며, 검증 범위는 Linux의 `bash scripts/check.sh m0`이고 모바일 export와 실기기 동작은 포함하지 않습니다.
+
 ## export와 빌드
 
-가로 회전 설정과 안전 영역 코드 수정 후 Android debug APK의 export·서명·검증과 iOS 프로젝트 export·개발 서명 빌드가 모두 종료 코드 0으로 통과했습니다.
-최종 산출물은 `build/android/chef-al-mando.apk`와 `build/ios-final-derived/Build/Products/Debug-iphoneos/chef_al_mando.app`입니다.
-Android APK와 iOS 산출물의 SHA는 기록하지 않았고 `build/`는 추적하지 않으므로, 이 산출물은 커밋과 연결되지 않으며 M0-05 증거로는 재수행이 필요합니다.
-iOS 빌드의 Info.plist는 양 가로 방향만 포함하며 Android manifest의 `screenOrientation` 값은 `0xb`입니다.
-Android APK의 확인된 application ID는 `kr.donminzzi.chefalmandodev`, 버전은 `0.0.1` build `1`, ABI는 `arm64-v8a`입니다.
+최초 iOS export는 명세와 다른 `build/ios-final/`을 사용했고 양 플랫폼 산출물의 SHA도 남기지 않았습니다.
+이전 산출물은 M0-05의 재현 근거로 사용하지 않습니다.
+2026-09-07에 PR #1의 머지 커밋 `e5df74d7d4f33467903e9a6a78154d5d63ce0244`에서 만든 새 worktree로 아래 export와 빌드를 재수행했습니다.
+이번 재검증에서 앱 소스와 export 설정은 이 커밋과 같으며 변경하지 않았습니다.
+엔진의 `--version`은 `.godot-version`과 일치했고 설치된 템플릿의 `version.txt`는 `4.7.2.stable`입니다.
 
 Android export에서는 로컬 debug keystore의 경로·사용자·비밀번호를 `GODOT_ANDROID_KEYSTORE_DEBUG_PATH`, `GODOT_ANDROID_KEYSTORE_DEBUG_USER`, `GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD`로 함께 전달합니다.
 셋 중 일부만 전달하면 Godot이 설정 오류로 거부합니다.
-
-아래 iOS export는 명세와 preset의 `build/ios/` 대신 `build/ios-final/`을 사용했습니다.
-재현할 때는 명세의 경로를 사용하고 `xcodebuild`의 `-project`와 `-derivedDataPath`를 그에 맞춥니다.
+경로와 비밀번호는 로컬 Editor Settings에서 읽고 별칭은 `androiddebugkey`를 사용했으며 로그와 저장소에 비밀 값을 기록하지 않습니다.
+`scripts/check.sh m0`가 출력 디렉터리를 준비한 상태에서 다음 명령을 실행했습니다.
 
 ```bash
 "$GODOT_BIN" --headless --path . --export-debug Android build/android/chef-al-mando.apk
-"$GODOT_BIN" --headless --path . --export-debug iOS build/ios-final/chef_al_mando.xcodeproj
-xcodebuild -project build/ios-final/chef_al_mando.xcodeproj -scheme chef_al_mando \
+"$GODOT_BIN" --headless --path . --export-debug iOS build/ios/chef_al_mando.xcodeproj
+xcodebuild -list -project build/ios/chef_al_mando.xcodeproj
+xcodebuild -project build/ios/chef_al_mando.xcodeproj -scheme chef_al_mando \
   -configuration Debug -destination 'generic/platform=iOS' \
-  -derivedDataPath build/ios-final-derived -jobs 2 build
+  -derivedDataPath build/ios-derived -jobs 2 build
 ```
 
-처음 실행한 iOS 빌드는 연결된 iPhone을 destination으로 사용했고 개발 프로비저닝 확인 옵션을 포함했습니다.
-기기 식별자는 저장소 명령에 고정하지 않습니다.
-개발 서명 Team ID는 개인 개발 인증서의 OU와 대조했습니다.
-Team ID는 공개 식별자이며 인증서·개인 키·프로비저닝 파일은 저장소에 포함하지 않습니다.
+두 export와 `xcodebuild -list`, 개발 서명 빌드는 모두 종료 코드 0으로 끝났고 빌드는 `BUILD SUCCEEDED`를 출력했습니다.
+기존 개인 개발 서명을 사용했으며 provisioning 갱신 옵션은 추가하지 않았습니다.
 출력 Xcode 프로젝트를 직접 수정하지 않고 Godot 설정에서 재생성합니다.
+서명 인증서·개인 키·프로비저닝 파일과 `build/` 산출물은 커밋하지 않습니다.
 
-최종 빌드도 연결된 iPhone을 destination으로 사용했으며 `BUILD SUCCEEDED`를 확인했습니다.
-`devicectl device install app`과 `devicectl device process launch`가 모두 종료 코드 0으로 완료됐습니다.
-iPhone에는 `kr.donminzzi.chefalmandodev` 개발 빌드 `0.0.1 (1)`을 남겼습니다.
+Android SDK Build Tools `36.0.0`의 `apksigner verify --verbose build/android/chef-al-mando.apk`는 종료 코드 0과 v2·v3 서명 검증 성공을 반환했습니다.
+`aapt dump badging`에서 application ID `kr.donminzzi.chefalmandodev`, 버전 `0.0.1` build `1`, ABI `arm64-v8a`를 확인했습니다.
+두 export 로그 끝에는 `cannot connect to daemon at tcp:5037: Connection refused`가 남았으며 Android 기기 연결·설치는 검증하지 않았습니다.
+
+iOS `.app`의 `Info.plist`에서 같은 application ID와 버전, iPhone·iPad 지원, 양 가로 방향만 허용하는 설정을 확인했습니다.
+다음 서명 검사는 번들의 서명 무결성을 읽으며 종료 코드 0으로 통과했습니다.
+
+```bash
+codesign --verify --deep --strict --verbose=2 \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
+ditto -c -k --keepParent \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app \
+  build/ios/chef_al_mando.app.zip
+shasum -a 256 build/android/chef-al-mando.apk build/ios/chef_al_mando.app.zip \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando.pck
+```
+
+아래 SHA-256은 이번 산출물을 식별하며 재빌드의 바이트 일치를 보장하지 않습니다.
+ZIP은 설치한 `.app` 번들을 보관한 파일이며 스토어 배포용 IPA가 아닙니다.
+
+| 산출물                          | SHA-256                                                            |
+| ------------------------------- | ------------------------------------------------------------------ |
+| `build/android/m0-e5df74d.apk`  | `8ce2f8e2a791d361aca3b2377363b9512feaa007bd990287debb0fd483e319b7` |
+| `build/ios/m0-e5df74d.app.zip`  | `d7f5bd68eaecc116c3a99725c7a2ac52cb60ab6acdeaf01a95422b152fa69a2f` |
+| `.app/chef_al_mando` 실행 파일  | `a9c461ecf083595378d839d05543f3827aa297942f76406183272e5e895da08e` |
+| `.app/chef_al_mando.pck` 리소스 | `23bf5fe610589823a460fc6c9152a9866e6b3c63d9f9827d7a938c82de100060` |
+
+APK 크기는 28,374,119바이트이고 ZIP 크기는 28,685,742바이트입니다.
+export·빌드 로그는 같은 worktree의 `build/check/android-export.log`, `ios-export.log`, `ios-build.log`에 보관합니다.
+
+## iPhone 재검증
+
+2026-09-07에 연결된 iPhone 16 Pro의 iOS `26.6.1` build `23G83`을 `devicectl`로 다시 확인했습니다.
+설치와 실행을 각각 사전 고지한 뒤 위 `.app`으로 다음 명령을 실행했고 모두 종료 코드 0으로 끝났습니다.
+`IOS_DEVICE_ID`는 로컬에서 확인한 기기 식별자를 사용합니다.
+
+```bash
+xcrun devicectl device install app --device "$IOS_DEVICE_ID" \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
+xcrun devicectl device process launch --device "$IOS_DEVICE_ID" \
+  kr.donminzzi.chefalmandodev
+xcrun devicectl device info apps --device "$IOS_DEVICE_ID" \
+  --bundle-id kr.donminzzi.chefalmandodev
+```
+
+설치 후 재조회에서 `Chef al Mando`, `kr.donminzzi.chefalmandodev`, `0.0.1 (1)`을 확인했습니다.
+이 설치 이후 입력 진단 빌드를 추가 설치했으며 현재 상태는 다음 절에 기록합니다.
 설치·프로세스 실행 성공은 화면 표시나 실제 OS 생명주기 검증을 대신하지 않습니다.
+운영자가 이 설치 빌드에서 아래 절차를 직접 수행하고 통과를 확인했습니다.
+아래 결과는 운영자의 실기기 관찰이며 자동화 로그나 에이전트의 화면 캡처 결과가 아닙니다.
+
+| 기준        | 실제로 확인한 속성                                              | 결과                               |
+| ----------- | --------------------------------------------------------------- | ---------------------------------- |
+| M0-01·M0-02 | 양 가로 방향에서 화면·한국어·버튼 표시와 노치·홈 표시줄 간섭    | 양 방향 정상                       |
+| M0-03       | 시작·일시정지·재개를 각각 한 번 탭했을 때의 반응                | 정상                               |
+| M0-04       | 진행 중 10초 이상 배경 전환 후 복귀, 명시적 재개 전 카운터 유지 | 복귀 `009.2초` → 10초 뒤 `009.2초` |
+| M0-04       | 재개 탭 후 카운터 진행                                          | 명시적 재개 후 증가                |
+
+위 관찰은 표시·상태 전이·생명주기를 확인합니다.
+상태 변경을 무시하는 중복 호출도 있을 수 있으므로 탭 반응만으로 버튼 신호가 정확히 한 번 발생했는지는 판별할 수 없습니다.
+PR #2 리뷰에 따라 M0-03 입력 횟수 계측을 추가하며 전체 기기 수용 기준은 미완료로 유지합니다.
+
+## 입력 횟수 계측 후속 검증
+
+소스 `37684b6d733510f56b7a5b3a01730f4c745065e7`은 시작·일시정지·재개 버튼의 `pressed` 신호를 상태 검사보다 먼저 셉니다.
+debug 빌드는 `M0_INPUT action=... total=...`을 출력하므로 상태 변경이 무시되는 중복 신호도 횟수에 남습니다.
+로컬 M0 검사는 이 동작을 포함해 25개를 통과했습니다.
+렌더링 검사는 마우스 이벤트 3회와 주입한 touch 이벤트 1회에서 합계 4회가 기록되고 입력 실패 0건임을 확인했습니다.
+이 결과는 설치한 iPhone에서의 실제 손가락 탭 횟수를 대신하지 않습니다.
+
+같은 소스로 Android·iOS export와 iOS 개발 서명 빌드를 재수행했습니다.
+두 export, Xcode 빌드, `apksigner`와 `codesign` 서명 검사는 모두 종료 코드 0입니다.
+로그는 `build/check/android-input-export.log`, `ios-input-export.log`, `ios-input-build.log`에 있습니다.
+이전 APK와 앱 ZIP은 위의 `m0-e5df74d` 이름으로 보관했습니다.
+
+| 새 산출물                               | SHA-256                                                            |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `build/android/chef-al-mando.apk`       | `a30a40ee5d454fc2f756ce6b1aa0cf8157aef0f4003ea75e49dfc565eaeb49ef` |
+| `build/ios/chef-al-mando-input.app.zip` | `1defc9b9813c71ce8e815b168539e75e8e473e6e9b776f4d477ab7a412294bfc` |
+| `.app/chef_al_mando` 실행 파일          | `21740aa54a6ddf980b7f192876bc180ac938e7b119d7118d9e12be3892b2a5df` |
+| `.app/chef_al_mando.pck` 리소스         | `092e42ec70ec96773eb0f2e553aede19cefe23b71111bfb4b3a358ea5c929913` |
+
+iPhone에 기존 앱 위로 새 진단 빌드를 설치하는 작업은 성공했습니다.
+이후 콘솔을 연결하는 실행은 기기 잠금으로 `Locked` 오류가 발생했으며 입력 로그를 얻지 못했습니다.
+현재 iPhone에는 `37684b6` 진단 빌드가 설치돼 있습니다.
+잠금 해제 후 앱을 실행하여 실제 시작·정지·재개 탭 횟수와 `M0_INPUT` 로그를 대조해야 합니다.
+새 빌드의 양 가로 방향·10초 배경 전환·수동 재개도 함께 재확인합니다.
+
+## 이전 에이전트 설정 진단
 
 AGENTS.md 변경 후 실행한 `codex doctor --summary --ascii --no-color`는 경고 2건, 실패 0건을 보고했습니다.
 경고는 업데이트 구성 진단과 macOS 보안 평가 조회 불가이며, 이 결과는 앱 검증이 아닙니다.
 관심사별 커밋 준비 중 같은 명령을 다시 실행한 결과는 경고 0건, 실패 0건입니다.
+이번 입력 계측 문서의 일관성 수정 후 다시 실행한 결과는 경고 1건, 실패 0건입니다.
+경고는 업데이트 구성 진단이며 앱 검증 결과와 구분합니다.
 
 ## 남은 수용 기준
 
-- 명세 경로로 export를 재수행하고 산출물 SHA를 기록합니다.
-- iPhone에서 최종 빌드의 화면 표시를 확인합니다.
-- iPhone에서 시작 후 10초 배경 전환·복귀 시 카운터 정지 유지와 명시적 재개를 확인합니다.
-- iPhone 양 가로 방향의 안전 영역과 터치 입력을 확인합니다.
-- Android 구매 후 같은 기기 검증을 수행합니다.
-- GitHub hosted CI는 아직 실행하지 않았습니다.
+- iPhone 진단 빌드에서 실제 탭 횟수와 입력 로그를 대조하고 표시·생명주기를 재확인합니다.
+- Android 구매 후 기종·OS를 기록하고 설치 빌드에서 M0-01~M0-04를 검증합니다.
+- Android에 실제 설치한 산출물의 SHA와 실행 기록으로 M0-05의 남은 기기 증거를 보완합니다.
 
-M0 전체 통과, M1 구현, 출시 빌드 검증을 완료한 것으로 보고하지 않습니다.
+M0 전체 통과와 출시 빌드 검증을 완료한 것으로 보고하지 않습니다.
