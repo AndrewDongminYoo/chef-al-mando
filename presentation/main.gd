@@ -13,6 +13,7 @@ const STATUS_TEXT := {
 }
 
 var state: State = State.READY
+var input_actions: int = 0
 var elapsed_seconds: float = 0.0
 var shown_tenths: int = -1
 var last_usable_area: Rect2 = Rect2()
@@ -29,14 +30,23 @@ var last_canvas_size: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
+	start_button.pressed.connect(_record_input.bind("start"))
 	start_button.pressed.connect(_start)
+	pause_button.pressed.connect(_record_input.bind("pause"))
 	pause_button.pressed.connect(_pause)
+	resume_button.pressed.connect(_record_input.bind("resume"))
 	resume_button.pressed.connect(_resume)
 	lifecycle.backgrounded.connect(_pause)
 	safe_area_source.changed.connect(_on_safe_area_changed)
 	resized.connect(_update_safe_area)
 	_update_safe_area()
 	_refresh()
+
+
+func _record_input(action: String) -> void:
+	input_actions += 1
+	if OS.is_debug_build():
+		print("M0_INPUT action=%s total=%d" % [action, input_actions])
 
 
 func _process(delta: float) -> void:
