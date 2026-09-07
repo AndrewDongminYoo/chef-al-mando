@@ -1,0 +1,155 @@
+[gd_resource type="Resource" script_class="" load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://content/definitions.gd" id="1_scenario"]
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_ingredient"]
+[ext_resource type="Script" path="res://content/process_def.gd" id="3_process"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="4_recipe"]
+[ext_resource type="Script" path="res://content/station_def.gd" id="5_station"]
+[ext_resource type="Script" path="res://content/employee_def.gd" id="6_employee"]
+
+[sub_resource type="Resource" id="Ingredient_vegetable"]
+script = ExtResource("2_ingredient")
+id = "vegetable"
+display_name = "채소"
+unit_cost = 100
+
+[sub_resource type="Resource" id="Ingredient_grain"]
+script = ExtResource("2_ingredient")
+id = "grain"
+display_name = "곡물"
+unit_cost = 150
+
+[sub_resource type="Resource" id="Ingredient_protein"]
+script = ExtResource("2_ingredient")
+id = "protein"
+display_name = "단백질"
+unit_cost = 400
+
+[sub_resource type="Resource" id="Process_pickup"]
+script = ExtResource("3_process")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "cook"
+
+[sub_resource type="Resource" id="Process_salad"]
+script = ExtResource("3_process")
+id = "cook"
+station_role = "cold"
+duration_ticks = 60
+next_id = "serve"
+
+[sub_resource type="Resource" id="Process_soup"]
+script = ExtResource("3_process")
+id = "cook"
+station_role = "hot"
+duration_ticks = 140
+next_id = "serve"
+
+[sub_resource type="Resource" id="Process_grill"]
+script = ExtResource("3_process")
+id = "cook"
+station_role = "hot"
+duration_ticks = 240
+next_id = "serve"
+
+[sub_resource type="Resource" id="Process_serve"]
+script = ExtResource("3_process")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+[sub_resource type="Resource" id="Recipe_salad"]
+script = ExtResource("4_recipe")
+id = "salad"
+display_name = "채소 샐러드"
+ingredients = Dictionary[String, int]({"vegetable": 1})
+cook_role = "cold"
+revenue = 500
+patience_ticks = 400
+first_process_id = "pickup"
+processes = Array[ExtResource("3_process")]([SubResource("Process_pickup"), SubResource("Process_salad"), SubResource("Process_serve")])
+
+[sub_resource type="Resource" id="Recipe_soup"]
+script = ExtResource("4_recipe")
+id = "soup"
+display_name = "곡물 수프"
+ingredients = Dictionary[String, int]({"vegetable": 2, "grain": 1})
+cook_role = "hot"
+revenue = 900
+patience_ticks = 600
+first_process_id = "pickup"
+processes = Array[ExtResource("3_process")]([SubResource("Process_pickup"), SubResource("Process_soup"), SubResource("Process_serve")])
+
+[sub_resource type="Resource" id="Recipe_grill"]
+script = ExtResource("4_recipe")
+id = "grill"
+display_name = "단백질 구이"
+ingredients = Dictionary[String, int]({"protein": 1})
+cook_role = "hot"
+revenue = 1500
+patience_ticks = 800
+first_process_id = "pickup"
+processes = Array[ExtResource("3_process")]([SubResource("Process_pickup"), SubResource("Process_grill"), SubResource("Process_serve")])
+
+[sub_resource type="Resource" id="Station_storage"]
+script = ExtResource("5_station")
+id = "storage_01"
+display_name = "재료고"
+role = "storage"
+tile = Vector2i(2, 1)
+work_position = Vector2i(2, 2)
+
+[sub_resource type="Resource" id="Station_cold"]
+script = ExtResource("5_station")
+id = "cold_01"
+display_name = "찬 조리대"
+role = "cold"
+tile = Vector2i(5, 1)
+work_position = Vector2i(5, 2)
+
+[sub_resource type="Resource" id="Station_hot"]
+script = ExtResource("5_station")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(8, 1)
+work_position = Vector2i(8, 2)
+
+[sub_resource type="Resource" id="Station_pass"]
+script = ExtResource("5_station")
+id = "pass_01"
+display_name = "출고대"
+role = "pass"
+tile = Vector2i(9, 5)
+work_position = Vector2i(9, 4)
+
+[sub_resource type="Resource" id="Employee_one"]
+script = ExtResource("6_employee")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+[sub_resource type="Resource" id="Employee_two"]
+script = ExtResource("6_employee")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+[resource]
+script = ExtResource("1_scenario")
+id = "m1_first_service"
+seed = 42
+closing_tick = 3000
+starting_budget = 10000
+labor_cost = 2000
+grid_size = Vector2i(12, 8)
+ingredients = Array[ExtResource("2_ingredient")]([SubResource("Ingredient_vegetable"), SubResource("Ingredient_grain"), SubResource("Ingredient_protein")])
+recipes = Array[ExtResource("4_recipe")]([SubResource("Recipe_salad"), SubResource("Recipe_soup"), SubResource("Recipe_grill")])
+stations = Array[ExtResource("5_station")]([SubResource("Station_storage"), SubResource("Station_cold"), SubResource("Station_hot"), SubResource("Station_pass")])
+employees = Array[ExtResource("6_employee")]([SubResource("Employee_one"), SubResource("Employee_two")])
+purchases = Dictionary[String, int]({"vegetable": 22, "grain": 8, "protein": 8})
+menu_ids = PackedStringArray("salad", "soup", "grill")
+order_count = 20
+first_arrival_tick = 10
+arrival_interval_ticks = 140

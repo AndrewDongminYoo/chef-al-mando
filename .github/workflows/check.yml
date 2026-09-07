@@ -31,3 +31,5 @@ jobs:
           echo "GODOT_BIN=$RUNNER_TEMP/godot/${archive%.zip}" >> "$GITHUB_ENV"
       - name: Check M0
         run: bash scripts/check.sh m0
+      - name: Check M1
+        run: bash scripts/check.sh m1
