@@ -1,6 +1,14 @@
 # Custom Dictionary Words
-393JTTV68D
-dongminyu
+backgrounded
+chefalmando
+chefalmandodev
+cucciolo
 donminzzi
 gacha
+gdignore
+iphoneos
+mando
 PRNG
+unvalidated
+xcodeproj
+xcrun

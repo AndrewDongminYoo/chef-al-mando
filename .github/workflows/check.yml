@@ -18,14 +18,16 @@ jobs:
           persist-credentials: false
       - name: Install pinned Godot
         env:
-          GODOT_ARCHIVE: Godot_v4.7.2-stable_linux.x86_64.zip
           GODOT_SHA256: cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4
         run: |
+          version="$(tr -d '[:space:]' < .godot-version)"
+          release="$(cut -d. -f1-3 <<< "$version")-$(cut -d. -f4 <<< "$version")"
+          archive="Godot_v${release}_linux.x86_64.zip"
           curl --fail --location --retry 2 \
-            "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/$GODOT_ARCHIVE" \
-            --output "$RUNNER_TEMP/$GODOT_ARCHIVE"
-          echo "$GODOT_SHA256  $RUNNER_TEMP/$GODOT_ARCHIVE" | sha256sum --check
-          unzip -q "$RUNNER_TEMP/$GODOT_ARCHIVE" -d "$RUNNER_TEMP/godot"
-          echo "GODOT_BIN=$RUNNER_TEMP/godot/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
+            "https://github.com/godotengine/godot-builds/releases/download/$release/$archive" \
+            --output "$RUNNER_TEMP/$archive"
+          echo "$GODOT_SHA256  $RUNNER_TEMP/$archive" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/$archive" -d "$RUNNER_TEMP/godot"
+          echo "GODOT_BIN=$RUNNER_TEMP/godot/${archive%.zip}" >> "$GITHUB_ENV"
       - name: Check M0
         run: bash scripts/check.sh m0
