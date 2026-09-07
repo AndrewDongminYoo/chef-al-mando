@@ -33,12 +33,14 @@ The `project.godot` file declares the `4.7` feature tag and the `GL Compatibilit
 The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
 
-The operator approved M0 preparation before an Android reference device is available on 2026-09-07.
-This exception permits desktop, iPhone, and export preparation.
-It does not permit M0 approval or M1 implementation before Android physical-device verification.
+On 2026-09-07, the operator approved M0 preparation before an Android reference device is available.
+After the iPhone revalidation passed, the operator also approved M1 implementation while Android physical-device verification remains deferred.
+This exception permits M1 implementation and its available local, export, and iPhone checks.
+M0 approval and full M1 acceptance still require the deferred Android physical-device evidence.
 
 The M0-M1 specification defines the exact stable Godot version, the matching export-template version, the reference iPhone, the three menu fixtures, the 20-order fixture, and the exact local and CI verification commands.
-The reference Android device is not defined yet; the 2026-09-07 exception above covers M0 preparation without it, and M0 approval still waits for it.
+The reference Android device is not defined yet.
+The 2026-09-07 exception above permits M1 work while the Android device and its verification remain pending.
 
 ## Product Invariants
 
@@ -200,7 +202,7 @@ Do not adopt an isometric view without a separate M2 evaluation and explicit app
 
 ## Milestone Discipline
 
-Start a milestone only after the previous milestone has fresh passing evidence.
+Start a milestone only after the previous milestone has fresh passing evidence, except for the approved M1 exception in Current Baseline.
 Do not mark a milestone complete because the project parses or launches on desktop.
 Record what each gate inspects and obtain evidence for the property that the milestone protects.
 

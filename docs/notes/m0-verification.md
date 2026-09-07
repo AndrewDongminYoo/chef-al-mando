@@ -8,7 +8,8 @@
 
 명세·계획의 기준 커밋은 `505ad0a`이며 M0 구현은 그 이후의 관심사별 커밋으로 기록합니다.
 명세 승인에는 Android 구매 전 데스크톱·iPhone·export 준비 예외가 포함됩니다.
-Android 실기기를 구매하고 M0 기기 검증을 통과하기 전에는 M1을 시작하지 않습니다.
+2026-09-07 iPhone 재검증 통과 후 운영자가 Android 실기기 검증을 구매 뒤로 미루고 M1 구현에 바로 착수하도록 추가 승인했습니다.
+M1 착수는 허용하되 Android 검증과 M0 전체 통과는 보류합니다.
 Oracle 조회 결과는 `[no precedent found]`입니다.
 
 ## 환경
@@ -65,7 +66,7 @@ GitHub hosted CI의 `m0`는 [PR #1 실행](https://github.com/AndrewDongminYoo/c
 최초 iOS export는 명세와 다른 `build/ios-final/`을 사용했고 양 플랫폼 산출물의 SHA도 남기지 않았습니다.
 이전 산출물은 M0-05의 재현 근거로 사용하지 않습니다.
 2026-09-07에 PR #1의 머지 커밋 `e5df74d7d4f33467903e9a6a78154d5d63ce0244`에서 만든 새 worktree로 아래 export와 빌드를 재수행했습니다.
-앱 소스와 export 설정은 이 커밋과 같으며 후속 변경은 export에서 제외되는 이 검증 문서뿐입니다.
+이번 재검증에서 앱 소스와 export 설정은 이 커밋과 같으며 변경하지 않았습니다.
 엔진의 `--version`은 `.godot-version`과 일치했고 설치된 템플릿의 `version.txt`는 `4.7.2.stable`입니다.
 
 Android export에서는 로컬 debug keystore의 경로·사용자·비밀번호를 `GODOT_ANDROID_KEYSTORE_DEBUG_PATH`, `GODOT_ANDROID_KEYSTORE_DEBUG_USER`, `GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD`로 함께 전달합니다.
