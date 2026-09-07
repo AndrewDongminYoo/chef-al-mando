@@ -2,7 +2,8 @@
 
 작성일: 2026-09-08.
 기준 계약은 [M2 구현 명세](../specs/m2-preparation.md)이며 M1 기준 커밋은 `5388ebc`입니다.
-검증·빌드 소스는 `7dc9188ddba7c16c50f0ef2c607faefaea5463bc`입니다.
+초기 검증·빌드 소스는 `7dc9188ddba7c16c50f0ef2c607faefaea5463bc`입니다.
+공유 재고 검사 수정 후 현재 소스와 설치 빌드는 `654b625e3d0ea30d98ed15d41f4b2ddcb42d4c5c`이며 갱신 근거는 7절에 있습니다.
 현재 head의 CI·호스팅 리뷰와 새 조작의 운영자 확인은 해당 작업 후 갱신합니다.
 
 ## 1. 구현과 남은 수용 기준
@@ -130,7 +131,7 @@ ZIP은 개발용 `.app` 보관 파일이며 스토어 배포용 IPA가 아닙니
 두 작업은 각각 사전 고지했으며 `devicectl` JSON의 `info.outcome`은 모두 `success`입니다.
 실행 옵션은 기존 프로세스 강제 종료 없이 `--log-file user://m2-acceptance-7dc9188.log`를 전달했습니다.
 설치와 실행 증거는 `m2-iphone-install-7dc9188.json`, `m2-iphone-launch-7dc9188.json`입니다.
-현재 휴대전화에 설치된 빌드는 M2 `7dc9188`이며 새 준비 조작·마감 분석·재준비의 운영자 확인을 기다립니다.
+초기 설치 빌드 M2 `7dc9188`에 대한 새 준비 조작·마감 분석·재준비의 운영자 확인은 이 기록 시점에 대기 중이었습니다.
 02:04 KST에 읽은 `m2-iphone-input-7dc9188.log`에는 앱 시작과 기존 `Mouse is not supported by this display server.` 엔진 오류가 있습니다.
 이 시점에는 시작 버튼 조작 기록이 없으며 실제 플레이 확인으로 세지 않습니다.
 이 오류를 새로 해결했거나 실기기 실행에 오류가 없다고 주장하지 않습니다.
@@ -140,3 +141,33 @@ M0에서 이미 승인한 회전·기존 탭·백그라운드 수동 재개 관�
 참가자별 빌드 SHA, 기기, 첫 준비 선택, 결과, 자발적 재도전 여부, 설명한 개선 가설, 두 번째 선택, 막힌 조작을 기록해야 합니다.
 운영자·에이전트의 반복 실행은 이 5명에 포함하지 않습니다.
 참가자 모집이나 메시지 전송은 이 작업에서 수행하지 않았습니다.
+
+## 7. 공유 재고 검사 수정
+
+[PR #4의 P2 지적](https://github.com/AndrewDongminYoo/chef-al-mando/pull/4#discussion_r3951688107)은 원재료만 쓰는 메뉴들의 최소 판매 수량을 검사할 때 같은 재고를 중복 사용할 수 있다는 내용입니다.
+승인 명세 3절에 따라 검사 전용 재고 사본에서 메뉴별 원재료 한 인분을 차감하도록 수정했습니다.
+서비스에 전달하는 실제 재고는 이 검사에서 소비하지 않습니다.
+채소 2개·곡물 1개·단백질 1개인 준비안은 거부하고, 채소를 3개로 늘리면 영업 시작을 허용합니다.
+
+새 회귀 검사는 메뉴 순서를 뒤집어도 같은 거부·허용 결과가 나오고 거부 시 재고·선택·명령 순서·확정 상태가 유지되는지 읽습니다.
+수정 전 `m2-menu-coverage-red.log`에서 364개 중 10개가 실패했고 스크립트 오류는 없었습니다.
+수정 후 `m2-menu-coverage-green.log`는 364개, 실패 0입니다.
+`m2-menu-coverage-m1.log`는 기존 회귀 177개, 실패 0이며 M1·M2 명령 로그 hash와 다섯 고정 선택 비교 결과는 유지됐습니다.
+수정 범위 검토에서는 차감의 음수 방지, 실제 재고와 사본의 분리, 중간 재료의 메뉴별 독점 연결, 메뉴 순서에 따른 결과를 확인했습니다.
+변경 파일 2개의 Trunk 검사와 CSpell 검사도 문제 없이 끝났습니다.
+
+`654b625`의 Android·iOS export와 Xcode 개발 빌드, APK v2·v3 서명, iOS 앱 서명 검사가 통과했습니다.
+실제 iOS 앱 팩은 M1 첫 주문·M2 준비와 첫 주문·추가 메뉴 준비와 제공의 세 완료 표지를 모두 출력했습니다.
+로그는 `m2-coverage-android-export.log`, `m2-coverage-ios-export.log`, `m2-coverage-ios-build.log`, `m2-coverage-android-signature.log`, `m2-coverage-ios-codesign.log`, `m2-coverage-ios-pack.log`입니다.
+
+| 산출물                                                                                |    바이트 | SHA-256                                                            |
+| ------------------------------------------------------------------------------------- | --------: | ------------------------------------------------------------------ |
+| `build/android/chef-al-mando.apk`                                                     |  28480683 | `1b04a5bde8bb1a6f8209fa280f1222e3c9ed41df8acf82dbbcc050da3765fc02` |
+| `build/ios/chef_al_mando.app.zip`                                                     |  28776000 | `db7eed1249160270aa6948ac6236a26f0c0b487b41696f31629b788b1083ccbd` |
+| `build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando`     | 103163552 | `1341be659a9e7f64a23380938141c50679ae27e2ad1632da755ed3b47bb52183` |
+| `build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando.pck` |    123936 | `eb9f362dbd96c87050fddfc98ca928d1828306a446df3f73ac23087d4d0464e3` |
+
+2026-09-08 02:26 KST에 기존 iPhone 앱 위에 `654b625`를 설치했고 02:27 KST에 실행했습니다.
+`m2-iphone-install-654b625.json`과 `m2-iphone-launch-654b625.json`의 `info.outcome`은 모두 `success`입니다.
+현재 휴대전화에는 이 수정본이 설치돼 있으며 M2 새 조작의 운영자 확인은 계속 대기 중입니다.
+코드·보안 리뷰의 현재 head 판정과 CI는 푸시 후 PR 본문에서 갱신합니다.
