@@ -47,7 +47,10 @@ func validate() -> Array[String]:
 	var roles: Dictionary[String, bool] = {}
 	for station: StationDef in stations:
 		if station != null:
-			roles[station.role] = true
+			if station.role not in ["storage", "cold", "hot", "pass"]:
+				errors.append("invalid station role: " + station.id)
+			else:
+				roles[station.role] = true
 	for recipe: RecipeDef in recipes:
 		if recipe == null:
 			continue

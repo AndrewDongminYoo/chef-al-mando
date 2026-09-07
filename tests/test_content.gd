@@ -83,6 +83,15 @@ func _test_invalid_content() -> void:
 	processes = recipes[0].get("processes")
 	processes[1].set("station_role", "missing")
 	expect(not data.call("validate").is_empty(), "an unavailable station role must be rejected")
+	for invalid_role: String in ["", "unknown_role"]:
+		data = fresh()
+		var changed_stations: Array = data.get("stations")
+		changed_stations[0].set("role", invalid_role)
+		recipes = data.get("recipes")
+		for recipe: Resource in recipes:
+			processes = recipe.get("processes")
+			processes[0].set("station_role", invalid_role)
+		expect(not data.call("validate").is_empty(), "matching station and process roles must still reject an unsupported role: " + invalid_role)
 	data = fresh()
 	data.set("menu_ids", PackedStringArray(["missing"]))
 	expect(not data.call("validate").is_empty(), "an unknown menu must be rejected")
