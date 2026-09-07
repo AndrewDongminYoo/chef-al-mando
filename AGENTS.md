@@ -30,21 +30,15 @@ The player can pause the simulation at any time.
 
 The repository now has an M0 screen, a lifecycle adapter, local checks, and mobile export presets.
 The `project.godot` file declares the `4.7` feature tag and the `GL Compatibility` renderer.
-The M0 implementation specification pins Godot `4.7.2.stable.official.ed1daf0bf` and matching `4.7.2.stable` export templates.
+The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
 
 The operator approved M0 preparation before an Android reference device is available on 2026-09-07.
 This exception permits desktop, iPhone, and export preparation.
 It does not permit M0 approval or M1 implementation before Android physical-device verification.
 
-Before M0 implementation starts, the M0-M1 specification must define:
-
-- The exact stable Godot version.
-- The matching export-template version.
-- The reference iPhone and Android devices.
-- The three menu fixtures.
-- The 20-order fixture.
-- The exact local and CI verification commands.
+The M0-M1 specification defines the exact stable Godot version, the matching export-template version, the reference iPhone, the three menu fixtures, the 20-order fixture, and the exact local and CI verification commands.
+The reference Android device is not defined yet; the 2026-09-07 exception above covers M0 preparation without it, and M0 approval still waits for it.
 
 ## Product Invariants
 

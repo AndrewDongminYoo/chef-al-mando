@@ -11,7 +11,7 @@ Oracle 조회 결과는 `[no precedent found]`입니다.
 
 ## 환경
 
-- Godot: `4.7.2.stable.official.ed1daf0bf`
+- Godot: `.godot-version`과 일치하는 `--version` 출력 확인
 - export template: `4.7.2.stable`
 - 렌더러: Compatibility
 - Xcode: 26.6, build `17F113`
@@ -35,7 +35,7 @@ Android SDK나 JDK를 새로 설치하지 않았습니다.
 
 | 검사                       | 실제로 읽는 속성                                                      | 결과                                            |
 | -------------------------- | --------------------------------------------------------------------- | ----------------------------------------------- |
-| `bash scripts/check.sh m0` | 엔진 버전, import 오류, 시작·정지·재개·주입된 생명주기·안전 영역 상태 | 14개 assertion 통과                             |
+| `bash scripts/check.sh m0` | 엔진 버전, import 오류, 시작·정지·재개·주입된 생명주기·안전 영역 상태 | 20개 assertion 통과                             |
 | 빈 suite 프로브            | 검사 0건의 거짓 성공 방지                                             | `FAIL: m0 checks=0 failures=0`, 비정상 종료     |
 | 엔진 오류 프로브           | suite가 PASS를 출력해도 엔진 오류가 있으면 실패                       | `FAIL: engine errors`, 비정상 종료              |
 | 잘못된 main scene 프로브   | 프로젝트의 실제 main scene 참조 검사                                  | import에서 누락 scene 오류를 감지해 비정상 종료 |
@@ -59,11 +59,15 @@ Android SDK나 JDK를 새로 설치하지 않았습니다.
 
 가로 회전 설정과 안전 영역 코드 수정 후 Android debug APK의 export·서명·검증과 iOS 프로젝트 export·개발 서명 빌드가 모두 종료 코드 0으로 통과했습니다.
 최종 산출물은 `build/android/chef-al-mando.apk`와 `build/ios-final-derived/Build/Products/Debug-iphoneos/chef_al_mando.app`입니다.
+Android APK와 iOS 산출물의 SHA는 기록하지 않았고 `build/`는 추적하지 않으므로, 이 산출물은 커밋과 연결되지 않으며 M0-05 증거로는 재수행이 필요합니다.
 iOS 빌드의 Info.plist는 양 가로 방향만 포함하며 Android manifest의 `screenOrientation` 값은 `0xb`입니다.
 Android APK의 확인된 application ID는 `kr.donminzzi.chefalmandodev`, 버전은 `0.0.1` build `1`, ABI는 `arm64-v8a`입니다.
 
 Android export에서는 로컬 debug keystore의 경로·사용자·비밀번호를 `GODOT_ANDROID_KEYSTORE_DEBUG_PATH`, `GODOT_ANDROID_KEYSTORE_DEBUG_USER`, `GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD`로 함께 전달합니다.
 셋 중 일부만 전달하면 Godot이 설정 오류로 거부합니다.
+
+아래 iOS export는 명세와 preset의 `build/ios/` 대신 `build/ios-final/`을 사용했습니다.
+재현할 때는 명세의 경로를 사용하고 `xcodebuild`의 `-project`와 `-derivedDataPath`를 그에 맞춥니다.
 
 ```bash
 "$GODOT_BIN" --headless --path . --export-debug Android build/android/chef-al-mando.apk
@@ -90,6 +94,7 @@ AGENTS.md 변경 후 실행한 `codex doctor --summary --ascii --no-color`는 �
 
 ## 남은 수용 기준
 
+- 명세 경로로 export를 재수행하고 산출물 SHA를 기록합니다.
 - iPhone에서 최종 빌드의 화면 표시를 확인합니다.
 - iPhone에서 시작 후 10초 배경 전환·복귀 시 카운터 정지 유지와 명시적 재개를 확인합니다.
 - iPhone 양 가로 방향의 안전 영역과 터치 입력을 확인합니다.
