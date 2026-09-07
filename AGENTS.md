@@ -34,7 +34,8 @@ The M0 implementation specification pins the Godot version recorded in `.godot-v
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
 
 On 2026-09-07, the operator approved M0 preparation before an Android reference device is available.
-After the iPhone revalidation passed, the operator also approved M1 implementation while Android physical-device verification remains deferred.
+After the initial iPhone observations, the operator also approved M1 implementation while Android physical-device verification remains deferred.
+Instrumented input-count verification on iPhone remains pending.
 This exception permits M1 implementation and its available local, export, and iPhone checks.
 M0 approval and full M1 acceptance still require the deferred Android physical-device evidence.
 
