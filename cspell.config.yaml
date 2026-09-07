@@ -1,11 +1,20 @@
 version: "0.2"
-ignorePaths: []
+ignorePaths:
+  - "**/*.uid"
 dictionaryDefinitions:
   - name: cucciolo-dictionary
     path: ./.cspell/cucciolo-dictionary.txt
     addWords: true
 dictionaries:
   - cucciolo-dictionary
-words: [cucciolo, mando]
+  - game-development
+  - shellscript
+  - fonts
+  - cpp-compound-words
+words:
+  - cucciolo
+  - mando
+  - chefalmando
+  - chefalmandodev
 ignoreWords: []
 import: []
