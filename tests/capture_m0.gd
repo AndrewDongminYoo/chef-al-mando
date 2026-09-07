@@ -66,6 +66,7 @@ func click(button: Button) -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.position = point
 	Input.parse_input_event(motion)
+	await process_frame
 	await tap(point, _mouse_event)
 
 
