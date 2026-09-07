@@ -2,7 +2,7 @@
 
 <!-- cspell:words aapt androiddebugkey apksigner -->
 
-작성일: 2026-09-07 · 상태: 로컬·iPhone 재검증 통과, Android 실기기 대기
+작성일: 2026-09-07 · 상태: 로컬 통과, iPhone 입력 횟수 추가 검증 대기, Android 실기기 대기
 
 ## 범위와 소스
 
@@ -109,12 +109,12 @@ shasum -a 256 build/android/chef-al-mando.apk build/ios/chef_al_mando.app.zip \
 아래 SHA-256은 이번 산출물을 식별하며 재빌드의 바이트 일치를 보장하지 않습니다.
 ZIP은 설치한 `.app` 번들을 보관한 파일이며 스토어 배포용 IPA가 아닙니다.
 
-| 산출물                            | SHA-256                                                            |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `build/android/chef-al-mando.apk` | `8ce2f8e2a791d361aca3b2377363b9512feaa007bd990287debb0fd483e319b7` |
-| `build/ios/chef_al_mando.app.zip` | `d7f5bd68eaecc116c3a99725c7a2ac52cb60ab6acdeaf01a95422b152fa69a2f` |
-| `.app/chef_al_mando` 실행 파일    | `a9c461ecf083595378d839d05543f3827aa297942f76406183272e5e895da08e` |
-| `.app/chef_al_mando.pck` 리소스   | `23bf5fe610589823a460fc6c9152a9866e6b3c63d9f9827d7a938c82de100060` |
+| 산출물                          | SHA-256                                                            |
+| ------------------------------- | ------------------------------------------------------------------ |
+| `build/android/m0-e5df74d.apk`  | `8ce2f8e2a791d361aca3b2377363b9512feaa007bd990287debb0fd483e319b7` |
+| `build/ios/m0-e5df74d.app.zip`  | `d7f5bd68eaecc116c3a99725c7a2ac52cb60ab6acdeaf01a95422b152fa69a2f` |
+| `.app/chef_al_mando` 실행 파일  | `a9c461ecf083595378d839d05543f3827aa297942f76406183272e5e895da08e` |
+| `.app/chef_al_mando.pck` 리소스 | `23bf5fe610589823a460fc6c9152a9866e6b3c63d9f9827d7a938c82de100060` |
 
 APK 크기는 28,374,119바이트이고 ZIP 크기는 28,685,742바이트입니다.
 export·빌드 로그는 같은 worktree의 `build/check/android-export.log`, `ios-export.log`, `ios-build.log`에 보관합니다.
@@ -135,7 +135,7 @@ xcrun devicectl device info apps --device "$IOS_DEVICE_ID" \
 ```
 
 설치 후 재조회에서 `Chef al Mando`, `kr.donminzzi.chefalmandodev`, `0.0.1 (1)`을 확인했습니다.
-iPhone에는 이 개발 빌드를 남깁니다.
+이 설치 이후 입력 진단 빌드를 추가 설치했으며 현재 상태는 다음 절에 기록합니다.
 설치·프로세스 실행 성공은 화면 표시나 실제 OS 생명주기 검증을 대신하지 않습니다.
 운영자가 이 설치 빌드에서 아래 절차를 직접 수행하고 통과를 확인했습니다.
 아래 결과는 운영자의 실기기 관찰이며 자동화 로그나 에이전트의 화면 캡처 결과가 아닙니다.
@@ -147,7 +147,35 @@ iPhone에는 이 개발 빌드를 남깁니다.
 | M0-04       | 진행 중 10초 이상 배경 전환 후 복귀, 명시적 재개 전 카운터 유지 | 복귀 `009.2초` → 10초 뒤 `009.2초` |
 | M0-04       | 재개 탭 후 카운터 진행                                          | 명시적 재개 후 증가                |
 
-iPhone 재검증은 통과했지만 Android 실기기 증거가 없어 M0 전체 통과와 M0-05의 기기별 실행 기록은 미완료입니다.
+위 관찰은 표시·상태 전이·생명주기를 확인합니다.
+상태 변경을 무시하는 중복 호출도 있을 수 있으므로 탭 반응만으로 버튼 신호가 정확히 한 번 발생했는지는 판별할 수 없습니다.
+PR #2 리뷰에 따라 M0-03 입력 횟수 계측을 추가하며 전체 기기 수용 기준은 미완료로 유지합니다.
+
+## 입력 횟수 계측 후속 검증
+
+소스 `37684b6d733510f56b7a5b3a01730f4c745065e7`은 시작·일시정지·재개 버튼의 `pressed` 신호를 상태 검사보다 먼저 셉니다.
+debug 빌드는 `M0_INPUT action=... total=...`을 출력하므로 상태 변경이 무시되는 중복 신호도 횟수에 남습니다.
+로컬 M0 검사는 이 동작을 포함해 25개를 통과했습니다.
+렌더링 검사는 마우스 이벤트 3회와 주입한 touch 이벤트 1회에서 합계 4회가 기록되고 입력 실패 0건임을 확인했습니다.
+이 결과는 설치한 iPhone에서의 실제 손가락 탭 횟수를 대신하지 않습니다.
+
+같은 소스로 Android·iOS export와 iOS 개발 서명 빌드를 재수행했습니다.
+두 export, Xcode 빌드, `apksigner`와 `codesign` 서명 검사는 모두 종료 코드 0입니다.
+로그는 `build/check/android-input-export.log`, `ios-input-export.log`, `ios-input-build.log`에 있습니다.
+이전 APK와 앱 ZIP은 위의 `m0-e5df74d` 이름으로 보관했습니다.
+
+| 새 산출물                               | SHA-256                                                            |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `build/android/chef-al-mando.apk`       | `a30a40ee5d454fc2f756ce6b1aa0cf8157aef0f4003ea75e49dfc565eaeb49ef` |
+| `build/ios/chef-al-mando-input.app.zip` | `1defc9b9813c71ce8e815b168539e75e8e473e6e9b776f4d477ab7a412294bfc` |
+| `.app/chef_al_mando` 실행 파일          | `21740aa54a6ddf980b7f192876bc180ac938e7b119d7118d9e12be3892b2a5df` |
+| `.app/chef_al_mando.pck` 리소스         | `092e42ec70ec96773eb0f2e553aede19cefe23b71111bfb4b3a358ea5c929913` |
+
+iPhone에 기존 앱 위로 새 진단 빌드를 설치하는 작업은 성공했습니다.
+이후 콘솔을 연결하는 실행은 기기 잠금으로 `Locked` 오류가 발생했으며 입력 로그를 얻지 못했습니다.
+현재 iPhone에는 `37684b6` 진단 빌드가 설치돼 있습니다.
+잠금 해제 후 앱을 실행하여 실제 시작·정지·재개 탭 횟수와 `M0_INPUT` 로그를 대조해야 합니다.
+새 빌드의 양 가로 방향·10초 배경 전환·수동 재개도 함께 재확인합니다.
 
 ## 이전 에이전트 설정 진단
 
@@ -157,7 +185,8 @@ AGENTS.md 변경 후 실행한 `codex doctor --summary --ascii --no-color`는 �
 
 ## 남은 수용 기준
 
+- iPhone 진단 빌드에서 실제 탭 횟수와 입력 로그를 대조하고 표시·생명주기를 재확인합니다.
 - Android 구매 후 기종·OS를 기록하고 설치 빌드에서 M0-01~M0-04를 검증합니다.
 - Android에 실제 설치한 산출물의 SHA와 실행 기록으로 M0-05의 남은 기기 증거를 보완합니다.
 
-M0 전체 통과, M1 구현, 출시 빌드 검증을 완료한 것으로 보고하지 않습니다.
+M0 전체 통과와 출시 빌드 검증을 완료한 것으로 보고하지 않습니다.
