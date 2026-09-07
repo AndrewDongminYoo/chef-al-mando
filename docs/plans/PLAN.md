@@ -358,13 +358,14 @@ M2의 사용자 5명 검증은 방향성 검증입니다.
 이 추가 예외는 Android 검증 보류를 유지한 프렙·배치·원인 분석·대표 아트 구현과 가용한 검증을 허용합니다.
 M0·M1 양 플랫폼 전체 수용 기준과 M2 사용자 5명의 재미 검증은 별도로 남습니다.
 
-현재 저장소에는 M0·M1 검증 runner와 Android·iOS export preset이 있습니다.
+현재 저장소에는 M0·M1·M2 검증 runner와 Android·iOS export preset이 있습니다.
 M0와 M1의 검증 명령 계약은 [구현 명세](../specs/m0-m1.md)에 정의했습니다.
 M0 로컬 검사와 실제 기기 검증 결과는 [M0 실행 기록](../notes/m0-verification.md)에 구분하여 기록합니다.
 M1은 `bash scripts/check.sh m1`으로 콘텐츠·규칙·결정론·화면 명령을 검사하며, `bash scripts/check-export.sh`로 내보낸 팩의 준비 화면과 첫 주문 실행을 확인합니다.
 M1의 설치 빌드와 남은 실기기 수용 기준은 [M1 실행 기록](../notes/m1-verification.md)에 구분하여 기록합니다.
 M2의 fixture·검사 명령·수동 증거 형식은 [M2 구현 명세](../specs/m2-preparation.md)에서 고정했습니다.
-M2 runner는 구현 후 실제 결과를 기록하며 명령 정의만으로 통과했다고 판단하지 않습니다.
+M2의 로컬 검사·선택 비교·export·기기 상태는 [M2 실행 기록](../notes/m2-verification.md)에 구분하여 기록합니다.
+자동 검사나 명령 정의만으로 M2 사용자 검증이 통과했다고 판단하지 않습니다.
 M3부터 M5의 정확한 검증 명령은 현재 `[UNKNOWN]`입니다.
 Android 실기기는 구매 예정이며 Android 기종·OS 확정과 실제 실행은 대기 상태입니다.
 각 후속 단계의 구현 명세도 해당 단계의 코드 작업 전에 정확한 명령, fixture, 수동 증거 형식을 고정해야 합니다.
