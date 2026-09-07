@@ -70,6 +70,17 @@ func _test_m1_process_chain() -> void:
 	var processes: Array = recipe.get("processes")
 	processes.reverse()
 	expect(data.call("validate").is_empty(), "process references determine chain order independently of the resource array")
+	for phase_index: int in range(3):
+		data = fresh()
+		recipe = data.get("recipes")[0]
+		processes = recipe.get("processes")
+		processes[phase_index].set("station_role", ["cold", "hot", "storage"][phase_index])
+		expect(not data.call("validate").is_empty(), "each M1 phase must use its assigned station role: " + str(phase_index))
+	data = fresh()
+	recipe = data.get("recipes")[0]
+	recipe.set("cook_role", "storage")
+	recipe.get("processes")[1].set("station_role", "storage")
+	expect(not data.call("validate").is_empty(), "a recipe cannot use storage as its cooking role")
 
 
 func _test_invalid_content() -> void:
@@ -131,6 +142,10 @@ func _test_invalid_content() -> void:
 	var stations: Array = data.get("stations")
 	stations[0].set("work_position", Vector2i(0, 0))
 	expect(not data.call("validate").is_empty(), "a work position on a wall must be rejected")
+	for outside_tile: Vector2i in [Vector2i(-1, 1), Vector2i(12, 1), Vector2i(1, -1), Vector2i(1, 8)]:
+		data = fresh()
+		data.get("stations")[0].set("tile", outside_tile)
+		expect(not data.call("validate").is_empty(), "a station outside the kitchen grid must be rejected: " + str(outside_tile))
 	data = fresh()
 	var obstacles: Array[Vector2i] = [Vector2i(1, 2), Vector2i(3, 2), Vector2i(2, 3)]
 	data.set("extra_obstacles", obstacles)

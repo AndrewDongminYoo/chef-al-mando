@@ -54,7 +54,7 @@ func validate() -> Array[String]:
 	for recipe: RecipeDef in recipes:
 		if recipe == null:
 			continue
-		if recipe.revenue < 0 or recipe.patience_ticks <= 0 or not roles.has(recipe.cook_role):
+		if recipe.revenue < 0 or recipe.patience_ticks <= 0 or recipe.cook_role not in ["cold", "hot"] or not roles.has(recipe.cook_role):
 			errors.append("invalid recipe values: " + recipe.id)
 		for ingredient_id: String in recipe.ingredients:
 			if not ingredient_ids.has(ingredient_id) or recipe.ingredients[ingredient_id] < 0:
@@ -69,11 +69,14 @@ func validate() -> Array[String]:
 				process_ids.append(process.id)
 			if process_ids != ["pickup", "cook", "serve"]:
 				errors.append("M1 processes must follow pickup, cook, serve: " + recipe.id)
+		var phase_roles := {"pickup": "storage", "cook": recipe.cook_role, "serve": "pass"}
 		for process: RecipeDef.ProcessDef in recipe.processes:
 			if process == null:
 				continue
 			if process.duration_ticks <= 0 or not roles.has(process.station_role):
 				errors.append("invalid process duration or station role: " + process.id)
+			if phase_roles.has(process.id) and process.station_role != phase_roles[process.id]:
+				errors.append("incorrect station role for M1 process: " + process.id)
 	if menu_ids.is_empty():
 		errors.append("scenario menus must not be empty")
 	for recipe_id: String in menu_ids:
@@ -95,6 +98,8 @@ func validate() -> Array[String]:
 	for station: StationDef in stations:
 		if station == null:
 			continue
+		if not Rect2i(Vector2i.ZERO, grid_size).has_point(station.tile):
+			errors.append("station tile is outside the kitchen: " + station.id)
 		if reference_station == null:
 			reference_station = station
 		elif routes.path_between(reference_station.work_position, station.work_position).is_empty():
