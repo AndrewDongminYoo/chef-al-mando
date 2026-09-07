@@ -135,6 +135,14 @@ func _test_invalid_content() -> void:
 	var obstacles: Array[Vector2i] = [Vector2i(1, 2), Vector2i(3, 2), Vector2i(2, 3)]
 	data.set("extra_obstacles", obstacles)
 	expect(not data.call("validate").is_empty(), "a station unreachable from every employee must be rejected")
+	data = fresh()
+	var employees: Array = data.get("employees")
+	employees[1].set("starting_tile", Vector2i(6, 4))
+	obstacles = []
+	for y: int in range(1, 7):
+		obstacles.append(Vector2i(4, y))
+	data.set("extra_obstacles", obstacles)
+	expect(not data.call("validate").is_empty(), "stations reached by separate employees must still form a connected kitchen")
 	expect(fresh().call("validate").is_empty(), "invalid fixtures must not mutate the saved kitchen")
 
 

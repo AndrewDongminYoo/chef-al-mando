@@ -91,9 +91,14 @@ func validate() -> Array[String]:
 	for employee: EmployeeDef in employees:
 		if employee != null and not routes.is_walkable(employee.starting_tile):
 			errors.append("invalid employee starting tile: " + employee.id)
+	var reference_station: StationDef = null
 	for station: StationDef in stations:
 		if station == null:
 			continue
+		if reference_station == null:
+			reference_station = station
+		elif routes.path_between(reference_station.work_position, station.work_position).is_empty():
+			errors.append("station is disconnected from the kitchen: " + station.id)
 		var reachable: bool = false
 		for employee: EmployeeDef in employees:
 			if employee != null and not routes.path_between(employee.starting_tile, station.work_position).is_empty():
