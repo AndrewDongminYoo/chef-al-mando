@@ -228,14 +228,16 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 			return result
 		duties[employee_id] = duty
 	if require_stock:
+		var available := inventory.duplicate()
 		for recipe_id: String in data.menu_ids:
 			var recipe := data.recipe_for(recipe_id)
 			if inventory.get(recipe.prepared_ingredient_id, 0) > 0:
 				continue
 			for ingredient_id: String in recipe.ingredients:
-				if inventory[ingredient_id] < recipe.ingredients[ingredient_id]:
+				if available[ingredient_id] < recipe.ingredients[ingredient_id]:
 					errors.append("menu_missing_ingredients")
-					break
+					return result
+				available[ingredient_id] -= recipe.ingredients[ingredient_id]
 	return result
 
 

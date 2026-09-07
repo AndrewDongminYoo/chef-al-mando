@@ -14,6 +14,7 @@ func run(_tree: SceneTree) -> void:
 	_test_conversion_and_commit()
 	_test_budget_and_invalid_commands()
 	_test_shared_raw_stock()
+	_test_raw_menu_coverage()
 	_test_placement()
 	_test_source_isolation_and_restart()
 	_test_invalid_content()
@@ -86,6 +87,23 @@ func _test_shared_raw_stock() -> void:
 	expect(command(plan, "set_purchase", "vegetable", 3, 2).accepted, "purchasing one more vegetable restores menu coverage")
 	expect(view(plan).can_start and view(plan).inventory.vegetable == 1, "coverage uses the remaining raw and prepared inventory")
 	expect(command(plan, "start", "", null, 3).accepted, "mixed raw and prepared menu coverage can start service")
+
+
+func _test_raw_menu_coverage() -> void:
+	for reverse_menus: bool in [false, true]:
+		var data := fresh()
+		data.purchases = {"vegetable": 2, "grain": 1, "protein": 1}
+		if reverse_menus:
+			data.menu_ids.reverse()
+		var plan: RefCounted = plan_script.new(data)
+		var before := JSON.stringify(view(plan), "", true)
+		expect(not view(plan).can_start and "menu_missing_ingredients" in view(plan).errors, "raw menus cannot reuse the same vegetable for minimum coverage")
+		var rejected := command(plan, "start", "", null, 1)
+		expect(not rejected.accepted and rejected.reason == "menu_missing_ingredients", "shared raw stock shortage rejects service start")
+		expect(JSON.stringify(view(plan), "", true) == before, "coverage rejection preserves inventory, choices, sequence, and commit state")
+		expect(command(plan, "set_purchase", "vegetable", 3, 1).accepted and view(plan).can_start, "exact combined raw stock covers every menu in either order")
+		var started := command(plan, "start", "", null, 2)
+		expect(started.accepted and started.inventory.vegetable == 3 and started.inventory.grain == 1 and started.inventory.protein == 1, "coverage validation does not consume the committed inventory")
 
 
 func _test_placement() -> void:
