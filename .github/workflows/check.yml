@@ -33,3 +33,5 @@ jobs:
         run: bash scripts/check.sh m0
       - name: Check M1
         run: bash scripts/check.sh m1
+      - name: Check exported M1
+        run: bash scripts/check-export.sh
