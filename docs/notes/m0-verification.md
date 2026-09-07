@@ -99,6 +99,6 @@ AGENTS.md 변경 후 실행한 `codex doctor --summary --ascii --no-color`는 �
 - iPhone에서 시작 후 10초 배경 전환·복귀 시 카운터 정지 유지와 명시적 재개를 확인합니다.
 - iPhone 양 가로 방향의 안전 영역과 터치 입력을 확인합니다.
 - Android 구매 후 같은 기기 검증을 수행합니다.
-- GitHub hosted CI는 아직 실행하지 않았습니다.
+- GitHub hosted CI의 `m0`는 [PR #1 실행](https://github.com/AndrewDongminYoo/chef-al-mando/actions/runs/34109482325)(head `db2d969`)과 [머지 후 실행](https://github.com/AndrewDongminYoo/chef-al-mando/actions/runs/34111924984)(`e5df74d`)에서 성공했으며, 검증 범위는 Linux의 `bash scripts/check.sh m0`이고 모바일 export와 실기기 동작은 포함하지 않습니다.
 
 M0 전체 통과, M1 구현, 출시 빌드 검증을 완료한 것으로 보고하지 않습니다.
