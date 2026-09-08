@@ -35,5 +35,7 @@ jobs:
         run: bash scripts/check.sh m1
       - name: Check M2
         run: bash scripts/check.sh m2
+      - name: Check export failure handling
+        run: python3 tests/test_export_check.py
       - name: Check exported M1 and M2
         run: bash scripts/check-export.sh
