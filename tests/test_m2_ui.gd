@@ -49,6 +49,7 @@ func run(tree: SceneTree) -> void:
 	screen.queue_free()
 	await tree.process_frame
 	await _extra_menu(tree)
+	await _custom_ingredients(tree)
 
 
 func _extra_menu(tree: SceneTree) -> void:
@@ -67,3 +68,41 @@ func _extra_menu(tree: SceneTree) -> void:
 	expect(screen.get("simulation").snapshot().orders[0].state == "served", "the displayed fourth-menu order actually serves")
 	screen.queue_free()
 	await tree.process_frame
+
+
+func _custom_ingredients(tree: SceneTree) -> void:
+	for source_path: String in ["res://content/m1_first_service.tres", "res://content/m2_first_service.tres"]:
+		var data: Resource = load(source_path).duplicate(true)
+		var ingredient: Resource = data.call("ingredient_for", "vegetable")
+		ingredient.set("id", "greens")
+		ingredient.set("display_name", "잎채소")
+		data.get("purchases")["greens"] = data.get("purchases")["vegetable"]
+		data.get("purchases").erase("vegetable")
+		for recipe: Resource in data.get("recipes"):
+			var inputs: Dictionary = recipe.get("ingredients")
+			if inputs.has("vegetable"):
+				inputs["greens"] = inputs["vegetable"]
+				inputs.erase("vegetable")
+		var oil: Resource = load("res://content/ingredient_def.gd").new()
+		oil.set("id", "oil")
+		oil.set("display_name", "식용유")
+		data.get("ingredients").append(oil)
+		expect(data.call("validate").is_empty(), "the custom ingredient fixture is valid for service")
+		var fixture_path: String = "user://test_summary_%s.tres" % data.get("id")
+		expect(ResourceSaver.save(data, fixture_path) == OK, "the custom ingredient fixture is saved for the real scene")
+		var screen := boot_main(tree, fixture_path)
+		await tree.process_frame
+		if data.call("supports_preparation"):
+			expect(screen.get("preparation_panel").purchase_labels.greens.text.contains("잎채소"), "preparation names a renamed raw ingredient")
+		else:
+			expect(screen.get("summary_label").text.contains("잎채소 22") and screen.get("summary_label").text.contains("식용유 0"), "ready summary lists custom raw ingredients including those with no purchases")
+		screen.get("start_button").pressed.emit()
+		screen.call("advance", 20.0)
+		var snapshot: Dictionary = screen.get("simulation").snapshot()
+		expect(snapshot.orders[0].state == "served", "a recipe using the renamed ingredient actually serves")
+		var summary: String = screen.get("summary_label").text
+		expect(summary.contains("잎채소 %d" % snapshot.inventory.greens) and summary.contains("식용유 0"), "service summary shows the actual custom raw stock")
+		expect(not summary.contains("손질한"), "raw stock summary excludes prepared ingredient definitions")
+		screen.queue_free()
+		await tree.process_frame
+		DirAccess.remove_absolute(fixture_path)

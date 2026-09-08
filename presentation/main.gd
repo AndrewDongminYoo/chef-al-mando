@@ -421,15 +421,23 @@ func _show_summary() -> void:
 		var menus: PackedStringArray = []
 		for recipe_id: String in definitions.menu_ids:
 			menus.append(definitions.recipe_for(recipe_id).display_name)
-		summary_label.text = "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n채소 %d · 곡물 %d · 단백질 %d · 주문 %d건" % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), latest_view.inventory.vegetable, latest_view.inventory.grain, latest_view.inventory.protein, definitions.order_count]
+		summary_label.text = "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건" % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), _raw_stock(" · "), definitions.order_count]
 	else:
-		summary_label.text = "제공 %d건 · 매출 %s\n남은 재료 · 채소 %d / 곡물 %d / 단백질 %d" % [accounting.served, _money(accounting.revenue), latest_view.inventory.vegetable, latest_view.inventory.grain, latest_view.inventory.protein]
+		summary_label.text = "제공 %d건 · 매출 %s\n남은 재료 · %s" % [accounting.served, _money(accounting.revenue), _raw_stock(" / ")]
 		if preparation != null:
 			var prepared: PackedStringArray = []
 			for recipe_id: String in definitions.menu_ids:
 				var recipe := definitions.recipe_for(recipe_id)
 				prepared.append("%s %d" % [recipe.display_name, latest_view.inventory.get(recipe.prepared_ingredient_id, 0)])
 			summary_label.text += "\n프렙 · " + " / ".join(prepared)
+
+
+func _raw_stock(separator: String) -> String:
+	var quantities: PackedStringArray = []
+	for ingredient: Definitions.IngredientDef in definitions.ingredients:
+		if ingredient.purchasable:
+			quantities.append("%s %d" % [ingredient.display_name, latest_view.inventory.get(ingredient.id, 0)])
+	return separator.join(quantities)
 
 
 func _show_analysis() -> void:
