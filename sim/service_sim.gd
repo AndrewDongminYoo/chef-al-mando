@@ -122,7 +122,9 @@ func enqueue_command(command: Dictionary) -> Dictionary:
 	var reason := _validate_command(command, true)
 	if not reason.is_empty():
 		return {"accepted": false, "reason": reason}
-	_commands.append(command.duplicate(true))
+	_commands.append({"kind": command.kind, "target_id": command.target_id,
+		"value": null if command.kind == "cancel_order" else command.value,
+		"apply_tick": command.apply_tick, "sequence": command.sequence})
 	_last_sequence = command.sequence
 	_commands.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a.sequence < b.sequence if a.apply_tick == b.apply_tick else a.apply_tick < b.apply_tick)
@@ -707,6 +709,9 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 	if state.closed:
 		if not state.tasks.is_empty() or not state.commands.is_empty():
 			return "invalid_closing_state"
+		for saved_order: Dictionary in state.orders:
+			if saved_order.state not in TERMINAL:
+				return "invalid_closing_state"
 		for value: Variant in state.reserved.values():
 			if value != 0:
 				return "invalid_closing_state"
@@ -793,9 +798,17 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 	if saved_order.state in TERMINAL:
 		if saved_order.ended_tick < saved_order.arrival_tick or saved_order.ended_tick > state.tick:
 			return "invalid_order"
+		if saved_order.state == "served" and saved_order.ended_tick >= saved_order.deadline_tick:
+			return "invalid_order"
 		if saved_order.state == "cancelled" and saved_order.terminal_reason != "player_cancelled":
 			return "invalid_order"
 		if saved_order.state == "expired" and saved_order.terminal_reason not in ["deadline", "service_closed"]:
+			return "invalid_order"
+		if saved_order.state == "expired" and saved_order.terminal_reason == "deadline" \
+			and saved_order.ended_tick != saved_order.deadline_tick:
+			return "invalid_order"
+		if saved_order.state == "expired" and saved_order.terminal_reason == "service_closed" \
+			and saved_order.ended_tick != data.closing_tick:
 			return "invalid_order"
 	else:
 		if not saved_order.terminal_reason.is_empty() or saved_order.ended_tick != -1:
@@ -834,6 +847,21 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			return "invalid_reservation"
 	if saved_order.carrying and (saved_order.state != "moving" or not saved_order.has_result):
 		return "invalid_order"
+	if saved_order.state in ["waiting", "moving", "working"] and saved_order.phase_index > 0 \
+		and not saved_order.has_result:
+		return "invalid_order"
+	if saved_order.state == "waiting" and saved_order.phase_index > 0:
+		var completed_preparation: bool = saved_order.uses_prepared
+		var completed_cooking: bool = false
+		for index: int in saved_order.phase_index:
+			completed_preparation = completed_preparation or phases[index].id == "prep"
+			completed_cooking = completed_cooking or phases[index].id == "cook"
+		var has_intermediate: bool = not recipe.prepared_ingredient_id.is_empty()
+		var expected_intermediate_ready: bool = has_intermediate and completed_preparation and not completed_cooking
+		var expected_intermediate_consumed: bool = has_intermediate and completed_cooking
+		if saved_order.intermediate_ready != expected_intermediate_ready \
+			or saved_order.intermediate_consumed != expected_intermediate_consumed:
+			return "invalid_consumption"
 	if saved_order.has_result and not routes.is_walkable(_array_tile(saved_order.result_position)):
 		return "invalid_order"
 	if saved_order.intermediate_ready and saved_order.intermediate_consumed:
@@ -933,9 +961,11 @@ static func _employees_restore_error(data: Definitions, routes: GridRoutes, empl
 				return "invalid_path"
 			if task.started_tick >= 0 and saved_employee.progress != 0:
 				return "invalid_employee"
-		employee_by_id[saved_employee.id] = true
+		employee_by_id[saved_employee.id] = saved_employee
 	for task: Dictionary in task_by_order.values():
-		if not employee_by_id.has(task.employee_id):
+		if not order_ids.has(task.order_id) or not employee_by_id.has(task.employee_id):
+			return "invalid_task_link"
+		if employee_by_id[task.employee_id].order_id != task.order_id:
 			return "invalid_task_link"
 	return ""
 

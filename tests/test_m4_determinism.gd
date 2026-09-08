@@ -29,6 +29,10 @@ func run(_tree: SceneTree) -> void:
 	_test_inventory_corruption(started.definitions, started.options, original, service_sim_script)
 	_test_corruption_table(started.definitions, started.options, original, service_sim_script)
 	_test_identity_and_type_corruption(started.definitions, started.options, service_sim_script)
+	_test_task_back_references(started.definitions, started.options, service_sim_script)
+	_test_between_process_waiting(service_sim_script)
+	_test_terminal_relationships(service_sim_script)
+	_test_command_canonicalization(service_sim_script)
 	_test_restore_checkpoints(service_sim_script)
 
 
@@ -152,6 +156,240 @@ func _test_identity_and_type_corruption(data: Resource, preparation: Dictionary,
 	var terminal_result: Variant = service_sim_script.call("restore", data, invalid_ended_tick, preparation)
 	expect(terminal_result is Dictionary and not terminal_result.get("accepted", false),
 		"restore rejects a malformed terminal tick without a runtime error")
+
+
+func _test_task_back_references(data: Resource, preparation: Dictionary, service_sim_script: GDScript) -> void:
+	var working := _advance_until_working(data, preparation)
+	var working_state: Dictionary = working.export_state()
+	var task: Dictionary = working_state.tasks[0]
+	var worker: Dictionary = {}
+	for employee: Dictionary in working_state.employees:
+		if employee.id == task.employee_id:
+			worker = employee
+			break
+	expect(not worker.is_empty() and worker.progress == 0 and worker.tile == worker.next_tile
+		and worker.order_id == task.order_id, "the back-reference fixture is valid active work")
+	worker.order_id = ""
+	var missing_back_reference: Dictionary = service_sim_script.call("restore", data, working_state, preparation)
+	expect(not missing_back_reference.get("accepted", false),
+		"restore rejects a working task whose employee lost the order back-reference")
+	var idle: RefCounted = service_sim_script.new(data, null, preparation)
+	var orphan_state: Dictionary = idle.export_state()
+	expect(orphan_state.orders.is_empty() and orphan_state.tasks.is_empty(), "the orphan fixture starts at an empty tick boundary")
+	orphan_state.tasks.append(task.duplicate(true))
+	var orphan_result: Dictionary = service_sim_script.call("restore", data, orphan_state, preparation)
+	expect(not orphan_result.get("accepted", false), "restore rejects a task that has no saved order")
+
+
+func _test_between_process_waiting(service_sim_script: GDScript) -> void:
+	for prepared: bool in [false, true]:
+		var fixture := _between_process_fixture(service_sim_script, prepared)
+		var simulation: RefCounted = fixture.simulation
+		var view: Dictionary = simulation.snapshot()
+		var waiting_order: Dictionary = view.orders[0]
+		expect(waiting_order.state == "waiting" and waiting_order.phase_index > 0 and waiting_order.has_result
+			and not waiting_order.carrying and view.tasks.is_empty(),
+			"the real between-process fixture waits with an uncollected result: " + str(prepared))
+		if prepared:
+			expect(waiting_order.uses_prepared and waiting_order.intermediate_ready
+				and not waiting_order.raw_consumed and not waiting_order.intermediate_consumed,
+				"the prepared fixture preserves its ready intermediate")
+		else:
+			expect(waiting_order.raw_consumed and not waiting_order.uses_prepared
+				and not waiting_order.intermediate_ready and not waiting_order.intermediate_consumed,
+				"the raw fixture preserves its pickup result before preparation")
+		var restored: Dictionary = service_sim_script.call("restore", fixture.definitions,
+			simulation.export_state(), fixture.options)
+		expect(restored.get("accepted", false) and restored.simulation.state_hash() == simulation.state_hash(),
+			"restore preserves a reachable between-process waiting state: " + str(prepared))
+		var lost_result: Dictionary = simulation.export_state()
+		lost_result.orders[0].has_result = false
+		var rejected: Dictionary = service_sim_script.call("restore", fixture.definitions, lost_result, fixture.options)
+		expect(not rejected.get("accepted", false),
+			"restore rejects a between-process order that lost its required result: " + str(prepared))
+		var invalid_intermediate: Dictionary = simulation.export_state()
+		invalid_intermediate.orders[0].intermediate_ready = not prepared
+		var invalid_intermediate_result: Dictionary = service_sim_script.call("restore", fixture.definitions,
+			invalid_intermediate, fixture.options)
+		expect(not invalid_intermediate_result.get("accepted", false),
+			"restore rejects unreachable between-process intermediate state: " + str(prepared))
+		for sequence: int in [3, 4]:
+			var employee_id := "employee_0%d" % (sequence - 2)
+			var command := {"kind": "set_duty", "target_id": employee_id, "value": "all",
+				"apply_tick": simulation.tick + 1, "sequence": sequence}
+			expect(simulation.enqueue_command(command).accepted and restored.simulation.enqueue_command(command).accepted,
+				"the resumed between-process fixture accepts the same duty command")
+		while simulation.tick < 600:
+			simulation.step()
+			restored.simulation.step()
+			var active_order: Dictionary = simulation.snapshot().orders[0]
+			if active_order.state == "moving" and active_order.phase_index > 0:
+				break
+		var moving_view: Dictionary = simulation.snapshot()
+		expect(moving_view.orders[0].state == "moving" and moving_view.orders[0].phase_index > 0
+			and moving_view.orders[0].has_result and moving_view.tasks[0].collection_index >= 0,
+			"the resumed fixture moves through a real result-collection path: " + str(prepared))
+		var skipped_collection: Dictionary = simulation.export_state()
+		skipped_collection.orders[0].has_result = false
+		skipped_collection.orders[0].carrying = false
+		skipped_collection.tasks[0].collection_index = -1
+		var skipped_collection_result: Dictionary = service_sim_script.call("restore", fixture.definitions,
+			skipped_collection, fixture.options)
+		expect(not skipped_collection_result.get("accepted", false),
+			"restore rejects a later-phase movement that skips result collection: " + str(prepared))
+		while not simulation.closed:
+			simulation.step()
+			restored.simulation.step()
+		expect(restored.simulation.state_hash() == simulation.state_hash(),
+			"between-process restore preserves the final hash: " + str(prepared))
+
+
+func _between_process_fixture(service_sim_script: GDScript, prepared: bool) -> Dictionary:
+	var plan := PreparationPlan.new(_fresh())
+	var preparation_sequence: int = 0
+	if prepared:
+		preparation_sequence = 1
+		expect(plan.apply_command({"kind": "set_prep", "target_id": "salad", "value": 1,
+			"apply_tick": 0, "sequence": preparation_sequence}).accepted,
+			"the between-process fixture prepares one salad")
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": preparation_sequence + 1})
+	expect(started.accepted, "the between-process fixture starts")
+	var simulation: RefCounted = service_sim_script.new(started.definitions, null, started.options)
+	while simulation.tick < 300 and (simulation.snapshot().orders.is_empty()
+		or simulation.snapshot().orders[0].state != "working"):
+		simulation.step()
+	expect(simulation.snapshot().orders[0].state == "working", "the between-process fixture reaches pickup work")
+	for sequence: int in [1, 2]:
+		var employee_id := "employee_0%d" % sequence
+		expect(simulation.enqueue_command({"kind": "set_duty", "target_id": employee_id, "value": "off",
+			"apply_tick": simulation.tick + 1, "sequence": sequence}).accepted,
+			"the between-process fixture schedules an off duty")
+	while simulation.tick < 500:
+		simulation.step()
+		var order: Dictionary = simulation.snapshot().orders[0]
+		if order.state == "waiting" and order.phase_index > 0:
+			break
+	return {"simulation": simulation, "definitions": started.definitions, "options": started.options}
+
+
+func _test_terminal_relationships(service_sim_script: GDScript) -> void:
+	var late := _single_order_fixture(service_sim_script, 2988)
+	while late.simulation.tick < 2999:
+		late.simulation.step()
+	var preclose: Dictionary = late.simulation.snapshot()
+	expect(not late.simulation.closed and late.simulation.tick == 2999 and preclose.tasks.size() == 1
+		and preclose.orders[0].state in ["moving", "working"] and preclose.orders[0].raw_consumed,
+		"the late-order fixture has consumed raw input and remains active one tick before closing")
+	var active_station_id: String = preclose.tasks[0].station_id
+	var resumed: Dictionary = service_sim_script.call("restore", late.definitions,
+		late.simulation.export_state(), late.options)
+	expect(resumed.get("accepted", false) and resumed.simulation.state_hash() == late.simulation.state_hash(),
+		"restore accepts the reachable raw-consuming pre-close state")
+	late.simulation.step()
+	resumed.simulation.step()
+	expect(late.simulation.closed and resumed.simulation.state_hash() == late.simulation.state_hash(),
+		"the restored raw-consuming pre-close state reaches the same final hash")
+	var closed_state: Dictionary = late.simulation.export_state()
+	var closed_order: Dictionary = closed_state.orders[0]
+	expect(closed_order.state == "expired" and closed_order.terminal_reason == "service_closed"
+		and closed_order.ended_tick == late.definitions.closing_tick and closed_state.tasks.is_empty(),
+		"the late order reaches a coherent service-close terminal state")
+	var active_closed := closed_state.duplicate(true)
+	active_closed.orders[0].state = "waiting"
+	active_closed.orders[0].terminal_reason = ""
+	active_closed.orders[0].ended_tick = -1
+	active_closed.orders[0].metrics.missing_ingredients += 1
+	var active_closed_result: Dictionary = service_sim_script.call("restore", late.definitions,
+		active_closed, late.options)
+	expect(not active_closed_result.get("accepted", false), "restore rejects an active order in a closed service")
+	var early_close := closed_state.duplicate(true)
+	expect(early_close.orders[0].metrics.working > 0, "the service-close fixture records active work before closing")
+	early_close.orders[0].ended_tick -= 1
+	early_close.orders[0].metrics.working -= 1
+	early_close.station_reserved_ticks[active_station_id] -= 1
+	var early_close_result: Dictionary = service_sim_script.call("restore", late.definitions, early_close, late.options)
+	expect(not early_close_result.get("accepted", false),
+		"restore ties a service-closed order's end tick to the closing tick")
+
+	var deadline := _single_order_fixture(service_sim_script, 10)
+	for sequence: int in [1, 2]:
+		var employee_id := "employee_0%d" % sequence
+		expect(deadline.simulation.enqueue_command({"kind": "set_duty", "target_id": employee_id,
+			"value": "off", "apply_tick": 1, "sequence": sequence}).accepted,
+			"the deadline fixture disables an employee")
+	while deadline.simulation.tick < deadline.definitions.order_schedule()[0].deadline_tick:
+		deadline.simulation.step()
+	var deadline_state: Dictionary = deadline.simulation.export_state()
+	var deadline_order: Dictionary = deadline_state.orders[0]
+	expect(deadline_order.state == "expired" and deadline_order.terminal_reason == "deadline"
+		and deadline_order.ended_tick == deadline_order.deadline_tick
+		and deadline_order.metrics.no_responsible_employee > 0,
+		"the deadline fixture reaches a coherent deadline terminal state")
+	deadline_order.ended_tick -= 1
+	deadline_order.metrics.no_responsible_employee -= 1
+	var deadline_result: Dictionary = service_sim_script.call("restore", deadline.definitions,
+		deadline_state, deadline.options)
+	expect(not deadline_result.get("accepted", false), "restore ties a deadline expiration to its deadline tick")
+
+	var served := _single_order_fixture(service_sim_script, 10)
+	var served_deadline: int = served.definitions.order_schedule()[0].deadline_tick
+	while served.simulation.tick < served_deadline:
+		served.simulation.step()
+	var served_state: Dictionary = served.simulation.export_state()
+	var served_order: Dictionary = served_state.orders[0]
+	expect(served_order.state == "served" and served_order.ended_tick < served_order.deadline_tick,
+		"the served fixture completes before its deadline")
+	served_order.metrics.missing_ingredients += served_order.deadline_tick - served_order.ended_tick
+	served_order.ended_tick = served_order.deadline_tick
+	var served_result: Dictionary = service_sim_script.call("restore", served.definitions,
+		served_state, served.options)
+	expect(not served_result.get("accepted", false), "restore rejects service recorded at or after the deadline")
+
+
+func _single_order_fixture(service_sim_script: GDScript, arrival_tick: int) -> Dictionary:
+	var data := _fresh()
+	data.order_count = 1
+	data.order_recipe_ids = PackedStringArray(["salad"])
+	data.first_arrival_tick = arrival_tick
+	data.minimum_served = 1
+	data.minimum_profit = -data.starting_budget
+	expect(data.validate(false).is_empty(), "the single-order restoration fixture is valid")
+	var plan := PreparationPlan.new(data)
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	expect(started.accepted, "the single-order restoration fixture starts")
+	return {"simulation": service_sim_script.new(started.definitions, null, started.options),
+		"definitions": started.definitions, "options": started.options}
+
+
+func _test_command_canonicalization(service_sim_script: GDScript) -> void:
+	var fixture := _single_order_fixture(service_sim_script, 10)
+	while fixture.simulation.snapshot().orders.is_empty():
+		fixture.simulation.step()
+	var command := {"kind": "cancel_order", "target_id": "order_01", "value": {"ignored": true},
+		"apply_tick": fixture.simulation.tick + 2, "sequence": 1, "extra": "discard"}
+	var original_command := command.duplicate(true)
+	expect(fixture.simulation.enqueue_command(command).accepted,
+		"the command API accepts a cancel value and an extra caller field")
+	expect(command == original_command, "command canonicalization leaves the caller's dictionary unchanged")
+	var exported: Dictionary = fixture.simulation.export_state()
+	var saved_command: Dictionary = exported.commands[0]
+	expect(saved_command.size() == 5 and saved_command.has("kind") and saved_command.has("target_id")
+		and saved_command.has("value") and saved_command.has("apply_tick") and saved_command.has("sequence")
+		and saved_command.value == null,
+		"an accepted command exports only authoritative fields with a canonical cancel value")
+	var restored: Dictionary = service_sim_script.call("restore", fixture.definitions, exported, fixture.options)
+	expect(restored.get("accepted", false), "restore accepts an exported command that the enqueue API accepted")
+	if not restored.get("accepted", false):
+		return
+	expect(restored.simulation.state_hash() == fixture.simulation.state_hash(),
+		"canonical command restoration preserves the immediate hash")
+	while not fixture.simulation.closed:
+		fixture.simulation.step()
+		restored.simulation.step()
+	expect(restored.simulation.state_hash() == fixture.simulation.state_hash(),
+		"canonical command restoration preserves the final hash")
 
 
 func _test_restore_checkpoints(service_sim_script: GDScript) -> void:
