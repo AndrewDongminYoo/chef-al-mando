@@ -511,8 +511,12 @@ func _resume_active_session() -> bool:
 
 
 func _save_checkpoint(_reason: String = "checkpoint") -> bool:
-	if session_only or active_service == null or active_service.last_preparation.is_empty():
-		return session_only
+	if session_only:
+		if active_service != null:
+			active_service.checkpoint_saved()
+		return true
+	if active_service == null or active_service.last_preparation.is_empty():
+		return false
 	var session := ServiceSession.capture(active_service.definitions.id, active_service.last_preparation,
 		active_service.simulation, active_service.driver.speed, active_service.driver.accumulator_us)
 	var result := store.save_active_session(session, progress.snapshot().records)

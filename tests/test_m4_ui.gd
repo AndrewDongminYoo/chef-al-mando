@@ -219,6 +219,7 @@ func run(tree: SceneTree) -> void:
 	await _test_service_locale_refresh(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
 	await _test_operational_option_popups(tree, entry, directory)
+	await _test_session_only_checkpoint_watermark(tree, entry, directory)
 	TranslationServer.set_locale("ko")
 	_cleanup(directory)
 
@@ -818,6 +819,63 @@ func _test_operational_option_popups(tree: SceneTree, entry: String, directory: 
 	expect(service.get("state") == 0 and _operational_popups_match(preparation_pickers, 26),
 		"preparation regeneration keeps normal station and duty popup rows")
 	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+
+func _test_session_only_checkpoint_watermark(tree: SceneTree, entry: String, directory: String) -> void:
+	var file_path := directory + "/session-only-watermark.json"
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	file.store_string("{broken")
+	file.close()
+	var original_bytes := FileAccess.get_file_as_bytes(file_path)
+	var screen := _boot(tree, entry, file_path, directory + "/session-only-watermark-settings.json")
+	await tree.process_frame
+	screen.get("session_only_button").pressed.emit()
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	var automatic_ticks: Array[int] = []
+	service.checkpoint_requested.connect(func(reason: String) -> void:
+		if reason == "automatic":
+			automatic_ticks.append(service.get("simulation").tick))
+	service.get("start_button").pressed.emit()
+	expect(screen.get("session_only") and service.get("last_saved_tick") == 0
+		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
+		"starting without saving advances the preparation checkpoint watermark without changing corrupt bytes")
+	for _tick: int in 200:
+		service.call("_process", 0.1)
+	expect(automatic_ticks == [100, 200] and service.get("last_saved_tick") == 200
+		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
+		"session-only automatic checkpoints run at ticks 100 and 200 without writing bytes")
+	for _tick: int in 50:
+		service.call("_process", 0.1)
+	service.get("pause_button").pressed.emit()
+	service.get("resume_button").pressed.emit()
+	for _tick: int in 99:
+		service.call("_process", 0.1)
+	expect(automatic_ticks == [100, 200] and service.get("last_saved_tick") == 250,
+		"a session-only pause preserves the automatic checkpoint cadence")
+	service.call("_process", 0.1)
+	expect(automatic_ticks == [100, 200, 350] and service.get("last_saved_tick") == 350
+		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
+		"the next session-only automatic checkpoint waits for tick 350 without writing bytes")
+	service.get("audio_feedback").set_enabled(false)
+	for _tick: int in 2650:
+		service.call("_process", 0.1)
+	var automatic_count_before_restart := automatic_ticks.size()
+	expect(automatic_count_before_restart == 29 and automatic_ticks[-1] == 2950,
+		"single-tick frames keep session-only automatic checkpoints on 100-tick boundaries before restart")
+	screen.get("result_dialog").hide()
+	service.get("restart_button").pressed.emit()
+	service.get("start_button").pressed.emit()
+	for _tick: int in 100:
+		service.call("_process", 0.1)
+	expect(automatic_ticks.size() == automatic_count_before_restart + 1 and automatic_ticks[-1] == 100
+		and service.get("last_saved_tick") == 100
+		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
+		"a session-only restart resets the watermark and keeps the corrupt bytes")
 	screen.queue_free()
 	await tree.process_frame
 	await tree.process_frame
