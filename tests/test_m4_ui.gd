@@ -460,6 +460,60 @@ func _test_lifecycle_audio(tree: SceneTree, entry: String, directory: String) ->
 	await tree.process_frame
 	await tree.process_frame
 
+	var closed_path := directory + "/lifecycle-closed.json"
+	screen = _boot(tree, entry, closed_path, directory + "/lifecycle-closed-settings.json")
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	service = screen.get("active_service")
+	service.set_process(false)
+	service.get("start_button").pressed.emit()
+	service.call("advance", 300.0)
+	var served := service.get_node("AudioFeedback/ServedPlayer") as AudioStreamPlayer
+	expect(service.get("state") == 3 and service.get("simulation").closed
+		and service.get("simulation").tick == 3000 and served.playing,
+		"one real advance closes service while its drained served event plays the product cue")
+	var closed_tick: int = service.get("simulation").tick
+	var closed_checkpoints := {"value": 0}
+	service.checkpoint_requested.connect(func(_reason: String) -> void: closed_checkpoints.value += 1)
+	service.get("lifecycle").call("_notification", Node.NOTIFICATION_APPLICATION_PAUSED)
+	expect(not served.playing and service.get("state") == 3
+		and service.get("simulation").tick == closed_tick and closed_checkpoints.value == 0,
+		"backgrounding a closed service stops its real served cue without changing state or checkpointing")
+	service.get("lifecycle").call("_notification", Node.NOTIFICATION_APPLICATION_RESUMED)
+	service.call("advance", 1.0)
+	expect(not served.playing and service.get("state") == 3
+		and service.get("simulation").tick == closed_tick and closed_checkpoints.value == 0,
+		"foregrounding a closed service does not replay audio or resume time")
+	service.get("audio_feedback").set_enabled(false)
+	await tree.create_timer(0.3).timeout
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+	var ready_path := directory + "/lifecycle-ready.json"
+	screen = _boot(tree, entry, ready_path, directory + "/lifecycle-ready-settings.json")
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	service = screen.get("active_service")
+	service.set_process(false)
+	var ready_checkpoints := {"value": 0}
+	service.checkpoint_requested.connect(func(_reason: String) -> void: ready_checkpoints.value += 1)
+	service.get("lifecycle").call("_notification", Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	service.get("lifecycle").call("_notification", Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	expect(service.get("state") == 0 and service.get("simulation").tick == 0
+		and ready_checkpoints.value == 0,
+		"backgrounding preparation does not start time or request a checkpoint")
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	var ready_arrival := service.get_node("AudioFeedback/ArrivalPlayer") as AudioStreamPlayer
+	expect(service.call("is_running") and service.get("simulation").tick == 10 and ready_arrival.playing,
+		"explicit Start after a preparation background transition enables the next real cue")
+	service.get("audio_feedback").set_enabled(false)
+	await tree.create_timer(0.3).timeout
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
 
 func _test_recovered_active_session(tree: SceneTree, entry: String, directory: String) -> void:
 	var file_path := directory + "/recovery.json"

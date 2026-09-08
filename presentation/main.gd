@@ -218,14 +218,15 @@ func _start() -> void:
 			driver = TickDriver.new(simulation)
 			board.selected_station_id = ""
 			_set_feedback("")
+		audio_feedback.resume()
 		_set_state(State.RUNNING)
 		checkpoint_requested.emit("preparation")
 
 
 func _pause() -> void:
+	audio_feedback.suspend()
 	if state == State.RUNNING:
 		_set_state(State.PAUSED)
-		audio_feedback.suspend()
 	elif state != State.PAUSED:
 		return
 	checkpoint_requested.emit("pause")
