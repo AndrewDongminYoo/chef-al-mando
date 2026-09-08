@@ -1,0 +1,87 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/employee_def.gd" id="1_svus2"]
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_w1nil"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_1d0o7"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_tfebx"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="5_ma4l5"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="6_0gwel"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_salad.tres" id="7_6rlua"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="8_8evkg"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="9_1ujmr"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/soup.tres" id="10_44a6k"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/grain_salad.tres" id="11_nfvh6"]
+[ext_resource type="Script" path="res://content/scenario_def.gd" id="12_flbmd"]
+[ext_resource type="Script" path="res://content/station_def.gd" id="13_wdji3"]
+
+[sub_resource type="Resource" id="Resource_rec7u"]
+script = ExtResource("1_svus2")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+[sub_resource type="Resource" id="Resource_0rakb"]
+script = ExtResource("1_svus2")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+[sub_resource type="Resource" id="Resource_si3dq"]
+script = ExtResource("13_wdji3")
+id = "storage_01"
+display_name = "재료"
+role = "storage"
+tile = Vector2i(2, 2)
+work_position = Vector2i(2, 3)
+
+[sub_resource type="Resource" id="Resource_h4qj2"]
+script = ExtResource("13_wdji3")
+id = "cold_01"
+display_name = "냉식"
+role = "cold"
+tile = Vector2i(5, 2)
+work_position = Vector2i(5, 3)
+
+[sub_resource type="Resource" id="Resource_jj3er"]
+script = ExtResource("13_wdji3")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(8, 2)
+work_position = Vector2i(8, 3)
+
+[sub_resource type="Resource" id="Resource_26ba3"]
+script = ExtResource("13_wdji3")
+id = "pass_01"
+display_name = "제공"
+role = "pass"
+tile = Vector2i(9, 5)
+work_position = Vector2i(9, 4)
+
+[resource]
+script = ExtResource("12_flbmd")
+display_name = "점심 전 준비"
+briefing = "수프의 손질은 샐러드보다 오래 걸립니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
+operation_problem = "프렙 배분"
+minimum_served = 14
+minimum_profit = 1000
+order_recipe_ids = PackedStringArray("salad", "soup", "grain_salad", "salad", "soup", "grain_salad", "salad", "soup", "grain_salad", "salad", "soup", "grain_salad", "salad", "soup", "grain_salad", "salad", "soup", "grain_salad")
+id = "lunch_prep"
+seed = 42
+closing_tick = 3000
+starting_budget = 7000
+labor_cost = 1800
+grid_size = Vector2i(12, 8)
+ingredients = Array[ExtResource("2_w1nil")]([ExtResource("3_1d0o7"), ExtResource("4_tfebx"), ExtResource("5_ma4l5"), ExtResource("6_0gwel"), ExtResource("7_6rlua")])
+recipes = Array[ExtResource("8_8evkg")]([ExtResource("9_1ujmr"), ExtResource("10_44a6k"), ExtResource("11_nfvh6")])
+stations = Array[ExtResource("13_wdji3")]([SubResource("Resource_si3dq"), SubResource("Resource_h4qj2"), SubResource("Resource_jj3er"), SubResource("Resource_26ba3")])
+employees = Array[ExtResource("1_svus2")]([SubResource("Resource_rec7u"), SubResource("Resource_0rakb")])
+purchases = Dictionary[String, int]({
+"grain": 12,
+"vegetable": 24
+})
+menu_ids = PackedStringArray("salad", "soup", "grain_salad")
+order_count = 18
+first_arrival_tick = 10
+arrival_interval_ticks = 150
+prep_labor_capacity = 9

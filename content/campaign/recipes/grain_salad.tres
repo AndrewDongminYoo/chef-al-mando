@@ -1,0 +1,49 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/m2/salad.svg" id="1_s337s"]
+[ext_resource type="Script" path="res://content/process_def.gd" id="2_7bidq"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="3_tboeu"]
+
+[sub_resource type="Resource" id="Resource_fn1mq"]
+script = ExtResource("2_7bidq")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "prep"
+
+[sub_resource type="Resource" id="Resource_njn11"]
+script = ExtResource("2_7bidq")
+id = "prep"
+station_role = "cold"
+duration_ticks = 30
+next_id = "cook"
+
+[sub_resource type="Resource" id="Resource_biysi"]
+script = ExtResource("2_7bidq")
+id = "cook"
+station_role = "cold"
+duration_ticks = 100
+next_id = "serve"
+
+[sub_resource type="Resource" id="Resource_pu27m"]
+script = ExtResource("2_7bidq")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+[resource]
+script = ExtResource("3_tboeu")
+id = "grain_salad"
+display_name = "곡물 샐러드"
+ingredients = Dictionary[String, int]({
+"grain": 1,
+"vegetable": 1
+})
+cook_role = "cold"
+revenue = 700
+patience_ticks = 500
+first_process_id = "pickup"
+processes = Array[ExtResource("2_7bidq")]([SubResource("Resource_fn1mq"), SubResource("Resource_njn11"), SubResource("Resource_biysi"), SubResource("Resource_pu27m")])
+prepared_ingredient_id = "prepped_grain_salad"
+prep_labor_units = 1
+icon = ExtResource("1_s337s")

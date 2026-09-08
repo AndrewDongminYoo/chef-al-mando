@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_jxf47"]
+
+[resource]
+script = ExtResource("1_jxf47")
+id = "prepped_grill"
+display_name = "손질한 단백질 구이 재료"
+unit_cost = 400
+purchasable = false

@@ -1,0 +1,49 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/m2/soup.svg" id="1_marr2"]
+[ext_resource type="Script" path="res://content/process_def.gd" id="2_ghcw4"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="3_m5ved"]
+
+[sub_resource type="Resource" id="Resource_16anm"]
+script = ExtResource("2_ghcw4")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "prep"
+
+[sub_resource type="Resource" id="Resource_0qpaj"]
+script = ExtResource("2_ghcw4")
+id = "prep"
+station_role = "cold"
+duration_ticks = 60
+next_id = "cook"
+
+[sub_resource type="Resource" id="Resource_lcxot"]
+script = ExtResource("2_ghcw4")
+id = "cook"
+station_role = "hot"
+duration_ticks = 140
+next_id = "serve"
+
+[sub_resource type="Resource" id="Resource_xkr61"]
+script = ExtResource("2_ghcw4")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+[resource]
+script = ExtResource("3_m5ved")
+id = "soup"
+display_name = "곡물 수프"
+ingredients = Dictionary[String, int]({
+"grain": 1,
+"vegetable": 2
+})
+cook_role = "hot"
+revenue = 900
+patience_ticks = 500
+first_process_id = "pickup"
+processes = Array[ExtResource("2_ghcw4")]([SubResource("Resource_16anm"), SubResource("Resource_0qpaj"), SubResource("Resource_lcxot"), SubResource("Resource_xkr61")])
+prepared_ingredient_id = "prepped_soup"
+prep_labor_units = 2
+icon = ExtResource("1_marr2")

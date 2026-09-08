@@ -28,7 +28,9 @@ The campaign uses fixed scenarios.
 Employees can pass through each other.
 The player can pause the simulation at any time.
 
-The repository has the M1 service loop, a lifecycle adapter, local checks, and mobile export presets.
+The repository has the M1 service loop, M2 preparation and analysis, and the M3 campaign with completion records.
+It also has a lifecycle adapter, local checks, and mobile export presets.
+Use [the M3 verification record](docs/notes/m3-verification.md) for the current local campaign evidence and deferred acceptance checks.
 The `project.godot` file declares the `4.7` feature tag and the `GL Compatibility` renderer.
 The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
@@ -208,7 +210,11 @@ Do not adopt an isometric view without a separate M2 evaluation and explicit app
 
 ## Milestone Discipline
 
-Start a milestone only after the previous milestone has fresh passing evidence, except for the approved M1 exception in Current Baseline.
+Start a milestone only after the previous milestone has fresh passing evidence, except for the approved milestone exceptions in the blueprint.
+On 2026-09-08, the operator approved M3 specification and implementation while deferring the five-user M2 validation.
+Resume that validation only when the operator explicitly says the build is ready for user testing.
+Do not recruit participants or treat this exception as an M2 pass.
+The existing Android physical-device deferral remains in effect.
 Do not mark a milestone complete because the project parses or launches on desktop.
 Record what each gate inspects and obtain evidence for the property that the milestone protects.
 

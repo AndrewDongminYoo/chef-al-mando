@@ -18,10 +18,10 @@ func run(_tree: SceneTree) -> void:
 	expect(false, "suite must override run")
 
 
-## Instantiates the project's main scene under `tree.root` with frame processing disabled.
-## Returns null when the main scene setting is empty or the scene cannot be loaded.
+## Instantiates the standalone service scene with frame processing disabled.
+## Campaign tests inspect the project's entry scene separately.
 static func boot_main(tree: SceneTree, scenario_path: String = "res://content/m1_first_service.tres") -> Control:
-	var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
+	var main_scene: String = "res://presentation/main.tscn"
 	if main_scene.is_empty() or not ResourceLoader.exists(main_scene):
 		return null
 	var scene := load(main_scene) as PackedScene

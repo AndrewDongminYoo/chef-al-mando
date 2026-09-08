@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_a5hog"]
+
+[resource]
+script = ExtResource("1_a5hog")
+id = "prepped_soup"
+display_name = "손질한 곡물 수프 재료"
+unit_cost = 350
+purchasable = false

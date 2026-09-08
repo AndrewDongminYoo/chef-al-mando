@@ -1,0 +1,81 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/employee_def.gd" id="1_evn8m"]
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_m5db0"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_s0dvg"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="4_x8qu1"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="5_4a8fl"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="6_h8rxi"]
+[ext_resource type="Script" path="res://content/scenario_def.gd" id="7_dnrqh"]
+[ext_resource type="Script" path="res://content/station_def.gd" id="8_vrijj"]
+
+[sub_resource type="Resource" id="Resource_6ypry"]
+script = ExtResource("1_evn8m")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+[sub_resource type="Resource" id="Resource_akrgk"]
+script = ExtResource("1_evn8m")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+[sub_resource type="Resource" id="Resource_6xo7e"]
+script = ExtResource("8_vrijj")
+id = "storage_01"
+display_name = "재료"
+role = "storage"
+tile = Vector2i(2, 2)
+work_position = Vector2i(2, 3)
+
+[sub_resource type="Resource" id="Resource_p6otv"]
+script = ExtResource("8_vrijj")
+id = "cold_01"
+display_name = "냉식"
+role = "cold"
+tile = Vector2i(5, 2)
+work_position = Vector2i(5, 3)
+
+[sub_resource type="Resource" id="Resource_mmten"]
+script = ExtResource("8_vrijj")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(8, 2)
+work_position = Vector2i(8, 3)
+
+[sub_resource type="Resource" id="Resource_42g7t"]
+script = ExtResource("8_vrijj")
+id = "pass_01"
+display_name = "제공"
+role = "pass"
+tile = Vector2i(9, 5)
+work_position = Vector2i(9, 4)
+
+[resource]
+script = ExtResource("7_dnrqh")
+display_name = "첫 영업"
+briefing = "채소 샐러드 한 메뉴로 시작합니다. 준비를 확인하고 영업을 시작하세요. 언제든 일시정지할 수 있습니다. 마감 후 제공 수와 손익을 확인합니다."
+operation_problem = "기본 흐름"
+minimum_served = 10
+minimum_profit = 1000
+order_recipe_ids = PackedStringArray("salad", "salad", "salad", "salad", "salad", "salad", "salad", "salad", "salad", "salad", "salad", "salad")
+id = "first_shift"
+seed = 42
+closing_tick = 3000
+starting_budget = 3800
+labor_cost = 1600
+grid_size = Vector2i(12, 8)
+ingredients = Array[ExtResource("2_m5db0")]([ExtResource("3_s0dvg"), ExtResource("4_x8qu1")])
+recipes = Array[ExtResource("5_4a8fl")]([ExtResource("6_h8rxi")])
+stations = Array[ExtResource("8_vrijj")]([SubResource("Resource_6xo7e"), SubResource("Resource_p6otv"), SubResource("Resource_mmten"), SubResource("Resource_42g7t")])
+employees = Array[ExtResource("1_evn8m")]([SubResource("Resource_6ypry"), SubResource("Resource_akrgk")])
+purchases = Dictionary[String, int]({
+"vegetable": 12
+})
+menu_ids = PackedStringArray("salad")
+order_count = 12
+first_arrival_tick = 10
+arrival_interval_ticks = 210
+prep_labor_capacity = 6

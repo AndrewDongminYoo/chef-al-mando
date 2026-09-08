@@ -1,0 +1,130 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/employee_def.gd" id="1_40kbv"]
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_upnr2"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_ykqqf"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_ediou"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/protein.tres" id="5_su0m0"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/mushroom.tres" id="6_xru0r"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="7_yj7s5"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="8_kobvb"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grill.tres" id="9_gv8ni"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_salad.tres" id="10_fwwxm"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom_salad.tres" id="11_4gex8"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom_soup.tres" id="12_sir4y"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_grill.tres" id="13_skt42"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_protein_bowl.tres" id="14_4x87i"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="15_kyfry"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="16_ldsuw"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/soup.tres" id="17_5m2rb"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/grill.tres" id="18_ojaiv"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/grain_salad.tres" id="19_q203s"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/mushroom_salad.tres" id="20_pmr7g"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/mushroom_soup.tres" id="21_th6w7"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/grain_grill.tres" id="22_d5mpj"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/protein_bowl.tres" id="23_60hyq"]
+[ext_resource type="Script" path="res://content/scenario_def.gd" id="24_br4xh"]
+[ext_resource type="Script" path="res://content/station_def.gd" id="25_ckp6s"]
+
+[sub_resource type="Resource" id="Resource_0x44x"]
+script = ExtResource("1_40kbv")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+[sub_resource type="Resource" id="Resource_74alr"]
+script = ExtResource("1_40kbv")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+[sub_resource type="Resource" id="Resource_3p3mh"]
+script = ExtResource("1_40kbv")
+id = "employee_03"
+display_name = "직원 3"
+starting_tile = Vector2i(10, 4)
+
+[sub_resource type="Resource" id="Resource_64ybt"]
+script = ExtResource("1_40kbv")
+id = "employee_04"
+display_name = "직원 4"
+starting_tile = Vector2i(11, 4)
+
+[sub_resource type="Resource" id="Resource_26spj"]
+script = ExtResource("25_ckp6s")
+id = "storage_01"
+display_name = "재료"
+role = "storage"
+tile = Vector2i(2, 2)
+work_position = Vector2i(2, 3)
+
+[sub_resource type="Resource" id="Resource_pv851"]
+script = ExtResource("25_ckp6s")
+id = "cold_01"
+display_name = "냉식"
+role = "cold"
+tile = Vector2i(5, 2)
+work_position = Vector2i(5, 3)
+
+[sub_resource type="Resource" id="Resource_gfhb5"]
+script = ExtResource("25_ckp6s")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(9, 2)
+work_position = Vector2i(9, 3)
+
+[sub_resource type="Resource" id="Resource_oaemu"]
+script = ExtResource("25_ckp6s")
+id = "pass_01"
+display_name = "제공"
+role = "pass"
+tile = Vector2i(11, 6)
+work_position = Vector2i(11, 5)
+
+[sub_resource type="Resource" id="Resource_6fanv"]
+script = ExtResource("25_ckp6s")
+id = "cold_02"
+display_name = "냉식"
+role = "cold"
+tile = Vector2i(5, 6)
+work_position = Vector2i(5, 5)
+
+[sub_resource type="Resource" id="Resource_kuei8"]
+script = ExtResource("25_ckp6s")
+id = "hot_02"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(9, 6)
+work_position = Vector2i(9, 5)
+
+[resource]
+script = ExtResource("24_br4xh")
+display_name = "몰려오는 주문"
+briefing = "여덟 메뉴의 주문이 빠르게 들어옵니다. 주문 구성을 보고 프렙을 배분하고, 영업 중 우선순위로 밀리는 주문을 조절하세요."
+operation_problem = "주문 유입과 프렙"
+minimum_served = 22
+minimum_profit = 3000
+order_recipe_ids = PackedStringArray("salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup")
+id = "rush_hour"
+seed = 42
+closing_tick = 3000
+starting_budget = 14400
+labor_cost = 3200
+grid_size = Vector2i(14, 9)
+extra_obstacles = Array[Vector2i]([Vector2i(7, 3), Vector2i(7, 4), Vector2i(7, 5)])
+ingredients = Array[ExtResource("2_upnr2")]([ExtResource("3_ykqqf"), ExtResource("4_ediou"), ExtResource("5_su0m0"), ExtResource("6_xru0r"), ExtResource("7_yj7s5"), ExtResource("8_kobvb"), ExtResource("9_gv8ni"), ExtResource("10_fwwxm"), ExtResource("11_4gex8"), ExtResource("12_sir4y"), ExtResource("13_skt42"), ExtResource("14_4x87i")])
+recipes = Array[ExtResource("15_kyfry")]([ExtResource("16_ldsuw"), ExtResource("17_5m2rb"), ExtResource("18_ojaiv"), ExtResource("19_q203s"), ExtResource("20_pmr7g"), ExtResource("21_th6w7"), ExtResource("22_d5mpj"), ExtResource("23_60hyq")])
+stations = Array[ExtResource("25_ckp6s")]([SubResource("Resource_26spj"), SubResource("Resource_pv851"), SubResource("Resource_gfhb5"), SubResource("Resource_oaemu"), SubResource("Resource_6fanv"), SubResource("Resource_kuei8")])
+employees = Array[ExtResource("1_40kbv")]([SubResource("Resource_0x44x"), SubResource("Resource_74alr"), SubResource("Resource_3p3mh"), SubResource("Resource_64ybt")])
+purchases = Dictionary[String, int]({
+"grain": 14,
+"mushroom": 11,
+"protein": 7,
+"vegetable": 31
+})
+menu_ids = PackedStringArray("salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl")
+order_count = 30
+first_arrival_tick = 10
+arrival_interval_ticks = 85
+prep_labor_capacity = 18

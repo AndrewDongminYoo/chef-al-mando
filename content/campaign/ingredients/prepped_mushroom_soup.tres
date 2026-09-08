@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_52sih"]
+
+[resource]
+script = ExtResource("1_52sih")
+id = "prepped_mushroom_soup"
+display_name = "손질한 버섯 수프 재료"
+unit_cost = 400
+purchasable = false
