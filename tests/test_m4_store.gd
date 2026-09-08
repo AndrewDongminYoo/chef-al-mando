@@ -47,7 +47,7 @@ func run(_tree: SceneTree) -> void:
 		"schema 1 upgrades to the exact schema 2 envelope")
 	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
 		"schema 1 record metrics remain exact after migration")
-	var session := _later_session(campaign)
+	var session := _later_session(campaign, 1)
 	var schema_two := {"schema_version": 2, "content_version": 1, "sim_version": 1,
 		"records": records, "active_session": session}
 	_write(file_path, JSON.stringify(schema_two))
@@ -80,8 +80,13 @@ func run(_tree: SceneTree) -> void:
 		expect(false, "the campaign store exposes atomic session save and clear operations")
 		_cleanup(directory)
 		return
-	var replacement_session := _later_session(campaign)
+	var replacement_session := _later_session(campaign, 2)
 	replacement_session.speed = 4
+	var baseline_restore := ServiceSession.restore(campaign, session, records)
+	var replacement_restore := ServiceSession.restore(campaign, replacement_session, records)
+	expect(baseline_restore.accepted and replacement_restore.accepted
+		and baseline_restore.simulation.state_hash() != replacement_restore.simulation.state_hash(),
+		"baseline and replacement fixtures have different simulation states")
 	var save_result: Dictionary = session_store.call("save_active_session", replacement_session, records)
 	expect(save_result.accepted, "active session and records save in one operation: " + save_result.reason)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
@@ -119,13 +124,14 @@ func _write(target: String, text: String) -> void:
 	file.close()
 
 
-func _later_session(campaign: Resource) -> Dictionary:
+func _later_session(campaign: Resource, tick_count: int = 1) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for("lunch_prep"))
 	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
 		"apply_tick": 0, "sequence": 1})
 	expect(started.accepted, "the later-service store fixture starts")
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
-	simulation.step()
+	for _step: int in range(tick_count):
+		simulation.step()
 	return ServiceSession.capture("lunch_prep", started.selection, simulation, 2, 12345)
 
 
