@@ -218,6 +218,7 @@ func run(tree: SceneTree) -> void:
 	await _test_lifecycle_audio(tree, entry, directory)
 	await _test_service_locale_refresh(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
+	await _test_operational_option_popups(tree, entry, directory)
 	TranslationServer.set_locale("ko")
 	_cleanup(directory)
 
@@ -788,6 +789,40 @@ func _test_future_settings_error(tree: SceneTree, entry: String, directory: Stri
 	await tree.process_frame
 
 
+func _test_operational_option_popups(tree: SceneTree, entry: String, directory: String) -> void:
+	var screen := _boot(tree, entry, directory + "/operational-popups.json", directory + "/operational-popups-settings.json")
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	var preparation: Control = service.get("preparation_panel")
+	var preparation_pickers: Array[OptionButton] = [preparation.get("station_picker")]
+	for picker: OptionButton in preparation.get("duty_buttons").values():
+		preparation_pickers.append(picker)
+	var live_pickers: Array[OptionButton] = []
+	for picker: OptionButton in service.get("duty_buttons"):
+		live_pickers.append(picker)
+	expect(_operational_popups_match(preparation_pickers, 26) and _operational_popups_match(live_pickers, 26),
+		"normal text styles preparation and live duty popup rows at 26 pixels")
+	service.get("settings_text_size").item_selected.emit(1)
+	expect(_operational_popups_match(preparation_pickers, 32) and _operational_popups_match(live_pickers, 32),
+		"large text styles preparation and live duty popup rows at 32 pixels")
+	service.get("settings_text_size").item_selected.emit(0)
+	expect(_operational_popups_match(preparation_pickers, 26) and _operational_popups_match(live_pickers, 26),
+		"normal text restores preparation and live duty popup rows at 26 pixels")
+	service.get("start_button").pressed.emit()
+	expect(service.call("is_running") and _operational_popups_match(live_pickers, 26),
+		"live service keeps normal duty popup rows after preparation starts")
+	service.call("_process", 300.0)
+	service.get("restart_button").pressed.emit()
+	expect(service.get("state") == 0 and _operational_popups_match(preparation_pickers, 26),
+		"preparation regeneration keeps normal station and duty popup rows")
+	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+
 func _boot(tree: SceneTree, scene_path: String, save_path: String, settings_path: String) -> Control:
 	var scene: PackedScene = load(scene_path)
 	var screen: Control = scene.instantiate()
@@ -840,3 +875,15 @@ func _popup_row_height(popup: PopupMenu) -> int:
 	var radio_height := maxi(popup.get_theme_icon("radio_checked").get_height(),
 		popup.get_theme_icon("radio_unchecked").get_height())
 	return maxi(text_height, radio_height) + popup.get_theme_constant("v_separation")
+
+
+func _operational_popups_match(pickers: Array[OptionButton], font_size: int) -> bool:
+	if pickers.is_empty():
+		return false
+	for picker: OptionButton in pickers:
+		var popup := picker.get_popup()
+		if popup.get_theme_font_size("font_size") != font_size \
+				or popup.get_theme_constant("v_separation") != 32 \
+				or _popup_row_height(popup) < 64:
+			return false
+	return true

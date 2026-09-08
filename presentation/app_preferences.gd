@@ -51,6 +51,10 @@ func apply_to(root: Control) -> void:
 func _apply_node(node: Node) -> void:
 	if node is Control:
 		_apply_font_size(node)
+	if node is OptionButton:
+		var popup: PopupMenu = node.get_popup()
+		popup.add_theme_font_size_override("font_size", 32 if current.text_size == "large" else 26)
+		popup.add_theme_constant_override("v_separation", 32)
 	for child: Node in node.get_children(true):
 		_apply_node(child)
 
