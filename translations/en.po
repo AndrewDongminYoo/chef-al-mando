@@ -1,0 +1,162 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Chef al Mando\n"
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Chef al Mando · 영업 목록"
+msgstr "Chef al Mando · Service list"
+
+msgid "엔딩 다시 보기"
+msgstr "View ending again"
+
+msgid "영업을 선택하세요"
+msgstr "Select a service"
+
+msgid "준비 시작"
+msgstr "Start preparation"
+
+msgid "영업 목록으로"
+msgstr "Service list"
+
+msgid "백업에서 복구"
+msgstr "Recover from backup"
+
+msgid "저장 없이 새로 시작"
+msgstr "Start without saving"
+
+msgid "영업 결과"
+msgstr "Service results"
+
+msgid "분석 보기"
+msgstr "View analysis"
+
+msgid "다음 영업"
+msgstr "Next service"
+
+msgid "다시 준비"
+msgstr "Prepare again"
+
+msgid "저장 재시도"
+msgstr "Retry save"
+
+msgid "이번 영업의 목표"
+msgstr "Goals for this service"
+
+msgid "확인"
+msgstr "OK"
+
+msgid "영업 목록으로 돌아가기"
+msgstr "Return to service list"
+
+msgid "영업을 끝내고 목록으로"
+msgstr "End service and return to list"
+
+msgid "일시정지 상태로 계속"
+msgstr "Stay paused"
+
+msgid "목록"
+msgstr "List"
+
+msgid "목표"
+msgstr "Goals"
+
+msgid "남은 시간 300.0초  ·  "
+msgstr "Time remaining 300.0 s  ·  "
+
+msgid "주문 · 탭하여 선택"
+msgstr "Orders · tap to select"
+
+msgid "주문 상세 접기"
+msgstr "Hide order details"
+
+msgid "주문 상세 펼치기"
+msgstr "Show order details"
+
+msgid "주문을 선택하세요"
+msgstr "Select an order"
+
+msgid "우선 −"
+msgstr "Priority −"
+
+msgid "우선 +"
+msgstr "Priority +"
+
+msgid "취소"
+msgstr "Cancel"
+
+msgid "준비 완료"
+msgstr "Preparation complete"
+
+msgid "시작"
+msgstr "Start"
+
+msgid "일시정지"
+msgstr "Pause"
+
+msgid "재개"
+msgstr "Resume"
+
+msgid "다시 준비"
+msgstr "Prepare again"
+
+msgid "채소"
+msgstr "Vegetables"
+
+msgid "곡물"
+msgstr "Grains"
+
+msgid "단백질"
+msgstr "Protein"
+
+msgid "버섯"
+msgstr "Mushrooms"
+
+msgid "채소 샐러드"
+msgstr "Vegetable salad"
+
+msgid "곡물 수프"
+msgstr "Grain soup"
+
+msgid "단백질 구이"
+msgstr "Grilled protein"
+
+msgid "버섯 수프"
+msgstr "Mushroom soup"
+
+msgid "버섯 샐러드"
+msgstr "Mushroom salad"
+
+msgid "곡물 샐러드"
+msgstr "Grain salad"
+
+msgid "단백질 덮밥"
+msgstr "Protein rice bowl"
+
+msgid "곡물 볶음"
+msgstr "Stir-fried grains"
+
+msgid "재료"
+msgstr "Ingredients"
+
+msgid "냉식"
+msgstr "Cold station"
+
+msgid "화구"
+msgstr "Hot station"
+
+msgid "제공"
+msgstr "Pass"
+
+msgid "직원 1"
+msgstr "Employee 1"
+
+msgid "직원 2"
+msgstr "Employee 2"
+
+msgid "직원 3"
+msgstr "Employee 3"
+
+msgid "직원 4"
+msgstr "Employee 4"
