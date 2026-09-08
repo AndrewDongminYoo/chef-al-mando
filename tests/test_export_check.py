@@ -12,8 +12,9 @@ from pathlib import Path
 import sys
 
 args = sys.argv[1:]
-if args == ["--version"]:
+if "--version" in args:
     print(os.environ["TEST_ENGINE_VERSION"])
+    Path(os.environ["TEST_VERSION_LOG"]).write_text(" ".join(args))
 elif "--export-pack" in args:
     case = os.environ["TEST_EXPORT_CASE"]
     if case == "exit_failure":
@@ -33,6 +34,8 @@ else:
         print("PASS: exported M2 extra menu prepared and served")
         if os.environ["TEST_EXPORT_CASE"] != "missing_m3":
             print("PASS: exported M3 campaign and first served order")
+        if os.environ["TEST_EXPORT_CASE"] != "missing_m4":
+            print("PASS: exported M4 resume and localization")
 """
 
 
@@ -51,6 +54,7 @@ class ExportCheckTests(unittest.TestCase):
         self.engine.write_text(f"#!{sys.executable}\n{FAKE_ENGINE}")
         self.engine.chmod(0o700)
         self.stale = self.root / "build/check/m1.pck"
+        self.version_log = self.root / "version-args.txt"
 
     def run_check(self, case="success", pack=None):
         return subprocess.run(
@@ -60,6 +64,7 @@ class ExportCheckTests(unittest.TestCase):
                 GODOT_BIN=str(self.engine),
                 TEST_ENGINE_VERSION=(self.root / ".godot-version").read_text().strip(),
                 TEST_EXPORT_CASE=case,
+                TEST_VERSION_LOG=str(self.version_log),
             ),
             capture_output=True,
             text=True,
@@ -89,6 +94,16 @@ class ExportCheckTests(unittest.TestCase):
         result = self.run_check("missing_m3")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("completion marker is missing", result.stderr)
+
+    def test_missing_m4_completion_marker_fails(self):
+        result = self.run_check("missing_m4")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion marker is missing", result.stderr)
+
+    def test_version_probe_is_headless(self):
+        result = self.run_check()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.version_log.read_text(), "--headless --version")
 
     def test_nonzero_export_exit_stops_before_runtime(self):
         self.stale.write_bytes(b"old valid pack")
