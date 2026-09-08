@@ -26,6 +26,7 @@ var prep_labels: Dictionary[String, Label] = {}
 var prep_plus: Dictionary[String, Button] = {}
 var prep_minus: Dictionary[String, Button] = {}
 var move_buttons: Dictionary[String, Button] = {}
+var employee_labels: Dictionary[String, Label] = {}
 var duty_buttons: Dictionary[String, OptionButton] = {}
 var station_picker: OptionButton
 var station_label: Label
@@ -137,7 +138,9 @@ func _build_layout(column: VBoxContainer) -> void:
 	for employee: Definitions.EmployeeDef in definitions.employees:
 		var row := HBoxContainer.new()
 		column.add_child(row)
-		row.add_child(_label(tr(employee.display_name)))
+		var label := _label(tr(employee.display_name))
+		row.add_child(label)
+		employee_labels[employee.id] = label
 		var picker := OptionButton.new()
 		picker.custom_minimum_size = Vector2(180, 64)
 		picker.add_theme_font_size_override("font_size", 20)
@@ -213,6 +216,8 @@ func refresh_translations() -> void:
 	reset_button.text = tr("기본 준비로 초기화")
 	for index: int in definitions.stations.size():
 		station_picker.set_item_text(index, tr(definitions.stations[index].display_name))
+	for employee: Definitions.EmployeeDef in definitions.employees:
+		employee_labels[employee.id].text = tr(employee.display_name)
 	for employee_id: String in duty_buttons:
 		for index: int in DUTY_NAMES.size():
 			duty_buttons[employee_id].set_item_text(index, tr(DUTY_NAMES[index]))

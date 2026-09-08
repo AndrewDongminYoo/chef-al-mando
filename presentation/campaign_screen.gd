@@ -308,6 +308,8 @@ func _refresh_strings() -> void:
 	settings_button.text = tr("설정")
 	ending_button.text = tr("엔딩 다시 보기")
 	continue_button.text = tr("이어하기")
+	recover_button.text = tr("백업에서 복구")
+	session_only_button.text = tr("저장 없이 새로 시작")
 	ending_title.text = tr("여덟 번의 영업을 마쳤습니다")
 	ending_copy.text = tr("준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요.")
 	ending_return_button.text = tr("영업 목록으로")

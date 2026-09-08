@@ -530,6 +530,20 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var remaining := service.get("remaining_label") as Label
 	var details_toggle := service.get("details_toggle") as Button
 	var detail_panel := service.get("detail_panel") as Control
+	var preparation_panel: Control = service.get("preparation_panel")
+	preparation_panel.call("show_tab", 0)
+	preparation_panel.get("prep_plus")["salad"].pressed.emit()
+	preparation_panel.call("show_tab", 1)
+	preparation_panel.get("duty_buttons")["employee_01"].item_selected.emit(1)
+	var employee_one_label := _find_label(preparation_panel.get("pages")[1], "직원 1")
+	var employee_two_label := _find_label(preparation_panel.get("pages")[1], "직원 2")
+	var ready_preparation: Dictionary = service.get("preparation").snapshot()
+	expect(preparation_panel.visible and preparation_panel.get("pages")[1].visible
+		and employee_one_label != null and employee_one_label.is_visible_in_tree()
+		and employee_two_label != null and employee_two_label.is_visible_in_tree()
+		and ready_preparation.prep_quantities.salad == 1
+		and ready_preparation.duties.employee_01 == "cold",
+		"the locale fixture shows the real layout tab with selected prep and duty state")
 	expect(service.get("state") == 0 and service.get("shown_tenths") == 0
 		and service.get("simulation").tick == 0,
 		"the ready locale fixture warms the displayed time cache at tick zero")
@@ -539,6 +553,13 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	expect(counter.text == "000.0 s", "a ready locale change refreshes the exact English elapsed time")
 	expect(remaining.text == "Time remaining 300.0 s  ·  ",
 		"a ready locale change refreshes the exact English remaining time")
+	expect(employee_one_label.text == "Employee 1",
+		"a ready locale change refreshes the exact first employee name")
+	expect(employee_two_label.text == "Employee 2",
+		"a ready locale change refreshes the exact second employee name")
+	expect(preparation_panel.get("pages")[1].visible
+		and service.get("preparation").snapshot() == ready_preparation,
+		"an English employee-name refresh preserves the visible tab and preparation state")
 	expect(service.get("state") == 0 and service.get("simulation").tick == 0
 		and service.get("simulation").snapshot().commands == ready_commands
 		and service.get("simulation").state_hash() == ready_hash,
@@ -547,6 +568,13 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	expect(counter.text == "000.0초", "a ready locale change refreshes the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 300.0초  ·  ",
 		"a ready locale change refreshes the exact Korean remaining time")
+	expect(employee_one_label.text == "직원 1",
+		"the Korean refresh restores the exact first employee name")
+	expect(employee_two_label.text == "직원 2",
+		"the Korean refresh restores the exact second employee name")
+	expect(preparation_panel.get("pages")[1].visible
+		and service.get("preparation").snapshot() == ready_preparation,
+		"a Korean employee-name refresh preserves the visible tab and preparation state")
 	expect(service.get("state") == 0 and service.get("simulation").tick == 0
 		and service.get("simulation").snapshot().commands == ready_commands
 		and service.get("simulation").state_hash() == ready_hash,
@@ -642,6 +670,12 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	screen.get("begin_button").pressed.emit()
 	service = screen.get("active_service")
 	service.set_process(false)
+	preparation_panel = service.get("preparation_panel")
+	preparation_panel.call("show_tab", 1)
+	expect(preparation_panel.visible and preparation_panel.get("pages")[1].visible
+		and _find_label(preparation_panel.get("pages")[1], "Employee 1") != null
+		and _find_label(preparation_panel.get("pages")[1], "Employee 2") != null,
+		"a saved-English boot renders exact employee names on the visible layout tab")
 	service.get("start_button").pressed.emit()
 	counter = service.get("counter") as Label
 	remaining = service.get("remaining_label") as Label
@@ -676,10 +710,44 @@ func _test_recovered_active_session(tree: SceneTree, entry: String, directory: S
 	var file := FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string("{broken")
 	file.close()
+	var primary_bytes := FileAccess.get_file_as_bytes(file_path)
+	var backup_bytes := FileAccess.get_file_as_bytes(file_path + ".backup")
 	var screen := _boot(tree, entry, file_path, directory + "/recovery-settings.json")
 	await tree.process_frame
-	expect(screen.get("recover_button").visible,
-		"a corrupt primary with a valid session backup offers explicit recovery")
+	var recover_button := screen.get("recover_button") as Button
+	var session_only_button := screen.get("session_only_button") as Button
+	expect(recover_button.visible and session_only_button.visible
+		and recover_button.text == "백업에서 복구"
+		and session_only_button.text == "저장 없이 새로 시작",
+		"a corrupt primary with a valid backup shows both Korean recovery choices")
+	expect(screen.get("storage_blocked") and screen.get("save_message_kind") == "storage"
+		and screen.get("save_message_reason") == "corrupt_records"
+		and screen.get("active_session") == null,
+		"the recovery choices start from the actual blocked corrupt-save state")
+	screen.get("settings_locale").item_selected.emit(1)
+	expect(recover_button.text == "Recover from backup",
+		"a locale change refreshes the exact English backup recovery action")
+	expect(session_only_button.text == "Start without saving",
+		"a locale change refreshes the exact English session-only action")
+	expect(screen.get("save_label").text == "The save could not be read. Recover the backup or start without saving.",
+		"the corrupt-save status remains visible in English")
+	expect(screen.get("storage_blocked") and screen.get("save_message_reason") == "corrupt_records"
+		and screen.get("active_session") == null and recover_button.visible
+		and session_only_button.visible and FileAccess.get_file_as_bytes(file_path) == primary_bytes
+		and FileAccess.get_file_as_bytes(file_path + ".backup") == backup_bytes,
+		"the English refresh preserves failure state, bytes, choices, and the manual recovery gate")
+	screen.get("settings_locale").item_selected.emit(0)
+	expect(recover_button.text == "백업에서 복구",
+		"the Korean refresh restores the exact backup recovery action")
+	expect(session_only_button.text == "저장 없이 새로 시작",
+		"the Korean refresh restores the exact session-only action")
+	expect(screen.get("save_label").text == "저장 기록을 정상적으로 읽을 수 없습니다. 백업을 복구하거나 저장 없이 시작할 수 있습니다.",
+		"the corrupt-save status remains visible in Korean")
+	expect(screen.get("storage_blocked") and screen.get("save_message_reason") == "corrupt_records"
+		and screen.get("active_session") == null and recover_button.visible
+		and session_only_button.visible and FileAccess.get_file_as_bytes(file_path) == primary_bytes
+		and FileAccess.get_file_as_bytes(file_path + ".backup") == backup_bytes,
+		"the Korean refresh preserves failure state, bytes, choices, and the manual recovery gate")
 	screen.get("recover_button").pressed.emit()
 	var continue_button := screen.get("continue_button") as Button
 	expect(continue_button.visible,
@@ -751,6 +819,16 @@ func _find_visible_button(node: Node, title: String) -> Button:
 		if child is Button and child.text == title and child.is_visible_in_tree():
 			return child
 		var found := _find_visible_button(child, title)
+		if found != null:
+			return found
+	return null
+
+
+func _find_label(node: Node, title: String) -> Label:
+	for child: Node in node.get_children(true):
+		if child is Label and child.text == title:
+			return child
+		var found := _find_label(child, title)
 		if found != null:
 			return found
 	return null
