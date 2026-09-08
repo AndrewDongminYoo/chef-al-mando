@@ -159,6 +159,26 @@ READY·PAUSED·CLOSED에서 시간이 멈춘 상태로 한국어→영어→한�
 `build/check/m4-round5-locale-refresh-m3.log`의 M3 608건도 실패 없이 통과했습니다.
 이 검사는 실제 Control의 문구와 저장·준비 상태를 읽는 헤드리스 검사입니다.
 
+## P1 작업 경로 변조 대응
+
+운영자는 기존 리뷰 예산 종료 후 PR #7의 P1 작업 경로 검증 지적에 대응하도록 요청했습니다.
+이번 후속 범위는 해당 P1의 재현·수정·검증과 후속 리뷰 한 회입니다.
+`a4ac6b1`에서는 현재 직원 위치·다음 칸·진행도와 도착점을 유지한 채 남은 경로에 왕복 우회를 넣어도 복원을 허용했습니다.
+수거가 없는 경로와 수거 전·후 경로에서 직접 복원의 거부 검사가 실패했고, 같은 변조를 넣은 실제 JSON 파일도 정상 저장으로 읽혔습니다.
+
+복원 검증은 저장된 경로 시작점부터 실제 작업 생성과 같은 정적 경로를 재구성합니다.
+수거가 있으면 시작점→수거 지점과 수거 지점→작업 위치를 결합하고 수거 인덱스까지 대조합니다.
+현재 위치에서 남은 경로만 다시 탐색하지 않으므로 원래 작업을 만든 입력을 유지합니다.
+정상 수거 경로의 중복 타일과 동률 최단 경로 후보를 갖춘 fixture에서 복원 직후·마감 hash를 확인했습니다.
+
+`build/check/m4-path-canonical-red.log`는 M4 668건·실패 6건입니다.
+동률 경로 후보의 사전조건 한 건을 추가한 `m4-path-canonical-green.log`는 M4 669건·실패 0건입니다.
+직접 복원은 `invalid_path`, 실제 파일 로드는 `corrupt_records`와 `can_recover: true`를 반환합니다.
+원본·백업 바이트를 보존하며 명시적 백업 복구 후 원래 simulation hash를 다시 읽었습니다.
+`build/check/m4-path-canonical-regression-m1.log`의 M1 177건도 실패 없이 통과했습니다.
+`m4-path-canonical-regression-m3.log`의 M3 608건과 `m4-path-canonical-restart.log`의 새 프로세스 검사 6건도 통과했습니다.
+P1의 `snapshot path`·`deterministic restore` Oracle 조회는 관련 선례를 반환하지 않아 `[no precedent found]`로 기록합니다.
+
 ## 렌더링 증거와 헤드리스 실행 경계
 
 최종 capture 소스는 `a21224f`이며 SHA-256은 `5ff4f0f525a225cddfe1106204792d1a7455ff5ae717f0a714e38f91d5be6238`입니다.
