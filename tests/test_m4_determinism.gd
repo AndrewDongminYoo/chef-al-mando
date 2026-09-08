@@ -1,6 +1,7 @@
 extends "res://tests/harness.gd"
 
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
+const GridRoutes := preload("res://sim/grid_routes.gd")
 const SERVICE_SIM_PATH := "res://sim/service_sim.gd"
 
 
@@ -29,6 +30,7 @@ func run(_tree: SceneTree) -> void:
 	_test_inventory_corruption(started.definitions, started.options, original, service_sim_script)
 	_test_reserved_input_json_type(started.definitions, started.options, original, service_sim_script)
 	_test_corruption_table(started.definitions, started.options, original, service_sim_script)
+	_test_canonical_task_paths(service_sim_script)
 	_test_identity_and_type_corruption(started.definitions, started.options, service_sim_script)
 	_test_task_back_references(started.definitions, started.options, service_sim_script)
 	_test_between_process_waiting(service_sim_script)
@@ -295,6 +297,116 @@ func _between_process_fixture(service_sim_script: GDScript, prepared: bool) -> D
 		if order.state == "waiting" and order.phase_index > 0:
 			break
 	return {"simulation": simulation, "definitions": started.definitions, "options": started.options}
+
+
+func _test_canonical_task_paths(service_sim_script: GDScript) -> void:
+	var direct := _prepared_service(service_sim_script)
+	_advance_to_progress(direct.simulation, 1)
+	var direct_state: Dictionary = direct.simulation.export_state()
+	expect(direct_state.tasks[0].collection_index == -1,
+		"the direct-path fixture moves without a collection leg")
+	_assert_detour_rejected(direct, service_sim_script, "direct")
+	_compare_restored_run(direct, service_sim_script, "canonical_direct_path")
+
+	var before_collection := _collection_path_fixture(service_sim_script, false)
+	var before_state: Dictionary = before_collection.simulation.export_state()
+	var before_task: Dictionary = before_state.tasks[0]
+	var before_routes := GridRoutes.new(before_collection.definitions.grid_size,
+		before_collection.definitions.blocked_tiles())
+	expect(before_task.collection_index > 0 and before_task.path_index < before_task.collection_index
+		and not before_state.orders[0].carrying,
+		"the collection fixture is moving before pickup on a nonempty first leg")
+	expect(before_task.path[0] == [3, 4] and before_task.path[before_task.collection_index] == [2, 3]
+		and before_task.path[-1] == [5, 3] and before_routes.is_walkable(Vector2i(2, 4))
+		and before_routes.is_walkable(Vector2i(3, 3)),
+		"the collection fixture exposes two walkable equal-length first-leg route candidates")
+	expect(_path_has_overlap(before_task.path),
+		"the real two-leg collection path legitimately revisits a route tile")
+	_assert_detour_rejected(before_collection, service_sim_script, "before_collection")
+	_compare_restored_run(before_collection, service_sim_script, "canonical_before_collection")
+
+	var after_collection := _collection_path_fixture(service_sim_script, true)
+	var after_state: Dictionary = after_collection.simulation.export_state()
+	var after_task: Dictionary = after_state.tasks[0]
+	expect(after_task.collection_index > 0 and after_task.path_index >= after_task.collection_index
+		and after_state.orders[0].carrying,
+		"the collection fixture is moving after pickup on its onward leg")
+	_assert_detour_rejected(after_collection, service_sim_script, "after_collection")
+	_compare_restored_run(after_collection, service_sim_script, "canonical_after_collection")
+
+
+func _collection_path_fixture(service_sim_script: GDScript, after_collection: bool) -> Dictionary:
+	var fixture := _between_process_fixture(service_sim_script, false)
+	var simulation: RefCounted = fixture.simulation
+	expect(simulation.enqueue_command({"kind": "set_duty", "target_id": "employee_02", "value": "all",
+		"apply_tick": simulation.tick + 1, "sequence": 3}).accepted,
+		"the collection fixture enables only the employee away from the result")
+	while simulation.tick < 700:
+		simulation.step()
+		var state: Dictionary = simulation.export_state()
+		if state.tasks.is_empty() or state.orders[0].state != "moving":
+			continue
+		var task: Dictionary = state.tasks[0]
+		var worker: Dictionary = {}
+		for employee: Dictionary in state.employees:
+			if employee.id == task.employee_id:
+				worker = employee
+				break
+		if worker.get("progress", 0) not in [1, 2, 3, 4]:
+			continue
+		if after_collection == (task.path_index >= task.collection_index):
+			break
+	var final_state: Dictionary = simulation.export_state()
+	expect(not final_state.tasks.is_empty() and final_state.tasks[0].employee_id == "employee_02",
+		"the collection fixture assigns the result to the enabled distant employee")
+	return fixture
+
+
+func _assert_detour_rejected(fixture: Dictionary, service_sim_script: GDScript, label: String) -> void:
+	var simulation: RefCounted = fixture.simulation
+	var source_hash: String = simulation.state_hash()
+	var corrupted: Dictionary = simulation.export_state()
+	var task: Dictionary = corrupted.tasks[0]
+	var worker: Dictionary = {}
+	for employee: Dictionary in corrupted.employees:
+		if employee.id == task.employee_id:
+			worker = employee
+			break
+	expect(not worker.is_empty() and worker.progress in [1, 2, 3, 4]
+		and worker.tile == task.path[task.path_index]
+		and worker.next_tile == task.path[task.path_index + 1],
+		"the detour fixture preserves real partial movement coordinates: " + label)
+	if not _insert_path_detour(task):
+		expect(false, "the detour fixture has a current and next path tile: " + label)
+		return
+	var result: Dictionary = service_sim_script.call("restore", fixture.definitions, corrupted, fixture.options)
+	print("M4_PATH_SOURCE_HASH %s %s" % [label, source_hash])
+	print("M4_PATH_DIRECT_RESULT %s %s" % [label, JSON.stringify(result)])
+	expect(not result.get("accepted", false) and result.get("reason", "") == "invalid_path",
+		"restore rejects a connected noncanonical task detour: " + label)
+	expect(simulation.state_hash() == source_hash,
+		"the rejected task detour preserves the source simulation: " + label)
+
+
+func _insert_path_detour(task: Dictionary) -> bool:
+	var insertion_index: int = task.path_index + 2
+	if insertion_index > task.path.size():
+		return false
+	var current_tile: Variant = task.path[task.path_index].duplicate(true)
+	var next_tile: Variant = task.path[task.path_index + 1].duplicate(true)
+	task.path.insert(insertion_index, current_tile)
+	task.path.insert(insertion_index + 1, next_tile)
+	if task.collection_index >= insertion_index:
+		task.collection_index += 2
+	return true
+
+
+func _path_has_overlap(path: Array) -> bool:
+	for first_index: int in path.size():
+		for second_index: int in range(first_index + 1, path.size()):
+			if path[first_index] == path[second_index]:
+				return true
+	return false
 
 
 func _test_active_state_relationships(service_sim_script: GDScript) -> void:

@@ -759,6 +759,24 @@ static func _task_restore_error(data: Definitions, routes: GridRoutes, saved_tas
 		return "invalid_path"
 	if saved_task.collection_index < -1 or saved_task.collection_index >= saved_task.path.size():
 		return "invalid_path"
+	var origin := _array_tile(saved_task.path[0])
+	var canonical_path: Array[Vector2i]
+	if saved_task.collection_index >= 0:
+		var collection_tile := _array_tile(saved_task.path[saved_task.collection_index])
+		var first_path := routes.path_between(origin, collection_tile)
+		var onward_path := routes.path_between(collection_tile, station.work_position)
+		if first_path.is_empty() or onward_path.is_empty() \
+			or saved_task.collection_index != first_path.size() - 1:
+			return "invalid_path"
+		canonical_path = first_path
+		canonical_path.append_array(onward_path.slice(1))
+	else:
+		canonical_path = routes.path_between(origin, station.work_position)
+	if canonical_path.size() != saved_task.path.size():
+		return "invalid_path"
+	for index: int in canonical_path.size():
+		if canonical_path[index] != _array_tile(saved_task.path[index]):
+			return "invalid_path"
 	task_by_order[saved_task.order_id] = saved_task
 	employee_tasks[saved_task.employee_id] = true
 	station_tasks[saved_task.station_id] = true

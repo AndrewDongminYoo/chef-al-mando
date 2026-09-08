@@ -115,6 +115,7 @@ func run(_tree: SceneTree) -> void:
 	_test_write_failures(campaign, directory, records, session, replacement_session)
 	_test_recovery(campaign, directory, records, improved, session, replacement_session)
 	_test_reserved_input_json_recovery(campaign, directory)
+	_test_task_path_json_recovery(campaign, directory)
 	_test_future_versions(campaign, directory, records, session)
 	_cleanup(directory)
 
@@ -317,6 +318,54 @@ func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -
 		"the recovered reservation session restores to the original simulation hash")
 	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
 		"explicit reservation recovery preserves the backup bytes")
+
+
+func _test_task_path_json_recovery(campaign: Resource, directory: String) -> void:
+	var valid_session := _moving_reserved_session(campaign)
+	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
+		"content_version": 1, "sim_version": 1, "records": {}, "active_session": valid_session}))
+	var valid_task: Dictionary = valid_document.active_session.simulation.tasks[0]
+	expect(valid_task.path_index == 0.0 and valid_task.collection_index == -1.0
+		and valid_task.path.size() >= 2,
+		"the task-path store fixture round-trips real partial movement through JSON")
+	var target := directory + "/task_path.json"
+	var valid_text := JSON.stringify(valid_document)
+	_write(target + ".backup", valid_text)
+	var corrupted_document: Variant = JSON.parse_string(valid_text)
+	var corrupted_task: Dictionary = corrupted_document.active_session.simulation.tasks[0]
+	var insertion_index: int = int(corrupted_task.path_index) + 2
+	corrupted_task.path.insert(insertion_index,
+		corrupted_task.path[int(corrupted_task.path_index)].duplicate(true))
+	corrupted_task.path.insert(insertion_index + 1,
+		corrupted_task.path[int(corrupted_task.path_index) + 1].duplicate(true))
+	expect(corrupted_task.path.size() == valid_task.path.size() + 2
+		and corrupted_task.path[0] == corrupted_task.path[2]
+		and corrupted_task.path[1] == corrupted_task.path[3],
+		"the primary JSON contains a connected task-path detour")
+	_write(target, JSON.stringify(corrupted_document))
+	var primary_bytes := FileAccess.get_file_as_bytes(target)
+	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
+	var expected_restore := ServiceSession.restore(campaign, valid_session, {})
+	var expected_hash: String = expected_restore.simulation.state_hash() if expected_restore.accepted else ""
+	var store := CampaignStore.new(campaign, target)
+	var loaded: Dictionary = store.load_records()
+	print("M4_PATH_STORE_RESULT " + JSON.stringify(loaded))
+	expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+		"the store reports the invalid task path and offers its valid backup")
+	expect(FileAccess.get_file_as_bytes(target) == primary_bytes
+		and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"the rejected task path preserves the primary and backup bytes")
+	var recovered: Dictionary = store.recover_backup()
+	print("M4_PATH_RECOVERY_RESULT accepted=%s reason=%s source_hash=%s" % [
+		recovered.accepted, recovered.reason, expected_hash])
+	expect(recovered.accepted and recovered.reason == "recovered",
+		"explicit recovery replaces the invalid task path session from backup")
+	loaded = CampaignStore.new(campaign, target).load_records()
+	var actual_restore := _restore_loaded(campaign, loaded)
+	expect(loaded.accepted and expected_restore.accepted and _same_restore(actual_restore, expected_restore),
+		"the recovered task-path session restores to the original simulation hash")
+	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"explicit task-path recovery preserves the backup bytes")
 
 
 func _test_future_versions(campaign: Resource, directory: String, records: Dictionary,
