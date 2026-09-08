@@ -612,7 +612,9 @@ func _refresh_translated_text() -> void:
 	for button: OptionButton in duty_buttons:
 		for index: int in DUTY_TEXT.size():
 			button.set_item_text(index, tr(DUTY_TEXT[index]))
+	shown_tenths = -1
 	_refresh()
+	_update_details_toggle()
 
 
 func _set_feedback(kind: String, reason: String = "") -> void:

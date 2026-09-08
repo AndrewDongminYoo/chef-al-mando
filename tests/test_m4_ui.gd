@@ -216,6 +216,7 @@ func run(tree: SceneTree) -> void:
 	await _test_failed_checkpoint_and_replacement(tree, entry, directory)
 	await _test_recovered_active_session(tree, entry, directory)
 	await _test_lifecycle_audio(tree, entry, directory)
+	await _test_service_locale_refresh(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
 	TranslationServer.set_locale("ko")
 	_cleanup(directory)
@@ -513,6 +514,148 @@ func _test_lifecycle_audio(tree: SceneTree, entry: String, directory: String) ->
 	screen.queue_free()
 	await tree.process_frame
 	await tree.process_frame
+
+
+func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: String) -> void:
+	TranslationServer.set_locale("ko")
+	var save_path := directory + "/locale-refresh.json"
+	var settings_path := directory + "/locale-refresh-settings.json"
+	var screen := _boot(tree, entry, save_path, settings_path)
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	await tree.process_frame
+	var counter := service.get("counter") as Label
+	var remaining := service.get("remaining_label") as Label
+	var details_toggle := service.get("details_toggle") as Button
+	var detail_panel := service.get("detail_panel") as Control
+	expect(service.get("state") == 0 and service.get("shown_tenths") == 0
+		and service.get("simulation").tick == 0,
+		"the ready locale fixture warms the displayed time cache at tick zero")
+	var ready_hash: String = service.get("simulation").state_hash()
+	var ready_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
+	service.get("settings_locale").item_selected.emit(1)
+	expect(counter.text == "000.0 s", "a ready locale change refreshes the exact English elapsed time")
+	expect(remaining.text == "Time remaining 300.0 s  ·  ",
+		"a ready locale change refreshes the exact English remaining time")
+	expect(service.get("state") == 0 and service.get("simulation").tick == 0
+		and service.get("simulation").snapshot().commands == ready_commands
+		and service.get("simulation").state_hash() == ready_hash,
+		"a ready locale change preserves the service state, tick, and commands")
+	service.get("settings_locale").item_selected.emit(0)
+	expect(counter.text == "000.0초", "a ready locale change refreshes the exact Korean elapsed time")
+	expect(remaining.text == "남은 시간 300.0초  ·  ",
+		"a ready locale change refreshes the exact Korean remaining time")
+	expect(service.get("state") == 0 and service.get("simulation").tick == 0
+		and service.get("simulation").snapshot().commands == ready_commands
+		and service.get("simulation").state_hash() == ready_hash,
+		"the Korean ready refresh preserves the service state, tick, and commands")
+
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	service.call("set_compact_layout", true)
+	expect(service.call("is_running") and service.get("compact_layout") and details_toggle.visible,
+		"the real running service exposes the compact phone details control")
+	service.get("pause_button").pressed.emit()
+	expect(service.get("state") == 2 and service.get("shown_tenths") == 10
+		and service.get("simulation").tick == 10 and details_toggle.visible,
+		"the paused locale fixture has a warm displayed time cache and a visible compact control")
+	details_toggle.pressed.emit()
+	expect(not detail_panel.visible and details_toggle.text == "주문 상세 펼치기",
+		"the paused compact fixture starts its collapsed check with Korean text")
+	var paused_hash: String = service.get("simulation").state_hash()
+	var paused_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
+	service.get("settings_locale").item_selected.emit(1)
+	expect(counter.text == "001.0 s", "a paused locale change refreshes the exact English elapsed time")
+	expect(remaining.text == "Time remaining 299.0 s  ·  ",
+		"a paused locale change refreshes the exact English remaining time")
+	expect(details_toggle.text == "Show order details",
+		"a paused locale change refreshes the collapsed details control")
+	expect(service.get("state") == 2 and service.get("simulation").tick == 10
+		and service.get("simulation").snapshot().commands == paused_commands
+		and service.get("simulation").state_hash() == paused_hash and not detail_panel.visible,
+		"the collapsed locale change preserves the paused state, tick, commands, and panel visibility")
+	service.get("settings_locale").item_selected.emit(0)
+	expect(counter.text == "001.0초", "a paused locale change refreshes the exact Korean elapsed time")
+	expect(remaining.text == "남은 시간 299.0초  ·  ",
+		"a paused locale change refreshes the exact Korean remaining time")
+	expect(details_toggle.text == "주문 상세 펼치기",
+		"the Korean refresh restores the collapsed details control text")
+
+	details_toggle.pressed.emit()
+	expect(detail_panel.visible and details_toggle.text == "주문 상세 접기",
+		"the paused compact fixture starts its expanded check with Korean text")
+	service.get("settings_locale").item_selected.emit(1)
+	expect(details_toggle.text == "Hide order details",
+		"a paused locale change refreshes the expanded details control")
+	expect(service.get("state") == 2 and service.get("simulation").tick == 10
+		and service.get("simulation").snapshot().commands == paused_commands
+		and service.get("simulation").state_hash() == paused_hash and detail_panel.visible,
+		"the expanded locale change preserves the paused state, tick, commands, and panel visibility")
+	service.get("settings_locale").item_selected.emit(0)
+	expect(details_toggle.text == "주문 상세 접기",
+		"the Korean refresh restores the expanded details control text")
+	expect(service.get("state") == 2 and service.get("simulation").tick == 10
+		and service.get("simulation").snapshot().commands == paused_commands
+		and service.get("simulation").state_hash() == paused_hash and detail_panel.visible,
+		"the Korean expanded refresh preserves the paused service and visible panel")
+
+	service.get("resume_button").pressed.emit()
+	service.call("advance", 299.0)
+	expect(service.get("state") == 3 and service.get("shown_tenths") == 3000
+		and service.get("simulation").tick == 3000,
+		"the closed locale fixture warms the displayed time cache at the closing tick")
+	var closed_hash: String = service.get("simulation").state_hash()
+	var closed_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
+	var closed_panel_visible: bool = detail_panel.visible
+	service.get("settings_locale").item_selected.emit(1)
+	expect(counter.text == "300.0 s", "a closed locale change refreshes the exact English elapsed time")
+	expect(remaining.text == "Time remaining 000.0 s  ·  ",
+		"a closed locale change refreshes the exact English remaining time")
+	expect(service.get("state") == 3 and service.get("simulation").tick == 3000
+		and service.get("simulation").snapshot().commands == closed_commands
+		and service.get("simulation").state_hash() == closed_hash
+		and detail_panel.visible == closed_panel_visible,
+		"a closed locale change preserves the service state, tick, commands, and panel visibility")
+	service.get("settings_locale").item_selected.emit(0)
+	expect(counter.text == "300.0초", "a closed locale change refreshes the exact Korean elapsed time")
+	expect(remaining.text == "남은 시간 000.0초  ·  ",
+		"a closed locale change refreshes the exact Korean remaining time")
+	expect(service.get("state") == 3 and service.get("simulation").tick == 3000
+		and service.get("simulation").snapshot().commands == closed_commands
+		and service.get("simulation").state_hash() == closed_hash
+		and detail_panel.visible == closed_panel_visible,
+		"the Korean closed refresh preserves the service state, tick, commands, and panel visibility")
+	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+	var english_settings_path := directory + "/locale-boot-settings.json"
+	var saved_preferences := AppPreferences.new(english_settings_path)
+	expect(saved_preferences.update_settings({"locale": "en"}).accepted,
+		"the saved-English boot fixture writes an isolated settings file")
+	TranslationServer.set_locale("ko")
+	screen = _boot(tree, entry, directory + "/locale-boot.json", english_settings_path)
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	service = screen.get("active_service")
+	service.set_process(false)
+	service.get("start_button").pressed.emit()
+	counter = service.get("counter") as Label
+	remaining = service.get("remaining_label") as Label
+	expect(TranslationServer.get_locale() == "en" and service.call("is_running")
+		and service.get("simulation").tick == 0,
+		"a fresh campaign loads the saved English locale before the service starts")
+	expect(counter.text == "000.0 s", "a saved-English boot renders the exact elapsed time after Start")
+	expect(remaining.text == "Time remaining 300.0 s  ·  ",
+		"a saved-English boot renders the exact remaining time after Start")
+	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+	TranslationServer.set_locale("ko")
 
 
 func _test_recovered_active_session(tree: SceneTree, entry: String, directory: String) -> void:
