@@ -16,7 +16,7 @@ func load_settings() -> Dictionary:
 	var loaded := store.load_settings()
 	if loaded.accepted:
 		current = loaded.values.duplicate()
-		TranslationServer.set_locale(current.locale)
+	TranslationServer.set_locale(current.locale)
 	return loaded
 
 

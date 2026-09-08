@@ -25,6 +25,7 @@ func run(tree: SceneTree) -> void:
 	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "M4 preferences fixture directory is created")
 	var file_path := directory + "/settings.json"
 	_test_store(file_path)
+	_test_failed_load_locale(file_path)
 	await _test_preferences(tree, file_path)
 	_test_translation()
 	_cleanup(directory)
@@ -72,6 +73,29 @@ func _test_store(file_path: String) -> void:
 	expect(not protected.accepted and protected.reason == "future_version"
 		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
 		"a future settings file is never overwritten")
+
+
+func _test_failed_load_locale(file_path: String) -> void:
+	for fixture: Dictionary in [
+		{"label": "corrupt", "text": "not valid json", "reason": "corrupt_settings"},
+		{"label": "future", "text": "{\"schema_version\":99,\"locale\":\"en\",\"sound_enabled\":false,\"text_size\":\"large\"}",
+			"reason": "future_version"},
+	]:
+		var target: String = file_path + "." + fixture.label + "-load"
+		_write(target, fixture.text)
+		var original_bytes := FileAccess.get_file_as_bytes(target)
+		TranslationServer.set_locale("en")
+		var preferences := AppPreferences.new(target)
+		var loaded: Dictionary = preferences.load_settings()
+		expect(not loaded.accepted and loaded.reason == fixture.reason,
+			"a failed preference load returns its original failure: " + fixture.label)
+		expect(preferences.snapshot() == {"locale": "ko", "sound_enabled": true, "text_size": "normal"},
+			"a failed preference load publishes the literal default snapshot: " + fixture.label)
+		expect(TranslationServer.get_locale() == "ko",
+			"a failed preference load applies the default Korean locale: " + fixture.label)
+		expect(FileAccess.get_file_as_bytes(target) == original_bytes,
+			"a failed preference load preserves the original file bytes: " + fixture.label)
+	TranslationServer.set_locale("ko")
 
 
 func _test_preferences(tree: SceneTree, file_path: String) -> void:
