@@ -16,7 +16,16 @@ fi
 mkdir -p build/check/export-runtime
 pack_file="${1:-$repo_dir/build/check/m1.pck}"
 if [[ $# -eq 0 ]]; then
-	"$godot_bin" --headless --path "$repo_dir" --export-pack Android "$pack_file"
+	export_dir="$(mktemp -d "$repo_dir/build/check/export-pack.XXXXXX")"
+	trap 'rm -rf -- "$export_dir"' EXIT
+	pack_file="$export_dir/content.pck"
+	export_log="$repo_dir/build/check/export.log"
+	export_exit=0
+	"$godot_bin" --headless --path "$repo_dir" --export-pack Android "$pack_file" 2>&1 | tee "$export_log" || export_exit=$?
+	if ((export_exit != 0)) || grep -Eq '(^|[[:space:]])(SCRIPT ERROR:|ERROR:|FAIL:)' "$export_log"; then
+		echo "FAIL: pack export failed with exit $export_exit; see $export_log" >&2
+		exit 1
+	fi
 fi
 if [[ ! -f $pack_file ]]; then
 	echo "FAIL: exported pack is missing: $pack_file" >&2
