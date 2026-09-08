@@ -46,6 +46,8 @@ func _test_store(file_path: String) -> void:
 		{"locale": "ja", "sound_enabled": true, "text_size": "normal"},
 		{"locale": "en", "sound_enabled": "false", "text_size": "normal"},
 		{"locale": "ko", "sound_enabled": true, "text_size": 120},
+		{"locale": &"en", "sound_enabled": true, "text_size": "normal"},
+		{"locale": "ko", "sound_enabled": true, "text_size": &"large"},
 		{"locale": "ko", "sound_enabled": true, "text_size": "normal", "extra": true},
 	]:
 		var rejected: Dictionary = SettingsStore.new(file_path).save_settings(invalid)
@@ -76,11 +78,20 @@ func _test_preferences(tree: SceneTree, file_path: String) -> void:
 	var preferences := AppPreferences.new(file_path + ".preferences")
 	var change_count := {"value": 0}
 	preferences.changed.connect(func() -> void: change_count.value += 1)
+	TranslationServer.set_locale("en")
 	var loaded: Dictionary = preferences.load_settings()
-	expect(loaded.accepted and preferences.snapshot().locale == "ko", "preferences load defaults through the store")
+	expect(loaded.accepted and preferences.snapshot().locale == "ko" and TranslationServer.get_locale() == "ko",
+		"preferences load applies the stored locale")
+	TranslationServer.set_locale("ko")
 	var changed: Dictionary = preferences.update_settings({"locale": "en", "text_size": "large"})
-	expect(changed.accepted and change_count.value == 1 and preferences.snapshot() == {"locale": "en", "sound_enabled": true, "text_size": "large"},
+	expect(changed.accepted and change_count.value == 1 and TranslationServer.get_locale() == "en"
+		and preferences.snapshot() == {"locale": "en", "sound_enabled": true, "text_size": "large"},
 		"a persisted preference update changes the snapshot and emits once")
+	TranslationServer.set_locale("ko")
+	var restored := AppPreferences.new(file_path + ".preferences")
+	var restored_load: Dictionary = restored.load_settings()
+	expect(restored_load.accepted and restored.snapshot().locale == "en" and TranslationServer.get_locale() == "en",
+		"a fresh preferences object restores the saved locale")
 	expect(preferences.font_size(25) == 30, "large text uses a 120 percent font size")
 	var root := Control.new()
 	root.add_theme_font_size_override("font_size", 20)
@@ -99,11 +110,19 @@ func _test_preferences(tree: SceneTree, file_path: String) -> void:
 	root.add_child(dynamic_label)
 	var dynamic_base := dynamic_label.get_theme_font_size("font_size")
 	var label_theme := Theme.new()
-	label_theme.set_font_size(&"Label", &"font_size", 13)
+	label_theme.set_font_size(&"font_size", &"Label", 13)
 	var themed_label := Label.new()
 	themed_label.theme = label_theme
 	root.add_child(themed_label)
 	var themed_base := themed_label.get_theme_font_size("font_size")
+	expect(themed_base == 13, "the label theme fixture resolves its independent baseline")
+	var button_theme := Theme.new()
+	button_theme.set_font_size(&"font_size", &"Button", 17)
+	var themed_button := Button.new()
+	themed_button.theme = button_theme
+	root.add_child(themed_button)
+	var themed_button_base := themed_button.get_theme_font_size("font_size")
+	expect(themed_button_base == 17, "the button theme fixture resolves its independent baseline")
 	var dialog := AcceptDialog.new()
 	dialog.dialog_text = "실제 대화 상자 본문"
 	var dialog_label := Label.new()
@@ -117,14 +136,19 @@ func _test_preferences(tree: SceneTree, file_path: String) -> void:
 	var confirmation := ConfirmationDialog.new()
 	confirmation.dialog_text = "확인 대화 상자 본문"
 	root.add_child(confirmation)
+	var confirmation_body := _find_text_label(confirmation, confirmation.dialog_text)
+	expect(confirmation_body != null, "the confirmation fixture exposes its native body label")
+	var confirmation_body_base := confirmation_body.get_theme_font_size("font_size") if confirmation_body != null else 0
 	var cancel_button_base := confirmation.get_cancel_button().get_theme_font_size("font_size")
 	preferences.apply_to(root)
 	expect(dynamic_label.get_theme_font_size("font_size") == preferences.font_size(dynamic_base)
-		and themed_label.get_theme_font_size("font_size") == preferences.font_size(themed_base)
+		and themed_label.get_theme_font_size("font_size") == 16
+		and themed_button.get_theme_font_size("font_size") == 21
 		and dialog_label.get_theme_font_size("font_size") == preferences.font_size(dialog_label_base)
 		and dialog.get_ok_button().get_theme_font_size("font_size") == preferences.font_size(dialog_button_base),
 		"font application uses each runtime control baseline and includes dialog buttons")
 	expect(dialog_body != null and dialog_body.get_theme_font_size("font_size") == preferences.font_size(dialog_body_base)
+		and confirmation_body != null and confirmation_body.get_theme_font_size("font_size") == preferences.font_size(confirmation_body_base)
 		and confirmation.get_cancel_button().get_theme_font_size("font_size") == preferences.font_size(cancel_button_base),
 		"font application includes native dialog text and confirmation cancel buttons")
 	var normalized: Dictionary = preferences.update_settings({"text_size": "normal"})
@@ -132,7 +156,10 @@ func _test_preferences(tree: SceneTree, file_path: String) -> void:
 	expect(normalized.accepted
 		and root.get_theme_font_size("font_size") == 20 and static_label.get_theme_font_size("font_size") == 15
 		and dynamic_label.get_theme_font_size("font_size") == dynamic_base and not dynamic_label.has_theme_font_size_override("font_size")
-		and themed_label.get_theme_font_size("font_size") == themed_base,
+		and themed_label.get_theme_font_size("font_size") == 13 and themed_button.get_theme_font_size("font_size") == 17
+		and confirmation_body != null and confirmation_body.get_theme_font_size("font_size") == confirmation_body_base
+		and confirmation.get_cancel_button().get_theme_font_size("font_size") == cancel_button_base
+		and not themed_label.has_theme_font_size_override("font_size") and not themed_button.has_theme_font_size_override("font_size"),
 		"normal text restores dynamic and overridden font sizes")
 	var failing := FailedStore.new(file_path + ".preferences")
 	failing.failure = "write"

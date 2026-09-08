@@ -98,9 +98,6 @@ msgstr "Pause"
 msgid "재개"
 msgstr "Resume"
 
-msgid "다시 준비"
-msgstr "Prepare again"
-
 msgid "채소"
 msgstr "Vegetables"
 

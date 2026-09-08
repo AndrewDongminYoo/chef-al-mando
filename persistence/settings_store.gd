@@ -71,8 +71,11 @@ func _read(target: String) -> Dictionary:
 func _valid_values(values: Variant) -> bool:
 	if not values is Dictionary or values.size() != DEFAULTS.size():
 		return false
-	return values.get("locale") in ["ko", "en"] and values.get("sound_enabled") is bool \
-		and values.get("text_size") in ["normal", "large"]
+	var locale: Variant = values.get("locale")
+	var sound_enabled: Variant = values.get("sound_enabled")
+	var text_size: Variant = values.get("text_size")
+	return locale is String and locale in ["ko", "en"] and sound_enabled is bool \
+		and text_size is String and text_size in ["normal", "large"]
 
 
 func _is_integer(value: Variant) -> bool:
