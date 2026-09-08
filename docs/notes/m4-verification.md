@@ -179,6 +179,40 @@ READY·PAUSED·CLOSED에서 시간이 멈춘 상태로 한국어→영어→한�
 `m4-path-canonical-regression-m3.log`의 M3 608건과 `m4-path-canonical-restart.log`의 새 프로세스 검사 6건도 통과했습니다.
 P1의 `snapshot path`·`deterministic restore` Oracle 조회는 관련 선례를 반환하지 않아 `[no precedent found]`로 기록합니다.
 
+## 남은 리뷰 네 건 대응
+
+운영자의 추가 리뷰 대응 요청에 따라 이동 진행도·산출물 위치 P1 두 건과 운영 팝업·저장 없는 모드의 자동 저장 P2 두 건을 분리해 수정했습니다.
+현재 열린 네 건의 로컬 수정·검증 후 후속 리뷰 한 회를 확인하는 범위입니다.
+
+경로 실패가 기록되지 않은 이동 주문은 누적 이동 tick의 나머지와 직원 진행도를 대조합니다.
+경로 실패가 없는 대기·이동 주문의 산출물은 마지막으로 실제 완료한 공정과 같은 역할의 설비 작업 위치에 있어야 합니다.
+프렙으로 건너뛴 공정은 직전 완료 공정으로 계산하지 않습니다.
+실제 부분 이동·대기 checkpoint의 값만 바꾼 직접 복원 여섯 건과 실제 JSON 파일의 거부·복구 여섯 건이 수정 전에 실패했습니다.
+`build/check/m4-remaining-core-red.log`는 M4 794건·실패 12건이며, `m4-remaining-core-green.log`는 794건·실패 0건입니다.
+수정 후 직접 복원은 `invalid_employee` 또는 `invalid_order`, 파일 읽기는 `corrupt_records`와 `can_recover: true`를 반환합니다.
+읽기 실패 때 원본·백업 바이트를 보존하고, 명시적 백업 복구 후 원래 simulation hash를 확인했습니다.
+
+런타임 경로 실패는 부분 이동 진행도를 초기화하고 운반 중인 산출물을 통로에 내려놓을 수 있습니다.
+따라서 `no_route > 0`이면 기존 범위·보행 가능 위치·수거 경로 관계 검증을 유지합니다.
+이 예외를 제거한 `m4-remaining-core-negative.log`는 정상 재시도·산출물 복원 세 건을 거부했습니다.
+총 788건·실패 3건이며, 거부 뒤에는 즉시·최종 hash 검사 여섯 건을 실행하지 않았습니다.
+최종 검사는 수거 전·후의 실제 경로 실패와 재시도에서 복원 직후·마감 hash를 비교합니다.
+한계: 현재 저장 형식에는 실패 당시 진행도와 산출물 이력이 없어 `no_route > 0`인 상태의 두 관계를 완전히 역산할 수 없습니다.
+Advisor는 이 조건부 검증을 권고했으며, 이번 `movement progress`·`path failure` Oracle 조회는 `[no precedent found]`입니다.
+
+공통 설정 적용 경로가 운영용 `OptionButton`의 실제 `PopupMenu`에도 기본 26·큰 글자 32와 행 간격 32를 적용합니다.
+헤드리스 검사는 준비 설비·담당과 영업 담당 메뉴의 테마 값·글꼴 메트릭으로 행 높이 64 이상을 확인합니다.
+기본→크게→기본 전환과 새 준비 상태를 검사했으며, 새 렌더링·좌표 입력 증거는 포함하지 않습니다.
+저장 없는 모드의 성공한 checkpoint도 기준 tick을 갱신합니다.
+실제 손상 파일에서 저장 없는 영업을 시작한 뒤 한 tick씩 프레임을 진행해 자동 신호가 100·200, tick 250 일시정지 후 350부터 발생하며 재시작 후 기준도 초기화되는지 확인했습니다.
+초기 UI RED는 `m4-remaining-ui-red.log`의 679건·실패 10건입니다.
+옛 조기 반환을 복원한 `m4-remaining-ui-negative.log`는 자동 저장 검사 다섯 건이 실패했으며 종료 시 리소스 경고도 남았습니다.
+전체 영업의 신호 수 검사를 한 건 추가한 최종 UI GREEN은 `m4-remaining-ui-green.log`의 680건·실패 0건입니다.
+
+최종 `m4-remaining-final-m0.log`부터 `m4-remaining-final-m4.log`는 각각 25·177·378·608·794건이며 실패는 없습니다.
+`m4-remaining-final-restart.log`의 새 프로세스 복원 6건과 `m4-remaining-final-export-harness.log`의 export 실패 처리 8건도 통과했습니다.
+`m4-remaining-final-pck.log`는 새 PCK의 M1–M4 완료 표시 다섯 개를 확인했습니다.
+
 ## 렌더링 증거와 헤드리스 실행 경계
 
 최종 capture 소스는 `a21224f`이며 SHA-256은 `5ff4f0f525a225cddfe1106204792d1a7455ff5ae717f0a714e38f91d5be6238`입니다.
