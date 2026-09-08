@@ -31,6 +31,8 @@ else:
         print("PASS: exported M1 content and first order")
         print("PASS: exported M2 preparation and first order")
         print("PASS: exported M2 extra menu prepared and served")
+        if os.environ["TEST_EXPORT_CASE"] != "missing_m3":
+            print("PASS: exported M3 campaign and first served order")
 """
 
 
@@ -82,6 +84,11 @@ class ExportCheckTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0, result.stdout)
                 self.assertIn("FAIL: exported pack is missing", result.stderr)
                 self.assertNotIn("RUNTIME_PACK=", result.stdout)
+
+    def test_missing_m3_completion_marker_fails(self):
+        result = self.run_check("missing_m3")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion marker is missing", result.stderr)
 
     def test_nonzero_export_exit_stops_before_runtime(self):
         self.stale.write_bytes(b"old valid pack")

@@ -42,7 +42,8 @@ if ((command_exit != 0)) || grep -Eq '(^|[[:space:]])(SCRIPT ERROR:|ERROR:|FAIL:
 fi
 for marker in 'PASS: exported M1 content and first order' \
 	'PASS: exported M2 preparation and first order' \
-	'PASS: exported M2 extra menu prepared and served'; do
+	'PASS: exported M2 extra menu prepared and served' \
+	'PASS: exported M3 campaign and first served order'; do
 	if ! grep -Fxq "$marker" "$log_file"; then
 		echo "FAIL: exported runtime completion marker is missing: $marker" >&2
 		exit 1
