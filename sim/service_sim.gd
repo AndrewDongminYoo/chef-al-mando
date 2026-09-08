@@ -548,6 +548,8 @@ static func restore(data: Definitions, state: Dictionary, preparation: Dictionar
 	var simulation = (load("res://sim/service_sim.gd") as GDScript).new(data, null, preparation)
 	if not simulation.errors.is_empty():
 		return {"accepted": false, "reason": "invalid_content"}
+	if state.tick == 0 and state.employees != simulation.export_state().employees:
+		return {"accepted": false, "reason": "invalid_employee"}
 	simulation.tick = state.tick
 	simulation.closed = state.closed
 	simulation._schedule_cursor = state.schedule_cursor

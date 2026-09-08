@@ -36,6 +36,7 @@ func run(_tree: SceneTree) -> void:
 	_test_terminal_relationships(service_sim_script)
 	_test_command_canonicalization(service_sim_script)
 	_test_work_timing_relationships(service_sim_script)
+	_test_tick_zero_employee_relationships(service_sim_script)
 	_test_active_duty_relationships(service_sim_script)
 	_test_restore_checkpoints(service_sim_script)
 
@@ -615,6 +616,62 @@ func _test_work_timing_relationships(service_sim_script: GDScript) -> void:
 				restored.simulation.step()
 			expect(restored.simulation.state_hash() == simulation.state_hash(),
 				"the valid working checkpoint preserves the final hash: " + label)
+
+
+func _test_tick_zero_employee_relationships(service_sim_script: GDScript) -> void:
+	var fixture := _prepared_service(service_sim_script)
+	var simulation: RefCounted = fixture.simulation
+	var state: Dictionary = simulation.export_state()
+	expect(state.tick == 0 and state.orders.is_empty() and state.tasks.is_empty()
+		and state.employees[0].duty == "cold" and state.employees[1].duty == "hot",
+		"the tick-zero fixture contains committed nondefault preparation duties")
+	var restored: Dictionary = service_sim_script.call("restore", fixture.definitions, state, fixture.options)
+	expect(restored.get("accepted", false) and restored.simulation.state_hash() == simulation.state_hash(),
+		"restore accepts the unmodified prepared tick-zero employees")
+	var source_hash: String = simulation.state_hash()
+	var moved_employee := state.duplicate(true)
+	moved_employee.employees[0].tile = [4, 4]
+	moved_employee.employees[0].next_tile = [4, 4]
+	var moved_result: Dictionary = service_sim_script.call("restore", fixture.definitions,
+		moved_employee, fixture.options)
+	expect(not moved_result.get("accepted", false),
+		"restore rejects a walkable tick-zero employee position that differs from preparation")
+	expect(simulation.state_hash() == source_hash,
+		"the rejected tick-zero position preserves the source simulation")
+	var changed_duty := state.duplicate(true)
+	changed_duty.employees[0].duty = "hot"
+	var duty_result: Dictionary = service_sim_script.call("restore", fixture.definitions,
+		changed_duty, fixture.options)
+	expect(not duty_result.get("accepted", false),
+		"restore rejects a valid tick-zero duty that differs from preparation")
+	expect(simulation.state_hash() == source_hash,
+		"the rejected tick-zero duty preserves the source simulation")
+	if not restored.get("accepted", false):
+		return
+	var command := {"kind": "set_duty", "target_id": "employee_01", "value": "all",
+		"apply_tick": 1, "sequence": 1}
+	expect(simulation.enqueue_command(command).accepted and restored.simulation.enqueue_command(command).accepted,
+		"the prepared tick-zero pair accepts the same real duty command")
+	while simulation.tick < 300:
+		simulation.step()
+		restored.simulation.step()
+		var view: Dictionary = simulation.snapshot()
+		if not view.tasks.is_empty() and view.employees[0].progress in [1, 2, 3, 4]:
+			break
+	var later_state: Dictionary = simulation.export_state()
+	expect(later_state.tick > 0 and later_state.employees[0].duty == "all"
+		and not later_state.tasks.is_empty() and later_state.employees[0].progress in [1, 2, 3, 4],
+		"the tick-positive fixture contains an applied duty command and actual path progress")
+	var later_restore: Dictionary = service_sim_script.call("restore", fixture.definitions,
+		later_state, fixture.options)
+	expect(later_restore.get("accepted", false)
+		and later_restore.simulation.state_hash() == simulation.state_hash(),
+		"tick-positive command and path state remain independently restorable")
+	while not simulation.closed:
+		simulation.step()
+		restored.simulation.step()
+	expect(restored.simulation.state_hash() == simulation.state_hash(),
+		"the valid prepared tick-zero restore preserves the final hash")
 
 
 func _test_active_duty_relationships(service_sim_script: GDScript) -> void:
