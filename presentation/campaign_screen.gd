@@ -290,6 +290,10 @@ func _sync_settings_controls() -> void:
 	settings_locale.select(0 if values.locale == "ko" else 1)
 	settings_sound.set_pressed_no_signal(values.sound_enabled)
 	settings_text_size.select(0 if values.text_size == "normal" else 1)
+	var popup_font_size := 32 if values.text_size == "large" else 26
+	for picker: OptionButton in [settings_locale, settings_text_size]:
+		picker.get_popup().add_theme_font_size_override("font_size", popup_font_size)
+		picker.get_popup().add_theme_constant_override("v_separation", 32)
 
 
 func _on_preferences_changed() -> void:
@@ -517,6 +521,7 @@ func _save_checkpoint(_reason: String = "checkpoint") -> bool:
 		active_service.checkpoint_saved()
 		save_error_dialog.hide()
 	elif active_service.state != KitchenScreen.State.CLOSED:
+		active_service.pause_after_save_failure()
 		save_error_dialog.dialog_text = save_label.text
 		save_error_dialog.popup_centered_clamped(Vector2i(680, 300))
 		_ensure_dialog_tap_sizes()

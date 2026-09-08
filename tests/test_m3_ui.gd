@@ -121,12 +121,12 @@ func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String)
 	var screen := _boot(tree, entry, file_path)
 	await tree.process_frame
 	var store := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
-	store.failure = "write"
 	screen.set("store", store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)
 	service.get("start_button").pressed.emit()
+	store.failure = "write"
 	service.call("advance", 300.0)
 	expect(screen.get("last_result").passed and screen.get("pending_save"), "a real passing service reaches the failed save path")
 	expect(screen.get("next_button").disabled and screen.get("retry_service_button").disabled and service.get("restart_button").disabled, "pending saves disable next service and both restart controls")

@@ -176,6 +176,13 @@ func checkpoint_saved() -> void:
 	last_saved_tick = simulation.tick
 
 
+func pause_after_save_failure() -> void:
+	if state != State.RUNNING:
+		return
+	_set_state(State.PAUSED)
+	audio_feedback.suspend()
+
+
 func restore_service(restored: Dictionary) -> bool:
 	if not restored.get("accepted", false):
 		return false
@@ -558,6 +565,10 @@ func _sync_settings_controls() -> void:
 	settings_locale.select(0 if values.locale == "ko" else 1)
 	settings_sound.set_pressed_no_signal(values.sound_enabled)
 	settings_text_size.select(0 if values.text_size == "normal" else 1)
+	var popup_font_size := 32 if values.text_size == "large" else 26
+	for picker: OptionButton in [settings_locale, settings_text_size]:
+		picker.get_popup().add_theme_font_size_override("font_size", popup_font_size)
+		picker.get_popup().add_theme_constant_override("v_separation", 32)
 
 
 func _on_preferences_changed() -> void:

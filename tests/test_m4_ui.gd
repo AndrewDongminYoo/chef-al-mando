@@ -18,6 +18,13 @@ func run(tree: SceneTree) -> void:
 	expect(_find_button(screen, "설정") != null,
 		"the campaign catalog provides a settings action")
 	screen.get("settings_button").pressed.emit()
+	var campaign_locale_popup: PopupMenu = screen.get("settings_locale").get_popup()
+	var campaign_text_popup: PopupMenu = screen.get("settings_text_size").get_popup()
+	expect(campaign_locale_popup.get_theme_font_size("font_size") == 26
+		and campaign_text_popup.get_theme_font_size("font_size") == 26
+		and _popup_row_height(campaign_locale_popup) >= 64
+		and _popup_row_height(campaign_text_popup) >= 64,
+		"normal campaign settings popups provide 64-pixel rows at the native 26-pixel font")
 	var base_font: int = screen.get("menu_title").get_theme_font_size("font_size")
 	screen.get("settings_locale").item_selected.emit(1)
 	screen.get("settings_text_size").item_selected.emit(1)
@@ -35,6 +42,11 @@ func run(tree: SceneTree) -> void:
 		and screen.get("scenario_buttons").first_shift.get_theme_font_size("font_size") == 24
 		and screen.scale == Vector2.ONE,
 		"large text changes native font size without scaling the campaign control")
+	expect(campaign_locale_popup.get_theme_font_size("font_size") == 32
+		and campaign_text_popup.get_theme_font_size("font_size") == 32
+		and _popup_row_height(campaign_locale_popup) >= 64
+		and _popup_row_height(campaign_text_popup) >= 64,
+		"large campaign settings popups provide 64-pixel rows at the native 32-pixel font")
 	screen.get("settings_sound").toggled.emit(true)
 	screen.get("settings_dialog").hide()
 	screen.get("begin_button").pressed.emit()
@@ -44,6 +56,13 @@ func run(tree: SceneTree) -> void:
 	var service_settings := _find_button(service, "Settings")
 	expect(service_settings != null and service.get_node("SafeArea/Layout/Controls/Start").text == "Start",
 		"the service shares the active locale and provides its own settings action")
+	var service_locale_popup: PopupMenu = service.get("settings_locale").get_popup()
+	var service_text_popup: PopupMenu = service.get("settings_text_size").get_popup()
+	expect(service_locale_popup.get_theme_font_size("font_size") == 32
+		and service_text_popup.get_theme_font_size("font_size") == 32
+		and _popup_row_height(service_locale_popup) >= 64
+		and _popup_row_height(service_text_popup) >= 64,
+		"large service settings popups provide 64-pixel rows at the native 32-pixel font")
 	expect(service.get_node("SafeArea/Layout/Header/Title").text == "First service"
 		and service.get("status_label").text.contains("Preparing")
 		and service.get("preparation_panel").purchase_labels.vegetable.text.contains("Vegetables"),
@@ -193,12 +212,93 @@ func run(tree: SceneTree) -> void:
 	screen.queue_free()
 	await tree.process_frame
 	await tree.process_frame
+	await _test_failed_checkpoint_pauses_live_service(tree, entry, directory)
 	await _test_failed_checkpoint_and_replacement(tree, entry, directory)
 	await _test_recovered_active_session(tree, entry, directory)
 	await _test_lifecycle_audio(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
 	TranslationServer.set_locale("ko")
 	_cleanup(directory)
+
+
+func _test_failed_checkpoint_pauses_live_service(tree: SceneTree, entry: String, directory: String) -> void:
+	var start_path := directory + "/live-start-failure.json"
+	var screen := _boot(tree, entry, start_path, directory + "/live-start-settings.json")
+	await tree.process_frame
+	var failed_store := StoreTests.FailedStore.new(screen.get("campaign"), start_path)
+	failed_store.failure = "write"
+	screen.set("store", failed_store)
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	expect(service.is_processing(), "the failed Start fixture uses the real service process loop")
+	service.get("start_button").pressed.emit()
+	var failed_tick: int = service.get("simulation").tick
+	expect(screen.get("pending_save") and screen.get("save_error_dialog").visible
+		and service.get("state") == 2 and service.get("driver").paused
+		and not service.call("is_running"),
+		"a failed Start checkpoint pauses the service behind the retry dialog")
+	await tree.create_timer(0.15).timeout
+	expect(service.get("simulation").tick == failed_tick,
+		"a failed Start checkpoint holds the simulation tick across real process frames")
+	failed_store.failure = ""
+	screen.get("retry_checkpoint_button").pressed.emit()
+	var loaded := CampaignStore.new(screen.get("campaign"), start_path).load_records()
+	expect(not screen.get("pending_save") and loaded.accepted
+		and loaded.active_session.simulation.tick == failed_tick
+		and service.get("state") == 2 and service.get("driver").paused,
+		"a successful Start retry preserves the checkpoint and remains paused")
+	await tree.create_timer(0.1).timeout
+	expect(service.get("simulation").tick == failed_tick,
+		"a successful Start retry waits for manual resume")
+	service.get("resume_button").pressed.emit()
+	await tree.create_timer(0.15).timeout
+	expect(service.call("is_running") and service.get("simulation").tick > failed_tick,
+		"manual resume restarts service time after a successful Start retry")
+	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+	var automatic_path := directory + "/live-automatic-failure.json"
+	screen = _boot(tree, entry, automatic_path, directory + "/live-automatic-settings.json")
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	service = screen.get("active_service")
+	expect(service.is_processing(), "the failed automatic checkpoint fixture uses the real service process loop")
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	var arrival := service.get_node("AudioFeedback/ArrivalPlayer") as AudioStreamPlayer
+	expect(arrival.playing, "the automatic checkpoint fixture starts an actual arrival cue")
+	failed_store = StoreTests.FailedStore.new(screen.get("campaign"), automatic_path)
+	failed_store.failure = "write"
+	screen.set("store", failed_store)
+	service.call("advance", 9.0)
+	failed_tick = service.get("simulation").tick
+	expect(screen.get("pending_save") and screen.get("save_error_dialog").visible
+		and service.get("state") == 2 and service.get("driver").paused
+		and not service.call("is_running") and not arrival.playing,
+		"a failed automatic checkpoint pauses time and stops an active arrival cue")
+	await tree.create_timer(0.15).timeout
+	expect(service.get("simulation").tick == failed_tick,
+		"a failed automatic checkpoint holds the simulation tick across real process frames")
+	failed_store.failure = ""
+	screen.get("retry_checkpoint_button").pressed.emit()
+	loaded = CampaignStore.new(screen.get("campaign"), automatic_path).load_records()
+	expect(not screen.get("pending_save") and loaded.accepted
+		and loaded.active_session.simulation.tick == failed_tick
+		and service.get("state") == 2 and service.get("driver").paused,
+		"a successful automatic retry preserves the checkpoint and remains paused")
+	await tree.create_timer(0.1).timeout
+	expect(service.get("simulation").tick == failed_tick,
+		"a successful automatic retry waits for manual resume")
+	service.get("resume_button").pressed.emit()
+	await tree.create_timer(0.15).timeout
+	expect(service.call("is_running") and service.get("simulation").tick > failed_tick,
+		"manual resume restarts service time after a successful automatic retry")
+	service.get("audio_feedback").set_enabled(false)
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
 
 
 func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, directory: String) -> void:
@@ -457,3 +557,11 @@ func _find_visible_button(node: Node, title: String) -> Button:
 		if found != null:
 			return found
 	return null
+
+
+func _popup_row_height(popup: PopupMenu) -> int:
+	var font_size := popup.get_theme_font_size("font_size")
+	var text_height := ceili(popup.get_theme_font("font").get_height(font_size))
+	var radio_height := maxi(popup.get_theme_icon("radio_checked").get_height(),
+		popup.get_theme_icon("radio_unchecked").get_height())
+	return maxi(text_height, radio_height) + popup.get_theme_constant("v_separation")
