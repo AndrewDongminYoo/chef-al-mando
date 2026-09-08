@@ -904,6 +904,18 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 		return "invalid_task_link"
 	if not _valid_metrics(saved_order.metrics, saved_order, state.tick):
 		return "invalid_metrics"
+	if saved_order.state in ["waiting", "moving"] and saved_order.has_result and saved_order.metrics.no_route == 0:
+		var previous_index: int = saved_order.phase_index - 1
+		if previous_index >= 0 and saved_order.uses_prepared and phases[previous_index].id == "prep":
+			previous_index -= 1
+		var result_at_completed_station := false
+		if previous_index >= 0:
+			for completed_station: StationDef in data.stations:
+				if completed_station.role == phases[previous_index].station_role \
+					and completed_station.work_position == _array_tile(saved_order.result_position):
+					result_at_completed_station = true
+		if not result_at_completed_station:
+			return "invalid_order"
 	if has_task:
 		var task: Dictionary = task_by_order[saved_order.id]
 		var station := _station_for(data, task.station_id)
@@ -999,6 +1011,9 @@ static func _employees_restore_error(data: Definitions, routes: GridRoutes, empl
 			if _array_tile(saved_employee.next_tile) != expected_next:
 				return "invalid_path"
 			if task.started_tick >= 0 and saved_employee.progress != 0:
+				return "invalid_employee"
+			if saved_order.state == "moving" and saved_order.metrics.no_route == 0 \
+				and saved_employee.progress != saved_order.metrics.moving % MOVE_TICKS:
 				return "invalid_employee"
 		employee_by_id[saved_employee.id] = saved_employee
 	for task: Dictionary in task_by_order.values():

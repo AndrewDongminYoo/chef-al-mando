@@ -116,6 +116,7 @@ func run(_tree: SceneTree) -> void:
 	_test_recovery(campaign, directory, records, improved, session, replacement_session)
 	_test_reserved_input_json_recovery(campaign, directory)
 	_test_task_path_json_recovery(campaign, directory)
+	_test_movement_and_result_json_recovery(campaign, directory)
 	_test_future_versions(campaign, directory, records, session)
 	_cleanup(directory)
 
@@ -366,6 +367,66 @@ func _test_task_path_json_recovery(campaign: Resource, directory: String) -> voi
 		"the recovered task-path session restores to the original simulation hash")
 	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
 		"explicit task-path recovery preserves the backup bytes")
+
+
+func _test_movement_and_result_json_recovery(campaign: Resource, directory: String) -> void:
+	for corruption: String in ["progress", "result_position"]:
+		var valid_session := _moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
+		var document := {"schema_version": 2, "content_version": 1, "sim_version": 1,
+			"records": {}, "active_session": valid_session}
+		var valid_text := JSON.stringify(document)
+		var corrupted: Variant = JSON.parse_string(valid_text)
+		if corruption == "progress":
+			expect(corrupted.active_session.simulation.employees[0].progress == 1.0,
+				"the progress store fixture contains real partial movement after JSON normalization")
+			corrupted.active_session.simulation.employees[0].progress = 4
+		else:
+			expect(corrupted.active_session.simulation.orders[0].state == "waiting"
+				and corrupted.active_session.simulation.orders[0].metrics.no_route == 0.0,
+				"the result store fixture waits after completed work without a path failure")
+			corrupted.active_session.simulation.orders[0].result_position = [3, 3]
+		var target := directory + "/relationship_" + corruption + ".json"
+		_write(target + ".backup", valid_text)
+		_write(target, JSON.stringify(corrupted))
+		var primary_bytes := FileAccess.get_file_as_bytes(target)
+		var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
+		var expected := ServiceSession.restore(campaign, valid_session, {})
+		var store := CampaignStore.new(campaign, target)
+		var loaded := store.load_records()
+		print("M4_RELATIONSHIP_STORE_RESULT %s %s" % [corruption, JSON.stringify(loaded)])
+		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a corrupt movement or result relationship offers the valid backup: " + corruption)
+		expect(FileAccess.get_file_as_bytes(target) == primary_bytes
+			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+			"relationship rejection preserves primary and backup bytes: " + corruption)
+		var recovered := store.recover_backup()
+		expect(recovered.accepted and recovered.reason == "recovered",
+			"explicit recovery replaces the corrupt relationship: " + corruption)
+		loaded = CampaignStore.new(campaign, target).load_records()
+		expect(_same_restore(_restore_loaded(campaign, loaded), expected),
+			"relationship recovery restores the original simulation hash: " + corruption)
+		expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+			"relationship recovery preserves the valid backup bytes: " + corruption)
+
+
+func _waiting_result_session(campaign: Resource) -> Dictionary:
+	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	expect(started.accepted, "the result recovery fixture starts")
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	while simulation.tick < 300 and (simulation.snapshot().orders.is_empty()
+		or simulation.snapshot().orders[0].state != "working"):
+		simulation.step()
+	for sequence: int in [1, 2]:
+		expect(simulation.enqueue_command({"kind": "set_duty", "target_id": "employee_0%d" % sequence,
+			"value": "off", "apply_tick": simulation.tick + 1, "sequence": sequence}).accepted,
+			"the result recovery fixture waits for the next responsible employee")
+	while simulation.tick < 500:
+		simulation.step()
+		if simulation.snapshot().orders[0].state == "waiting" and simulation.snapshot().orders[0].phase_index > 0:
+			break
+	return ServiceSession.capture("first_shift", started.selection, simulation, 1, 0)
 
 
 func _test_future_versions(campaign: Resource, directory: String, records: Dictionary,

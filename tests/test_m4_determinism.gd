@@ -31,6 +31,9 @@ func run(_tree: SceneTree) -> void:
 	_test_reserved_input_json_type(started.definitions, started.options, original, service_sim_script)
 	_test_corruption_table(started.definitions, started.options, original, service_sim_script)
 	_test_canonical_task_paths(service_sim_script)
+	_test_movement_progress_corruption(service_sim_script)
+	_test_result_position_corruption(service_sim_script)
+	_test_path_failure_checkpoints(service_sim_script)
 	_test_identity_and_type_corruption(started.definitions, started.options, service_sim_script)
 	_test_task_back_references(started.definitions, started.options, service_sim_script)
 	_test_between_process_waiting(service_sim_script)
@@ -407,6 +410,105 @@ func _path_has_overlap(path: Array) -> bool:
 			if path[first_index] == path[second_index]:
 				return true
 	return false
+
+
+func _test_movement_progress_corruption(service_sim_script: GDScript) -> void:
+	for progress: int in [1, 4]:
+		var fixture := _prepared_service(service_sim_script)
+		_advance_to_progress(fixture.simulation, progress)
+		var source_hash: String = fixture.simulation.state_hash()
+		var corrupted: Dictionary = fixture.simulation.export_state()
+		var employee: Dictionary = corrupted.employees[0]
+		expect(employee.progress == progress and corrupted.orders[0].metrics.no_route == 0
+			and corrupted.orders[0].metrics.moving % 5 == progress,
+			"the moving checkpoint has an exact remainder without a route failure")
+		employee.progress = 4 if progress == 1 else 1
+		var result: Dictionary = service_sim_script.call("restore", fixture.definitions, corrupted, fixture.options)
+		print("M4_PROGRESS_RESTORE_RESULT %d %s" % [progress, JSON.stringify(result)])
+		expect(not result.get("accepted", false) and result.get("reason", "") == "invalid_employee",
+			"restore rejects in-range movement progress that changes elapsed travel")
+		expect(fixture.simulation.state_hash() == source_hash,
+			"movement progress rejection preserves the original simulation")
+		_compare_restored_run(fixture, service_sim_script, "valid_progress_%d" % progress)
+
+
+func _test_result_position_corruption(service_sim_script: GDScript) -> void:
+	for prepared: bool in [false, true]:
+		var fixture := _between_process_fixture(service_sim_script, prepared)
+		var state: Dictionary = fixture.simulation.export_state()
+		var routes := GridRoutes.new(fixture.definitions.grid_size, fixture.definitions.blocked_tiles())
+		expect(state.orders[0].state == "waiting" and state.orders[0].has_result
+			and state.orders[0].metrics.no_route == 0 and state.orders[0].result_position == [2, 3]
+			and state.orders[0].phase_index == (2 if prepared else 1),
+			"the waiting checkpoint retains the pickup result and skips prepared work when applicable")
+		for invalid_tile: Array in [[3, 3], [5, 3]]:
+			expect(routes.is_walkable(Vector2i(invalid_tile[0], invalid_tile[1])),
+				"the corrupt result candidate passes the existing walkable tile check")
+			var corrupted := state.duplicate(true)
+			corrupted.orders[0].result_position = invalid_tile
+			var result: Dictionary = service_sim_script.call("restore", fixture.definitions, corrupted, fixture.options)
+			print("M4_RESULT_POSITION_RESTORE_RESULT %s %s %s" % [prepared, invalid_tile, JSON.stringify(result)])
+			expect(not result.get("accepted", false) and result.get("reason", "") == "invalid_order",
+				"restore rejects a result outside the completed pickup station without a route failure")
+		_compare_restored_run(fixture, service_sim_script, "valid_pickup_result_%s" % prepared)
+
+
+func _test_path_failure_checkpoints(service_sim_script: GDScript) -> void:
+	for carrying: bool in [false, true]:
+		for checkpoint: String in ["waiting", "retry"]:
+			var fixture := _partial_path_failure_fixture(service_sim_script, carrying)
+			if checkpoint == "retry":
+				while fixture.simulation.tick < 700:
+					fixture.simulation.step()
+					var view: Dictionary = fixture.simulation.snapshot()
+					var worker := _worker_for_order(view, view.orders[0].id)
+					if view.orders[0].state == "moving" and worker.get("progress", 0) == 1:
+						break
+				var retried: Dictionary = fixture.simulation.export_state()
+				var worker := _worker_for_order(retried, retried.orders[0].id)
+				expect(retried.orders[0].state == "moving" and worker.get("progress", 0) == 1
+					and retried.orders[0].metrics.moving % 5 != worker.progress,
+					"a real retry retains lost movement ticks while progress starts a new segment")
+			_compare_restored_run(fixture, service_sim_script, "path_failure_%s_%s" % [carrying, checkpoint])
+
+
+func _partial_path_failure_fixture(service_sim_script: GDScript, carrying: bool) -> Dictionary:
+	var fixture := _collection_path_fixture(service_sim_script, true) if carrying else _prepared_service(service_sim_script)
+	if carrying:
+		while fixture.simulation.tick < 650:
+			var view: Dictionary = fixture.simulation.snapshot()
+			var worker := _worker_for_order(view, view.orders[0].id)
+			if view.orders[0].carrying and worker.get("progress", 0) == 1 and worker.tile == [3, 3]:
+				break
+			fixture.simulation.step()
+	else:
+		_advance_to_progress(fixture.simulation, 1)
+	var before: Dictionary = fixture.simulation.export_state()
+	var worker := _worker_for_order(before, before.orders[0].id)
+	expect(worker.get("progress", 0) == 1 and before.orders[0].carrying == carrying,
+		"the path failure interrupts an actual partial segment before or after collection")
+	var next := Vector2i(worker.next_tile[0], worker.next_tile[1])
+	var routes: RefCounted = fixture.simulation.get("_routes")
+	routes.grid.set_point_solid(next, true)
+	fixture.simulation.step()
+	routes.grid.set_point_solid(next, false)
+	var failed: Dictionary = fixture.simulation.export_state()
+	expect(failed.orders[0].state == "waiting" and failed.orders[0].wait_reason == "no_route"
+		and failed.orders[0].metrics.no_route > 0 and failed.orders[0].metrics.moving % 5 == 1
+		and failed.tasks.is_empty(),
+		"a real path failure releases the task and retains its earlier movement remainder")
+	if carrying:
+		expect(failed.orders[0].result_position == [3, 3] and failed.orders[0].has_result
+			and not failed.orders[0].carrying,
+			"a real carrying failure drops the result on the corridor tile")
+	return fixture
+
+
+func _worker_for_order(state: Dictionary, order_id: String) -> Dictionary:
+	for employee: Dictionary in state.employees:
+		if employee.order_id == order_id:
+			return employee
+	return {}
 
 
 func _test_active_state_relationships(service_sim_script: GDScript) -> void:
