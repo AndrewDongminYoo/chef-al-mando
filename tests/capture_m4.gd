@@ -193,17 +193,31 @@ func _dialog_click(button: BaseButton, allowed: Rect2) -> void:
 
 
 func _dialog_choose(picker: OptionButton, index: int, allowed: Rect2) -> void:
-	await _dialog_click(picker, allowed)
 	var popup := picker.get_popup()
-	await process_frame
+	for input_attempt: int in range(2):
+		await _dialog_click(picker, allowed)
+		for frame_index: int in range(4):
+			await process_frame
+			if popup.visible:
+				break
+		if popup.visible:
+			break
 	var popup_rect := Rect2(popup.position, popup.size)
-	checks.expect(popup.visible and allowed.encloses(popup_rect),
-		"settings selection popup is visible inside the safe area")
+	checks.expect(popup.visible, "settings selection popup opens after coordinate input")
+	checks.expect(allowed.encloses(popup_rect),
+		"settings selection popup fits inside the safe area")
+	if not popup.visible:
+		return
 	checks.expect(not popup.get_item_text(index).is_empty(),
 		"settings selection popup shows the requested choice")
 	var local_point := Vector2(popup.position) + Vector2(
 		popup.size.x * 0.5, popup.size.y * (index + 0.5) / popup.item_count)
 	var point := root.get_screen_transform() * local_point
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	motion.global_position = point
+	Input.parse_input_event(motion)
+	await process_frame
 	await tap(point, _mouse_event)
 	await process_frame
 	checks.expect(picker.selected == index, "settings popup input selects item %d" % index)
@@ -227,7 +241,7 @@ func _viewport_click(button: BaseButton, point: Vector2) -> void:
 		var event := _mouse_event(point, pressed) as InputEventMouseButton
 		event.global_position = point
 		root.push_input(event, true)
-	await process_frame
+		await process_frame
 
 
 func _check_text(label: Label, description: String) -> void:

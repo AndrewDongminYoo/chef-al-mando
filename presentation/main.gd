@@ -71,6 +71,7 @@ var feedback_kind: String = ""
 var feedback_reason: String = ""
 var settings_message_kind: String = ""
 var settings_message_reason: String = ""
+var modal_open_allowed: Callable
 
 @onready var start_button: Button = $SafeArea/Layout/Controls/Start
 @onready var pause_button: Button = $SafeArea/Layout/Controls/Pause
@@ -527,6 +528,8 @@ func _settings_label(text: String) -> Label:
 
 func _show_settings() -> void:
 	_pause()
+	if modal_open_allowed.is_valid() and not modal_open_allowed.call():
+		return
 	_sync_settings_controls()
 	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 	settings_dialog.get_ok_button().custom_minimum_size = Vector2(64, 64)

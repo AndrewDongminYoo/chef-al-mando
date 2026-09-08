@@ -194,8 +194,8 @@ msgstr "Could not save service"
 msgid "진행 중인 영업 교체"
 msgstr "Replace service in progress"
 
-msgid "저장한 이어하기를 지우고 선택한 영업의 준비를 시작합니다."
-msgstr "Delete the saved checkpoint and prepare the selected service."
+msgid "새 영업에서 시작을 누르면 저장한 이어하기를 새 영업으로 교체합니다."
+msgstr "Starting the new service replaces the saved checkpoint."
 
 msgid "새 영업으로 교체"
 msgstr "Replace with new service"

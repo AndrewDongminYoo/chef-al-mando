@@ -238,21 +238,86 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 		retry.pressed.emit()
 	expect(not screen.get("pending_save") and FileAccess.file_exists(file_path),
 		"retry writes the preserved open service without changing its state")
+	failed_store.failure = "write"
+	screen.get("service_goal_button").pressed.emit()
+	await tree.process_frame
+	expect(screen.get("pending_save") and screen.get("save_error_dialog").visible
+		and not screen.get("goal_dialog").visible and not screen.get("leave_dialog").visible,
+		"a failed goal pause shows only the checkpoint retry dialog")
+	failed_store.failure = ""
+	retry.pressed.emit()
+	screen.get("service_goal_button").pressed.emit()
+	expect(not screen.get("pending_save") and screen.get("goal_dialog").visible
+		and not service.call("is_running"),
+		"a successful retry allows the goal dialog while service remains paused")
+	screen.get("goal_dialog").hide()
+	service.get("resume_button").pressed.emit()
+	failed_store.failure = "write"
+	service.get("settings_button").pressed.emit()
+	await tree.process_frame
+	expect(screen.get("pending_save") and screen.get("save_error_dialog").visible
+		and not service.get("settings_dialog").visible and not screen.get("goal_dialog").visible,
+		"a failed service-settings pause shows only the checkpoint retry dialog")
+	failed_store.failure = ""
+	retry.pressed.emit()
+	service.get("settings_button").pressed.emit()
+	expect(not screen.get("pending_save") and service.get("settings_dialog").visible
+		and not service.call("is_running"),
+		"a successful retry allows service settings while service remains paused")
+	service.get("settings_dialog").hide()
 	screen.call("request_menu")
 	screen.get("leave_dialog").confirmed.emit()
 	await tree.process_frame
 	expect(screen.get("active_service") == null,
 		"the menu action succeeds after the checkpoint retry")
+	var saved_bytes := FileAccess.get_file_as_bytes(file_path)
+	var saved_session: Dictionary = screen.get("active_session").duplicate(true)
 	screen.get("begin_button").pressed.emit()
 	var replace := _find_visible_button(screen, "새 영업으로 교체")
 	expect(screen.get("active_service") == null and replace != null,
 		"starting over with an open checkpoint requires an explicit replacement confirmation")
+	expect(screen.get("replace_dialog").dialog_text == "새 영업에서 시작을 누르면 저장한 이어하기를 새 영업으로 교체합니다.",
+		"replacement copy names Start as the checkpoint replacement point")
+	screen.get("settings_locale").item_selected.emit(1)
+	expect(screen.get("replace_dialog").dialog_text == "Starting the new service replaces the saved checkpoint.",
+		"English replacement copy names Start as the checkpoint replacement point")
+	screen.get("settings_locale").item_selected.emit(0)
 	if replace != null:
 		replace.pressed.emit()
 	await tree.process_frame
 	service = screen.get("active_service")
-	expect(service != null and service.get("state") == 0,
-		"confirming replacement opens a fresh preparation screen")
+	expect(service != null and service.get("state") == 0
+		and screen.get("active_session") == saved_session
+		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		"confirming replacement opens preparation without replacing the saved checkpoint")
+	screen.call("return_to_menu")
+	await tree.process_frame
+	expect(screen.get("active_service") == null and screen.get("continue_button").visible
+		and screen.get("active_session") == saved_session
+		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		"leaving fresh preparation keeps the previous checkpoint available")
+	screen.get("begin_button").pressed.emit()
+	var second_replace := _find_visible_button(screen, "새 영업으로 교체")
+	if second_replace != null:
+		second_replace.pressed.emit()
+	await tree.process_frame
+	service = screen.get("active_service")
+	var replacement_purchase := int(saved_session.preparation.purchases.vegetable) + 1
+	expect(service.call("submit_preparation", "set_purchase", "vegetable", replacement_purchase).accepted,
+		"the replacement fixture changes its preparation")
+	failed_store.failure = "write"
+	service.get("start_button").pressed.emit()
+	await tree.process_frame
+	expect(screen.get("pending_save") and screen.get("active_session") == saved_session
+		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		"a failed replacement Start preserves the previous checkpoint")
+	failed_store.failure = ""
+	retry.pressed.emit()
+	var replaced := CampaignStore.new(screen.get("campaign"), file_path).load_records()
+	expect(not screen.get("pending_save") and replaced.accepted
+		and replaced.active_session.preparation.purchases.vegetable == replacement_purchase
+		and FileAccess.get_file_as_bytes(file_path) != saved_bytes,
+		"a successful replacement Start writes the new checkpoint")
 	if service != null:
 		service.get("audio_feedback").set_enabled(false)
 	screen.queue_free()

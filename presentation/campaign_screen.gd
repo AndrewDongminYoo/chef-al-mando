@@ -212,7 +212,7 @@ func _build_dialogs() -> void:
 	save_error_dialog.confirmed.connect(_retry_checkpoint)
 	replace_dialog = ConfirmationDialog.new()
 	replace_dialog.title = tr("진행 중인 영업 교체")
-	replace_dialog.dialog_text = tr("저장한 이어하기를 지우고 선택한 영업의 준비를 시작합니다.")
+	replace_dialog.dialog_text = tr("새 영업에서 시작을 누르면 저장한 이어하기를 새 영업으로 교체합니다.")
 	replace_dialog.ok_button_text = tr("새 영업으로 교체")
 	replace_dialog.cancel_button_text = tr("이어하기 유지")
 	replace_dialog.dialog_autowrap = true
@@ -318,7 +318,7 @@ func _refresh_strings() -> void:
 	save_error_dialog.title = tr("영업을 저장하지 못했습니다")
 	retry_checkpoint_button.text = tr("저장 재시도")
 	replace_dialog.title = tr("진행 중인 영업 교체")
-	replace_dialog.dialog_text = tr("저장한 이어하기를 지우고 선택한 영업의 준비를 시작합니다.")
+	replace_dialog.dialog_text = tr("새 영업에서 시작을 누르면 저장한 이어하기를 새 영업으로 교체합니다.")
 	replace_dialog.ok_button_text = tr("새 영업으로 교체")
 	replace_dialog.cancel_button_text = tr("이어하기 유지")
 	result_dialog.title = tr("영업 결과")
@@ -465,6 +465,7 @@ func _mount_service(scenario: Resource) -> void:
 	active_service.scenario_path = scenario.resource_path
 	active_service.settings_path = settings_path
 	active_service.app_preferences = preferences
+	active_service.modal_open_allowed = func() -> bool: return not pending_save
 	active_service.service_closed.connect(_on_service_closed.bind(scenario.id))
 	active_service.checkpoint_requested.connect(_save_checkpoint)
 	add_child(active_service)
@@ -612,6 +613,8 @@ func _show_goal() -> void:
 		_show_result()
 		return
 	active_service.call("_pause")
+	if pending_save:
+		return
 	var scenario := campaign.scenario_for(selected_scenario_id)
 	goal_dialog.dialog_text = tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요.") % [tr(scenario.display_name), scenario.minimum_served, KitchenScreen._money(scenario.minimum_profit), tr(scenario.briefing)]
 	goal_dialog.popup_centered_clamped(Vector2i(700, 360))
