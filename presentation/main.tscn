@@ -21,6 +21,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = SubResource("Theme_main")
 script = ExtResource("1_main")
+scenario_path = "res://content/m2_first_service.tres"
 
 [node name="Lifecycle" type="Node" parent="."]
 script = ExtResource("2_lifecycle")

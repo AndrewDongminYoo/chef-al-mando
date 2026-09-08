@@ -20,7 +20,7 @@ func run(_tree: SceneTree) -> void:
 
 ## Instantiates the project's main scene under `tree.root` with frame processing disabled.
 ## Returns null when the main scene setting is empty or the scene cannot be loaded.
-static func boot_main(tree: SceneTree) -> Control:
+static func boot_main(tree: SceneTree, scenario_path: String = "res://content/m1_first_service.tres") -> Control:
 	var main_scene: String = ProjectSettings.get_setting("application/run/main_scene", "")
 	if main_scene.is_empty() or not ResourceLoader.exists(main_scene):
 		return null
@@ -28,6 +28,7 @@ static func boot_main(tree: SceneTree) -> Control:
 	if scene == null:
 		return null
 	var screen := scene.instantiate() as Control
+	screen.set("scenario_path", scenario_path)
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	return screen

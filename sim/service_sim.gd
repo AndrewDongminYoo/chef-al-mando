@@ -5,6 +5,7 @@ const RecipeDef := preload("res://content/recipe_def.gd")
 const ProcessDef := preload("res://content/process_def.gd")
 const StationDef := preload("res://content/station_def.gd")
 const GridRoutes := preload("res://sim/grid_routes.gd")
+const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const TERMINAL: Array[String] = ["served", "cancelled", "expired"]
 const DUTIES: Array[String] = ["all", "cold", "hot", "off"]
 const MOVE_TICKS: int = 5
@@ -23,6 +24,15 @@ class OrderState extends RefCounted:
 	var wait_reason: String = ""
 	var wait_detail: String = ""
 	var raw_consumed: bool = false
+	var input_consumed: bool = false
+	var uses_prepared: bool = false
+	var reserved_inputs: Dictionary[String, int] = {}
+	var consumed_cost: int = 0
+	var intermediate_ready: bool = false
+	var intermediate_consumed: bool = false
+	var ended_tick: int = -1
+	var metrics: Dictionary[String, int] = {"missing_ingredients": 0, "no_responsible_employee": 0,
+		"station_in_use": 0, "no_route": 0, "responsible_employee_busy": 0, "moving": 0, "working": 0}
 	var ingredients_reserved: bool = false
 	var has_result: bool = false
 	var result_position: Vector2i = Vector2i.ZERO
@@ -69,11 +79,17 @@ var _commands: Array[Dictionary] = []
 var _last_sequence: int = 0
 var _revenue: int = 0
 var _events: Array[Dictionary] = []
+var _station_reserved_ticks: Dictionary[String, int] = {}
 
 
-func _init(data: Definitions, routes: GridRoutes = null) -> void:
+func _init(data: Definitions, routes: GridRoutes = null, preparation: Dictionary = {}) -> void:
 	_data = data
-	errors = data.validate()
+	var initial: Dictionary = {}
+	if data.supports_preparation() or not preparation.is_empty():
+		initial = PreparationPlan.initial_state(data, preparation)
+		errors = initial.errors
+	else:
+		errors = data.validate()
 	if not errors.is_empty():
 		closed = true
 		return
@@ -81,16 +97,20 @@ func _init(data: Definitions, routes: GridRoutes = null) -> void:
 	_schedule = data.order_schedule()
 	_stations.assign(data.stations)
 	_stations.sort_custom(func(a: StationDef, b: StationDef) -> bool: return a.id < b.id)
+	for station: StationDef in _stations:
+		_station_reserved_ticks[station.id] = 0
 	for definition: Definitions.EmployeeDef in data.employees:
 		var employee := EmployeeState.new()
 		employee.id = definition.id
 		employee.tile = definition.starting_tile
 		employee.next_tile = employee.tile
+		if not initial.is_empty():
+			employee.duty = initial.duties[employee.id]
 		_employees.append(employee)
 		_employee_by_id[employee.id] = employee
 	_employees.sort_custom(func(a: EmployeeState, b: EmployeeState) -> bool: return a.id < b.id)
 	for ingredient: Definitions.IngredientDef in data.ingredients:
-		_inventory[ingredient.id] = data.purchases.get(ingredient.id, 0)
+		_inventory[ingredient.id] = data.purchases.get(ingredient.id, 0) if initial.is_empty() else initial.inventory[ingredient.id]
 		_reserved[ingredient.id] = 0
 
 
@@ -142,6 +162,7 @@ func step() -> void:
 	_complete_work()
 	_assign_work()
 	_move_employees()
+	_accumulate_metrics()
 
 
 func _apply_commands() -> void:
@@ -200,11 +221,16 @@ func _complete_work() -> void:
 		order.result_position = task.station.work_position
 		order.has_result = true
 		order.carrying = false
+		if order.phases[order.phase_index].id == "prep":
+			order.intermediate_ready = true
 		_release_task(order)
 		order.phase_index += 1
+		if order.uses_prepared and order.phase_index < order.phases.size() and order.phases[order.phase_index].id == "prep":
+			order.phase_index += 1
 		if order.phase_index == order.phases.size():
 			order.state = "served"
 			order.has_result = false
+			order.ended_tick = tick
 			_revenue += order.recipe.revenue
 			_events.append({"kind": "order_served", "order_id": order.id})
 		else:
@@ -233,11 +259,12 @@ func _assign_work() -> void:
 
 func _try_assignment(order: OrderState) -> void:
 	order.wait_detail = ""
-	if not order.raw_consumed:
-		for ingredient_id: String in order.recipe.ingredients:
-			if _inventory[ingredient_id] - _reserved[ingredient_id] < order.recipe.ingredients[ingredient_id]:
-				order.wait_reason = "missing_ingredients"
-				return
+	var inputs: Dictionary[String, int] = {}
+	if not order.input_consumed:
+		inputs = _available_inputs(order)
+		if inputs.is_empty():
+			order.wait_reason = "missing_ingredients"
+			return
 	var available: Array[EmployeeState] = []
 	var responsible: bool = false
 	for employee: EmployeeState in _employees:
@@ -261,9 +288,11 @@ func _try_assignment(order: OrderState) -> void:
 			var task := _plan_task(order, employee, station)
 			if task == null:
 				continue
-			if not order.raw_consumed:
-				for ingredient_id: String in order.recipe.ingredients:
-					_reserved[ingredient_id] += order.recipe.ingredients[ingredient_id]
+			if not order.input_consumed:
+				order.reserved_inputs = inputs
+				order.uses_prepared = inputs.has(order.recipe.prepared_ingredient_id)
+				for ingredient_id: String in inputs:
+					_reserved[ingredient_id] += inputs[ingredient_id]
 				order.ingredients_reserved = true
 			_tasks[order.id] = task
 			employee.order_id = order.id
@@ -276,6 +305,19 @@ func _try_assignment(order: OrderState) -> void:
 				_begin_work(order, task)
 			return
 	order.wait_reason = "no_route"
+
+
+func _available_inputs(order: OrderState) -> Dictionary[String, int]:
+	var inputs: Dictionary[String, int] = {}
+	var prepared_id := order.recipe.prepared_ingredient_id
+	if not prepared_id.is_empty() and _inventory[prepared_id] - _reserved[prepared_id] > 0:
+		inputs[prepared_id] = 1
+		return inputs
+	for ingredient_id: String in order.recipe.ingredients:
+		if _inventory[ingredient_id] - _reserved[ingredient_id] < order.recipe.ingredients[ingredient_id]:
+			return {}
+	inputs.assign(order.recipe.ingredients)
+	return inputs
 
 
 func _station_available(station: StationDef) -> bool:
@@ -305,12 +347,17 @@ func _plan_task(order: OrderState, employee: EmployeeState, station: StationDef)
 
 
 func _begin_work(order: OrderState, task: TaskState) -> void:
-	if not order.raw_consumed:
-		for ingredient_id: String in order.recipe.ingredients:
-			_inventory[ingredient_id] -= order.recipe.ingredients[ingredient_id]
-			_reserved[ingredient_id] -= order.recipe.ingredients[ingredient_id]
-		order.raw_consumed = true
-		order.ingredients_reserved = false
+	if not order.input_consumed:
+		for ingredient_id: String in order.reserved_inputs:
+			_inventory[ingredient_id] -= order.reserved_inputs[ingredient_id]
+			order.consumed_cost += _data.ingredient_for(ingredient_id).unit_cost * order.reserved_inputs[ingredient_id]
+		_release_ingredients(order)
+		order.input_consumed = true
+		order.raw_consumed = not order.uses_prepared
+		order.intermediate_ready = order.uses_prepared
+	if order.phases[order.phase_index].id == "cook" and order.intermediate_ready:
+		order.intermediate_ready = false
+		order.intermediate_consumed = true
 	order.state = "working"
 	order.carrying = false
 	order.has_result = true
@@ -366,8 +413,9 @@ func _release_task(order: OrderState) -> void:
 func _release_ingredients(order: OrderState) -> void:
 	if not order.ingredients_reserved:
 		return
-	for ingredient_id: String in order.recipe.ingredients:
-		_reserved[ingredient_id] -= order.recipe.ingredients[ingredient_id]
+	for ingredient_id: String in order.reserved_inputs:
+		_reserved[ingredient_id] -= order.reserved_inputs[ingredient_id]
+	order.reserved_inputs.clear()
 	order.ingredients_reserved = false
 
 
@@ -380,6 +428,8 @@ func _terminate_order(order: OrderState, terminal: String, reason: String) -> vo
 	order.wait_detail = ""
 	order.carrying = false
 	order.has_result = false
+	order.intermediate_ready = false
+	order.ended_tick = tick
 	_events.append({"kind": "order_ended", "order_id": order.id, "reason": reason})
 
 
@@ -391,9 +441,8 @@ func _accounting() -> Dictionary:
 	for order: OrderState in _orders:
 		if order.state in TERMINAL:
 			counts[order.state] += 1
-		if order.raw_consumed and order.state in ["cancelled", "expired"]:
-			for ingredient: Definitions.IngredientDef in _data.ingredients:
-				waste_cost += ingredient.unit_cost * order.recipe.ingredients.get(ingredient.id, 0)
+		if order.state in ["cancelled", "expired"]:
+			waste_cost += order.consumed_cost
 	if closed:
 		for ingredient: Definitions.IngredientDef in _data.ingredients:
 			waste_cost += ingredient.unit_cost * _inventory.get(ingredient.id, 0)
@@ -402,6 +451,27 @@ func _accounting() -> Dictionary:
 	return {"revenue": _revenue, "purchased_cost": purchased_cost, "labor_cost": _data.labor_cost,
 		"profit": profit, "cash": _data.starting_budget + profit, "waste_cost": waste_cost,
 		"served": counts.served, "cancelled": counts.cancelled, "expired": counts.expired}
+
+
+func _accumulate_metrics() -> void:
+	for order: OrderState in _orders:
+		if order.state in TERMINAL:
+			continue
+		var key := order.wait_reason if order.state == "waiting" else order.state
+		order.metrics[key] += 1
+		if order.state == "waiting" and order.wait_detail == "responsible_employee_busy":
+			order.metrics.responsible_employee_busy += 1
+		if _tasks.has(order.id):
+			_station_reserved_ticks[_tasks[order.id].station.id] += 1
+
+
+func _metrics() -> Dictionary:
+	var totals: Dictionary[String, int] = {"missing_ingredients": 0, "no_responsible_employee": 0,
+		"station_in_use": 0, "no_route": 0, "responsible_employee_busy": 0, "moving": 0, "working": 0}
+	for order: OrderState in _orders:
+		for key: String in totals:
+			totals[key] += order.metrics[key]
+	return {"orders": totals, "station_reserved_ticks": _station_reserved_ticks.duplicate()}
 
 
 func snapshot() -> Dictionary:
@@ -418,6 +488,10 @@ func snapshot() -> Dictionary:
 			"phase_index": order.phase_index, "phase_id": order.phases[order.phase_index].id if order.phase_index < order.phases.size() else "",
 			"priority": order.priority, "wait_reason": order.wait_reason, "wait_detail": order.wait_detail,
 			"raw_consumed": order.raw_consumed, "ingredients_reserved": order.ingredients_reserved,
+			"input_consumed": order.input_consumed, "uses_prepared": order.uses_prepared,
+			"reserved_inputs": order.reserved_inputs.duplicate(), "consumed_cost": order.consumed_cost,
+			"intermediate_ready": order.intermediate_ready, "intermediate_consumed": order.intermediate_consumed,
+			"ended_tick": order.ended_tick, "metrics": order.metrics.duplicate(),
 			"has_result": order.has_result, "result_position": _tile_array(order.result_position), "carrying": order.carrying,
 			"employee_id": task.employee_id if task != null else "",
 			"station_id": task.station.id if task != null else "",
@@ -437,7 +511,7 @@ func snapshot() -> Dictionary:
 	return {"tick": tick, "closed": closed, "schedule_cursor": _schedule_cursor,
 		"orders": orders, "employees": employees, "tasks": tasks,
 		"inventory": _inventory.duplicate(), "reserved": _reserved.duplicate(),
-		"accounting": _accounting(), "commands": _commands.duplicate(true),
+		"accounting": _accounting(), "metrics": _metrics(), "commands": _commands.duplicate(true),
 		"last_sequence": _last_sequence, "events": _events.duplicate(true), "errors": errors.duplicate()}
 
 

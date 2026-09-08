@@ -22,11 +22,12 @@ const GridRoutes := preload("res://sim/grid_routes.gd")
 @export var order_count: int = 0
 @export var first_arrival_tick: int = 0
 @export var arrival_interval_ticks: int = 0
+@export var prep_labor_capacity: int = 0
 
 
-func validate() -> Array[String]:
+func validate(require_stock: bool = true) -> Array[String]:
 	var errors: Array[String] = []
-	if id.is_empty() or closing_tick <= 0 or starting_budget < 0 or labor_cost < 0:
+	if id.is_empty() or closing_tick <= 0 or starting_budget < 0 or labor_cost < 0 or prep_labor_capacity < 0:
 		errors.append("invalid scenario values")
 	if order_count <= 0 or first_arrival_tick <= 0 or arrival_interval_ticks <= 0:
 		errors.append("invalid arrival schedule")
@@ -46,6 +47,8 @@ func validate() -> Array[String]:
 	for ingredient_id: String in purchases:
 		if not ingredient_ids.has(ingredient_id) or purchases[ingredient_id] < 0:
 			errors.append("invalid purchase: " + ingredient_id)
+		elif not ingredient_for(ingredient_id).purchasable:
+			errors.append("prepared ingredients cannot be purchased: " + ingredient_id)
 	var roles: Dictionary[String, bool] = {}
 	for station: StationDef in stations:
 		if station != null:
@@ -53,6 +56,7 @@ func validate() -> Array[String]:
 				errors.append("invalid station role: " + station.id)
 			else:
 				roles[station.role] = true
+	var prepared_ids: Dictionary[String, bool] = {}
 	for recipe: RecipeDef in recipes:
 		if recipe == null:
 			continue
@@ -61,6 +65,25 @@ func validate() -> Array[String]:
 		for ingredient_id: String in recipe.ingredients:
 			if not ingredient_ids.has(ingredient_id) or recipe.ingredients[ingredient_id] < 0:
 				errors.append("invalid recipe ingredient: " + ingredient_id)
+		var has_preparation := not recipe.prepared_ingredient_id.is_empty()
+		if has_preparation:
+			var prepared := ingredient_for(recipe.prepared_ingredient_id)
+			if prepared == null or prepared.purchasable or prepared_ids.has(recipe.prepared_ingredient_id):
+				errors.append("invalid prepared ingredient: " + recipe.id)
+			prepared_ids[recipe.prepared_ingredient_id] = true
+			if recipe.prep_labor_units <= 0 or recipe.ingredients.is_empty():
+				errors.append("invalid preparation inputs or labor: " + recipe.id)
+			var input_cost: int = 0
+			for ingredient_id: String in recipe.ingredients:
+				var ingredient := ingredient_for(ingredient_id)
+				if ingredient == null or not ingredient.purchasable or recipe.ingredients[ingredient_id] <= 0:
+					errors.append("preparation requires raw ingredients: " + recipe.id)
+				else:
+					input_cost += ingredient.unit_cost * recipe.ingredients[ingredient_id]
+			if prepared != null and prepared.unit_cost != input_cost:
+				errors.append("prepared ingredient cost must equal its raw input cost: " + recipe.id)
+		elif recipe.prep_labor_units != 0:
+			errors.append("preparation labor requires a prepared ingredient: " + recipe.id)
 		_check_ids(recipe.processes, "process", errors)
 		var ordered_processes := recipe.ordered_processes()
 		if ordered_processes.is_empty():
@@ -69,9 +92,14 @@ func validate() -> Array[String]:
 			var process_ids: Array[String] = []
 			for process: RecipeDef.ProcessDef in ordered_processes:
 				process_ids.append(process.id)
-			if process_ids != ["pickup", "cook", "serve"]:
-				errors.append("M1 processes must follow pickup, cook, serve: " + recipe.id)
+			var required_phases: Array[String] = ["pickup", "cook", "serve"]
+			if has_preparation:
+				required_phases.insert(1, "prep")
+			if process_ids != required_phases:
+				errors.append("processes must follow the supported recipe phases: " + recipe.id)
 		var phase_roles := {"pickup": "storage", "cook": recipe.cook_role, "serve": "pass"}
+		if has_preparation:
+			phase_roles["prep"] = "cold"
 		for process: RecipeDef.ProcessDef in recipe.processes:
 			if process == null:
 				continue
@@ -86,9 +114,10 @@ func validate() -> Array[String]:
 		if recipe == null:
 			errors.append("unknown scenario menu: " + recipe_id)
 			continue
-		for ingredient_id: String in recipe.ingredients:
-			if purchases.get(ingredient_id, 0) < recipe.ingredients[ingredient_id]:
-				errors.append("scenario cannot sell menu: " + recipe_id)
+		if require_stock:
+			for ingredient_id: String in recipe.ingredients:
+				if purchases.get(ingredient_id, 0) < recipe.ingredients[ingredient_id]:
+					errors.append("scenario cannot sell menu: " + recipe_id)
 	if grid_size.x < 3 or grid_size.y < 3:
 		errors.append("invalid kitchen grid size")
 		return errors
@@ -112,7 +141,49 @@ func validate() -> Array[String]:
 				reachable = true
 		if not reachable:
 			errors.append("unreachable station: " + station.id)
+	if supports_preparation():
+		var placement_reason := placement_error()
+		if not placement_reason.is_empty():
+			errors.append(placement_reason)
 	return errors
+
+
+func supports_preparation() -> bool:
+	for recipe: RecipeDef in recipes:
+		if recipe != null and not recipe.prepared_ingredient_id.is_empty():
+			return true
+	return false
+
+
+# cspell:ignore absi
+func placement_error() -> String:
+	if grid_size.x < 3 or grid_size.y < 3 or stations.is_empty() or employees.is_empty():
+		return "invalid_layout"
+	var interior := Rect2i(Vector2i.ONE, grid_size - Vector2i(2, 2))
+	var occupied: Array[Vector2i] = []
+	for station: StationDef in stations:
+		if station == null:
+			return "invalid_layout"
+		if not interior.has_point(station.tile):
+			return "outside_kitchen"
+		if station.tile in occupied or station.tile in extra_obstacles:
+			return "station_overlap"
+		occupied.append(station.tile)
+		var offset := station.work_position - station.tile
+		if absi(offset.x) + absi(offset.y) != 1:
+			return "invalid_work_position"
+	var routes := GridRoutes.new(grid_size, blocked_tiles())
+	for station: StationDef in stations:
+		if not routes.is_walkable(station.work_position):
+			return "blocked_work_position"
+		if routes.path_between(stations[0].work_position, station.work_position).is_empty():
+			return "no_route"
+	for employee: EmployeeDef in employees:
+		if employee == null or not routes.is_walkable(employee.starting_tile):
+			return "employee_start_blocked"
+		if routes.path_between(employee.starting_tile, stations[0].work_position).is_empty():
+			return "no_route"
+	return ""
 
 
 func _check_ids(items: Array, kind: String, errors: Array[String]) -> void:
@@ -153,6 +224,13 @@ func recipe_for(recipe_id: String) -> RecipeDef:
 	for recipe: RecipeDef in recipes:
 		if recipe != null and recipe.id == recipe_id:
 			return recipe
+	return null
+
+
+func ingredient_for(ingredient_id: String) -> IngredientDef:
+	for ingredient: IngredientDef in ingredients:
+		if ingredient != null and ingredient.id == ingredient_id:
+			return ingredient
 	return null
 
 

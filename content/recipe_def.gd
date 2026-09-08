@@ -10,6 +10,9 @@ const ProcessDef := preload("res://content/process_def.gd")
 @export var patience_ticks: int = 0
 @export var first_process_id: String = ""
 @export var processes: Array[ProcessDef] = []
+@export var prepared_ingredient_id: String = ""
+@export var prep_labor_units: int = 0
+@export var icon: Texture2D
 
 
 func ordered_processes() -> Array[ProcessDef]:
@@ -28,4 +31,6 @@ func ordered_processes() -> Array[ProcessDef]:
 		var process: ProcessDef = by_id[next]
 		result.append(process)
 		next = process.next_id
-	return result if result.size() == processes.size() else []
+	if result.size() != processes.size():
+		return []
+	return result

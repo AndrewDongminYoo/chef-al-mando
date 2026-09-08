@@ -1,0 +1,277 @@
+[gd_resource type="Resource" load_steps=36 format=3]
+
+[ext_resource type="Script" path="res://content/definitions.gd" id="scenario"]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="ingredient"]
+
+[ext_resource type="Script" path="res://content/process_def.gd" id="process"]
+
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="recipe"]
+
+[ext_resource type="Script" path="res://content/station_def.gd" id="station"]
+
+[ext_resource type="Script" path="res://content/employee_def.gd" id="employee"]
+
+[ext_resource type="Texture2D" path="res://assets/m2/salad.svg" id="icon_salad"]
+
+[ext_resource type="Texture2D" path="res://assets/m2/soup.svg" id="icon_soup"]
+
+[ext_resource type="Texture2D" path="res://assets/m2/grill.svg" id="icon_grill"]
+
+[sub_resource type="Resource" id="Ingredient_vegetable"]
+script = ExtResource("ingredient")
+id = "vegetable"
+display_name = "채소"
+unit_cost = 100
+purchasable = true
+
+
+[sub_resource type="Resource" id="Ingredient_grain"]
+script = ExtResource("ingredient")
+id = "grain"
+display_name = "곡물"
+unit_cost = 150
+purchasable = true
+
+
+[sub_resource type="Resource" id="Ingredient_protein"]
+script = ExtResource("ingredient")
+id = "protein"
+display_name = "단백질"
+unit_cost = 400
+purchasable = true
+
+
+[sub_resource type="Resource" id="Ingredient_prepped_salad"]
+script = ExtResource("ingredient")
+id = "prepped_salad"
+display_name = "손질한 샐러드 재료"
+unit_cost = 100
+purchasable = false
+
+
+[sub_resource type="Resource" id="Ingredient_prepped_soup"]
+script = ExtResource("ingredient")
+id = "prepped_soup"
+display_name = "손질한 수프 재료"
+unit_cost = 350
+purchasable = false
+
+
+[sub_resource type="Resource" id="Ingredient_prepped_grill"]
+script = ExtResource("ingredient")
+id = "prepped_grill"
+display_name = "손질한 구이 재료"
+unit_cost = 400
+purchasable = false
+
+
+[sub_resource type="Resource" id="Process_pickup"]
+script = ExtResource("process")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "prep"
+
+
+[sub_resource type="Resource" id="Process_serve"]
+script = ExtResource("process")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+
+[sub_resource type="Resource" id="Prep_salad"]
+script = ExtResource("process")
+id = "prep"
+station_role = "cold"
+duration_ticks = 30
+next_id = "cook"
+
+
+[sub_resource type="Resource" id="Cook_salad"]
+script = ExtResource("process")
+id = "cook"
+station_role = "cold"
+duration_ticks = 60
+next_id = "serve"
+
+
+[sub_resource type="Resource" id="Prep_soup"]
+script = ExtResource("process")
+id = "prep"
+station_role = "cold"
+duration_ticks = 60
+next_id = "cook"
+
+
+[sub_resource type="Resource" id="Cook_soup"]
+script = ExtResource("process")
+id = "cook"
+station_role = "hot"
+duration_ticks = 140
+next_id = "serve"
+
+
+[sub_resource type="Resource" id="Prep_grill"]
+script = ExtResource("process")
+id = "prep"
+station_role = "cold"
+duration_ticks = 90
+next_id = "cook"
+
+
+[sub_resource type="Resource" id="Cook_grill"]
+script = ExtResource("process")
+id = "cook"
+station_role = "hot"
+duration_ticks = 240
+next_id = "serve"
+
+
+[sub_resource type="Resource" id="Recipe_salad"]
+script = ExtResource("recipe")
+id = "salad"
+icon = ExtResource("icon_salad")
+display_name = "채소 샐러드"
+ingredients = Dictionary[String, int]({"vegetable": 1})
+cook_role = "cold"
+revenue = 500
+patience_ticks = 400
+first_process_id = "pickup"
+processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_salad"), SubResource("Process_serve")])
+prepared_ingredient_id = "prepped_salad"
+prep_labor_units = 1
+
+
+[sub_resource type="Resource" id="Recipe_soup"]
+script = ExtResource("recipe")
+id = "soup"
+icon = ExtResource("icon_soup")
+display_name = "곡물 수프"
+ingredients = Dictionary[String, int]({"vegetable": 2, "grain": 1})
+cook_role = "hot"
+revenue = 900
+patience_ticks = 600
+first_process_id = "pickup"
+processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_soup"), SubResource("Cook_soup"), SubResource("Process_serve")])
+prepared_ingredient_id = "prepped_soup"
+prep_labor_units = 2
+
+
+[sub_resource type="Resource" id="Recipe_grill"]
+script = ExtResource("recipe")
+id = "grill"
+icon = ExtResource("icon_grill")
+display_name = "단백질 구이"
+ingredients = Dictionary[String, int]({"protein": 1})
+cook_role = "hot"
+revenue = 1500
+patience_ticks = 800
+first_process_id = "pickup"
+processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_grill"), SubResource("Cook_grill"), SubResource("Process_serve")])
+prepared_ingredient_id = "prepped_grill"
+prep_labor_units = 3
+
+
+[sub_resource type="Resource" id="Station_storage_01"]
+script = ExtResource("station")
+id = "storage_01"
+display_name = "재료고"
+role = "storage"
+tile = Vector2i(2, 1)
+work_position = Vector2i(2, 2)
+
+
+[sub_resource type="Resource" id="Station_cold_01"]
+script = ExtResource("station")
+id = "cold_01"
+display_name = "찬 조리대"
+role = "cold"
+tile = Vector2i(5, 1)
+work_position = Vector2i(5, 2)
+
+
+[sub_resource type="Resource" id="Station_hot_01"]
+script = ExtResource("station")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(8, 1)
+work_position = Vector2i(8, 2)
+
+
+[sub_resource type="Resource" id="Station_pass_01"]
+script = ExtResource("station")
+id = "pass_01"
+display_name = "출고대"
+role = "pass"
+tile = Vector2i(9, 5)
+work_position = Vector2i(9, 4)
+
+
+[sub_resource type="Resource" id="Employee_employee_01"]
+script = ExtResource("employee")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+
+[sub_resource type="Resource" id="Employee_employee_02"]
+script = ExtResource("employee")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+
+[sub_resource type="Resource" id="Ingredient_prepped_grain_salad"]
+script = ExtResource("ingredient")
+id = "prepped_grain_salad"
+display_name = "손질한 곡물 샐러드 재료"
+unit_cost = 250
+purchasable = false
+
+[sub_resource type="Resource" id="Cook_grain_salad"]
+script = ExtResource("process")
+id = "cook"
+station_role = "cold"
+duration_ticks = 100
+next_id = "serve"
+
+[sub_resource type="Resource" id="Recipe_grain_salad"]
+script = ExtResource("recipe")
+id = "grain_salad"
+icon = ExtResource("icon_salad")
+display_name = "곡물 샐러드"
+ingredients = Dictionary[String, int]({"vegetable": 1, "grain": 1})
+cook_role = "cold"
+revenue = 700
+patience_ticks = 500
+first_process_id = "pickup"
+processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_grain_salad"), SubResource("Process_serve")])
+prepared_ingredient_id = "prepped_grain_salad"
+prep_labor_units = 1
+
+[resource]
+script = ExtResource("scenario")
+id = "m2_extra_menu"
+seed = 0
+closing_tick = 3000
+starting_budget = 10000
+labor_cost = 2000
+prep_labor_capacity = 6
+grid_size = Vector2i(12, 8)
+
+ingredients = Array[ExtResource("ingredient")]([SubResource("Ingredient_vegetable"), SubResource("Ingredient_grain"), SubResource("Ingredient_protein"), SubResource("Ingredient_prepped_salad"), SubResource("Ingredient_prepped_soup"), SubResource("Ingredient_prepped_grill"), SubResource("Ingredient_prepped_grain_salad")])
+
+recipes = Array[ExtResource("recipe")]([SubResource("Recipe_salad"), SubResource("Recipe_soup"), SubResource("Recipe_grill"), SubResource("Recipe_grain_salad")])
+
+stations = Array[ExtResource("station")]([SubResource("Station_storage_01"), SubResource("Station_cold_01"), SubResource("Station_hot_01"), SubResource("Station_pass_01")])
+
+employees = Array[ExtResource("employee")]([SubResource("Employee_employee_01"), SubResource("Employee_employee_02")])
+
+purchases = Dictionary[String, int]({"vegetable": 22, "grain": 8, "protein": 8})
+menu_ids = PackedStringArray("grain_salad", "salad", "soup", "grill")
+order_count = 20
+first_arrival_tick = 10
+arrival_interval_ticks = 140

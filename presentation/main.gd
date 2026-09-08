@@ -10,6 +10,8 @@ const Definitions := preload("res://content/definitions.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 const TickDriver := preload("res://presentation/tick_driver.gd")
 const KitchenBoard := preload("res://presentation/kitchen_board.gd")
+const PreparationPlan := preload("res://sim/preparation_plan.gd")
+const PreparationPanel := preload("res://presentation/preparation_panel.gd")
 const STATUS_TEXT := {
 	State.READY: "준비 완료 · 시작을 눌러 주방을 확인하세요",
 	State.RUNNING: "진행 중 · 언제든지 일시정지할 수 있습니다",
@@ -17,9 +19,11 @@ const STATUS_TEXT := {
 	State.CLOSED: "영업 종료 · 결과를 확인하고 다시 준비할 수 있습니다",
 }
 const STATE_TEXT := {"waiting": "대기", "moving": "이동", "working": "작업", "served": "제공 완료", "cancelled": "취소", "expired": "미제공"}
-const PHASE_TEXT := {"pickup": "재료 수거", "cook": "조리", "serve": "제공", "": "완료"}
+const PHASE_TEXT := {"pickup": "재료 수거", "prep": "손질", "cook": "조리", "serve": "제공", "": "완료"}
 const WAIT_TEXT := {"missing_ingredients": "재료 부족", "no_responsible_employee": "담당 없음", "responsible_employee_busy": "담당 직원 작업 중", "station_in_use": "작업대 사용 중", "no_route": "경로 없음", "": ""}
 const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
+
+@export_file("*.tres") var scenario_path: String = "res://content/m1_first_service.tres"
 
 var state: State = State.READY
 var input_actions: int = 0
@@ -38,6 +42,12 @@ var duty_buttons: Array[OptionButton] = []
 var duty_labels: Array[Label] = []
 var speed_buttons: Array[Button] = []
 var compact_layout: bool = true
+var details_expanded: bool = true
+var preparation: PreparationPlan
+var preparation_panel: PreparationPanel
+var last_preparation: Dictionary = {}
+var analysis_scroll: ScrollContainer
+var analysis_label: Label
 
 @onready var start_button: Button = $SafeArea/Layout/Controls/Start
 @onready var pause_button: Button = $SafeArea/Layout/Controls/Pause
@@ -117,6 +127,19 @@ func is_running() -> bool:
 
 func _start() -> void:
 	if state == State.READY and simulation.errors.is_empty():
+		if preparation != null:
+			var committed := submit_preparation("start", "", null)
+			if not committed.accepted:
+				return
+			definitions = committed.definitions
+			last_preparation = committed.selection
+			simulation = ServiceSim.new(definitions, null, committed.options)
+			if not simulation.errors.is_empty():
+				_refresh()
+				return
+			driver = TickDriver.new(simulation)
+			board.selected_station_id = ""
+			feedback_label.text = ""
 		_set_state(State.RUNNING)
 
 
@@ -138,6 +161,8 @@ func _set_state(next: State) -> void:
 
 func _refresh() -> void:
 	start_button.disabled = state != State.READY or not simulation.errors.is_empty()
+	if state == State.READY and preparation != null:
+		start_button.disabled = start_button.disabled or not preparation.snapshot().can_start
 	pause_button.disabled = state != State.RUNNING
 	resume_button.disabled = state != State.PAUSED
 	restart_button.visible = state == State.CLOSED
@@ -158,8 +183,35 @@ func _show_counter() -> void:
 
 
 func _new_service() -> void:
-	definitions = load("res://content/m1_first_service.tres") as Definitions
-	simulation = ServiceSim.new(definitions)
+	var source := load(scenario_path) as Definitions
+	definitions = source
+	simulation = ServiceSim.new(source)
+	if source.supports_preparation():
+		restart_button.text = "준비 다시 하기"
+		preparation = PreparationPlan.new(source, last_preparation)
+		var display := preparation.display_definition()
+		if display != null:
+			definitions = display
+		if preparation_panel == null and display != null:
+			preparation_panel = PreparationPanel.new()
+			$SafeArea/Layout/Kitchen/Body/Side.add_child(preparation_panel)
+			$SafeArea/Layout/Kitchen/Body/Side.move_child(preparation_panel, 0)
+			preparation_panel.command_requested.connect(submit_preparation)
+			preparation_panel.station_selected.connect(func(station_id: String) -> void:
+				board.selected_station_id = station_id
+				board.queue_redraw())
+			preparation_panel.setup(source)
+			analysis_scroll = ScrollContainer.new()
+			analysis_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			analysis_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			$SafeArea/Layout/Kitchen/Body/Side.add_child(analysis_scroll)
+			analysis_label = Label.new()
+			analysis_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			analysis_label.add_theme_font_size_override("font_size", 20)
+			analysis_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			analysis_scroll.add_child(analysis_label)
+		if preparation_panel != null:
+			board.selected_station_id = preparation_panel.selected_station_id
 	driver = TickDriver.new(simulation)
 	selected_order_id = ""
 	command_sequence = 0
@@ -209,6 +261,18 @@ func submit_command(kind: String, target_id: String, value: Variant) -> Dictiona
 	return result
 
 
+func submit_preparation(kind: String, target_id: String, value: Variant) -> Dictionary:
+	if preparation == null or state != State.READY:
+		return {"accepted": false, "reason": "service_started"}
+	var result := preparation.apply_command({"kind": kind, "target_id": target_id, "value": value,
+		"apply_tick": 0, "sequence": preparation.snapshot().sequence + 1})
+	feedback_label.text = "준비 반영 완료" if result.accepted else PreparationPanel.reason_text(result.reason)
+	if result.accepted:
+		definitions = preparation.display_definition()
+	_refresh()
+	return result
+
+
 func select_order(order_id: String) -> void:
 	selected_order_id = order_id
 	_refresh_service()
@@ -249,6 +313,7 @@ func set_compact_layout(value: bool) -> void:
 
 func _toggle_details() -> void:
 	detail_panel.visible = not detail_panel.visible
+	details_expanded = detail_panel.visible
 	_update_details_toggle()
 
 
@@ -258,6 +323,19 @@ func _update_details_toggle() -> void:
 
 func _refresh_service() -> void:
 	latest_view = simulation.snapshot()
+	if preparation_panel != null:
+		var preparing := state == State.READY
+		var analyzing := state == State.CLOSED
+		preparation_panel.visible = preparing
+		analysis_scroll.visible = analyzing
+		employee_controls.visible = not preparing
+		$SafeArea/Layout/Kitchen/Body/Side/Heading.visible = not preparing and not analyzing
+		$SafeArea/Layout/Kitchen/Body/Side/OrdersScroll.visible = not preparing and not analyzing
+		details_toggle.visible = not preparing and not analyzing and compact_layout
+		detail_panel.visible = not preparing and not analyzing and (details_expanded or not compact_layout)
+		if preparing and latest_view.errors.is_empty():
+			_show_preparation()
+			return
 	if not latest_view.errors.is_empty():
 		board.show_state(null, {})
 		summary_label.text = "주방 데이터 오류 · 영업을 시작할 수 없습니다"
@@ -279,6 +357,9 @@ func _refresh_service() -> void:
 			var button := Button.new()
 			button.custom_minimum_size = Vector2(64, 64)
 			button.add_theme_font_size_override("font_size", 20)
+			button.icon = definitions.recipe_for(order.recipe_id).icon
+			button.expand_icon = true
+			button.add_theme_constant_override("icon_max_width", 32)
 			button.pressed.connect(select_order.bind(order.id))
 			order_list.add_child(button)
 			order_buttons[order.id] = button
@@ -307,12 +388,35 @@ func _refresh_service() -> void:
 			feedback_label.text = "주문 상태가 바뀌어 명령을 적용하지 못했습니다"
 
 
+func _show_preparation() -> void:
+	var preview := preparation.snapshot()
+	preparation_panel.refresh(preview)
+	if not preview.has("purchases"):
+		board.show_state(null, {})
+		summary_label.text = "준비 데이터 오류 · 영업을 시작할 수 없습니다"
+		return
+	var employees: Array[Dictionary] = []
+	for definition: Definitions.EmployeeDef in definitions.employees:
+		var tile: Array[int] = [definition.starting_tile.x, definition.starting_tile.y]
+		employees.append({"id": definition.id, "tile": tile, "next_tile": tile.duplicate(), "progress": 0,
+			"duty": preview.duties[definition.id], "order_id": ""})
+	board.show_state(definitions, {"employees": employees})
+	summary_label.text = "시작 예산 %s · 발주 %s · 고정 인건비 %s\n남은 예산 %s · 준비 노동량 %d / %d\n주문 %d건 · %s" % [_money(definitions.starting_budget), _money(preview.purchased_cost), _money(definitions.labor_cost), _money(preview.budget_remaining), preview.labor_used, preview.labor_capacity, definitions.order_count, "영업 시작 가능" if preview.can_start else "준비를 확인하세요"]
+	status_label.text = "준비 중 · 발주·프렙과 배치·담당을 선택한 뒤 시작하세요"
+	if not preview.errors.is_empty():
+		status_label.text = PreparationPanel.reason_text(preview.errors[0])
+	for button: Button in speed_buttons:
+		button.disabled = true
+
+
 func _show_summary() -> void:
 	var accounting: Dictionary = latest_view.accounting
 	if state == State.CLOSED:
 		var total: int = latest_view.orders.size()
 		var rate: float = accounting.served * 100.0 / maxi(total, 1)
 		summary_label.text = "제공 %d / %d건 (%.0f%%) · 취소 %d · 미제공 %d\n매출 %s · 재료비 %s · 인건비 %s\n폐기 %s · 손익 %s · 남은 예산 %s" % [accounting.served, total, rate, accounting.cancelled, accounting.expired, _money(accounting.revenue), _money(accounting.purchased_cost), _money(accounting.labor_cost), _money(accounting.waste_cost), _money(accounting.profit), _money(accounting.cash)]
+		if analysis_label != null:
+			_show_analysis()
 	elif state == State.READY:
 		var menus: PackedStringArray = []
 		for recipe_id: String in definitions.menu_ids:
@@ -320,6 +424,29 @@ func _show_summary() -> void:
 		summary_label.text = "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n채소 %d · 곡물 %d · 단백질 %d · 주문 %d건" % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), latest_view.inventory.vegetable, latest_view.inventory.grain, latest_view.inventory.protein, definitions.order_count]
 	else:
 		summary_label.text = "제공 %d건 · 매출 %s\n남은 재료 · 채소 %d / 곡물 %d / 단백질 %d" % [accounting.served, _money(accounting.revenue), latest_view.inventory.vegetable, latest_view.inventory.grain, latest_view.inventory.protein]
+		if preparation != null:
+			var prepared: PackedStringArray = []
+			for recipe_id: String in definitions.menu_ids:
+				var recipe := definitions.recipe_for(recipe_id)
+				prepared.append("%s %d" % [recipe.display_name, latest_view.inventory.get(recipe.prepared_ingredient_id, 0)])
+			summary_label.text += "\n프렙 · " + " / ".join(prepared)
+
+
+func _show_analysis() -> void:
+	var totals: Dictionary = latest_view.metrics.orders
+	var longest: String = "missing_ingredients"
+	var lines: PackedStringArray = ["주문별 누적 시간", "여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다.", ""]
+	for reason: String in ["missing_ingredients", "no_responsible_employee", "station_in_use", "no_route"]:
+		lines.append("%s · %.1f초" % [WAIT_TEXT[reason], totals[reason] / 10.0])
+		if totals[reason] > totals[longest]:
+			longest = reason
+	lines.append("  담당 부재 %.1f초 / 작업 중 %.1f초" % [(totals.no_responsible_employee - totals.responsible_employee_busy) / 10.0, totals.responsible_employee_busy / 10.0])
+	lines.append("이동 · %.1f초\n작업 · %.1f초" % [totals.moving / 10.0, totals.working / 10.0])
+	lines.append("\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다." % (WAIT_TEXT[longest] if totals[longest] > 0 else "대기 없음"))
+	lines.append("\n설비별 예약·사용 시간\n재료를 가져오는 이동 중 예약도 포함합니다.")
+	for station: Definitions.StationDef in definitions.stations:
+		lines.append("%s · %.1f초" % [station.display_name, latest_view.metrics.station_reserved_ticks[station.id] / 10.0])
+	analysis_label.text = "\n".join(lines)
 
 
 func _order_status(order: Dictionary) -> String:

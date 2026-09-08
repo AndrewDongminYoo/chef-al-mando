@@ -28,7 +28,7 @@ The campaign uses fixed scenarios.
 Employees can pass through each other.
 The player can pause the simulation at any time.
 
-The repository now has an M0 screen, a lifecycle adapter, local checks, and mobile export presets.
+The repository has the M1 service loop, a lifecycle adapter, local checks, and mobile export presets.
 The `project.godot` file declares the `4.7` feature tag and the `GL Compatibility` renderer.
 The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
@@ -38,6 +38,11 @@ After the initial iPhone observations, the operator also approved M1 implementat
 Instrumented input-count verification on iPhone remains pending.
 This exception permits M1 implementation and its available local, export, and iPhone checks.
 M0 approval and full M1 acceptance still require the deferred Android physical-device evidence.
+
+On 2026-09-08, the operator approved the final M1 iPhone build and [the M2 specification](docs/specs/m2-preparation.md).
+This approval permits M2 implementation while Android physical-device verification remains deferred.
+It includes preparation, placement, result analysis, representative art, and available local, export, and iPhone checks.
+It does not establish full M0 or M1 acceptance or the M2 user-test result.
 
 The M0-M1 specification defines the exact stable Godot version, the matching export-template version, the reference iPhone, the three menu fixtures, the 20-order fixture, and the exact local and CI verification commands.
 The reference Android device is not defined yet.

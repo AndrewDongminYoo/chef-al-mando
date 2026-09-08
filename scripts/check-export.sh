@@ -31,7 +31,11 @@ if ((command_exit != 0)) || grep -Eq '(^|[[:space:]])(SCRIPT ERROR:|ERROR:|FAIL:
 	echo "FAIL: exported runtime check failed; see $log_file" >&2
 	exit 1
 fi
-if ! grep -Fxq 'PASS: exported M1 content and first order' "$log_file"; then
-	echo "FAIL: exported runtime completion marker is missing" >&2
-	exit 1
-fi
+for marker in 'PASS: exported M1 content and first order' \
+	'PASS: exported M2 preparation and first order' \
+	'PASS: exported M2 extra menu prepared and served'; do
+	if ! grep -Fxq "$marker" "$log_file"; then
+		echo "FAIL: exported runtime completion marker is missing: $marker" >&2
+		exit 1
+	fi
+done
