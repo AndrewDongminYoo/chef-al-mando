@@ -157,6 +157,12 @@ func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
 	var scene: PackedScene = load(scene_path)
 	var screen: Control = scene.instantiate()
 	screen.set("save_path", file_path)
+	var settings_path := file_path + ".settings.json"
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	if not HarnessSettingsStore.new(settings_path).save_settings(settings).accepted:
+		return null
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	return screen

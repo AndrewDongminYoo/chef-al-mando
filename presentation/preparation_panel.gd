@@ -32,6 +32,8 @@ var station_label: Label
 var summary: Label
 var reset_button: Button
 var selected_station_id: String = ""
+var stock_heading: Label
+var prep_heading: Label
 
 
 func setup(data: Definitions) -> void:
@@ -65,7 +67,8 @@ func setup(data: Definitions) -> void:
 
 
 func _build_stock(column: VBoxContainer) -> void:
-	column.add_child(_label("원재료 발주 · 한 개씩 조절"))
+	stock_heading = _label("원재료 발주 · 한 개씩 조절")
+	column.add_child(stock_heading)
 	for ingredient: Definitions.IngredientDef in definitions.ingredients:
 		if not ingredient.purchasable:
 			continue
@@ -82,7 +85,8 @@ func _build_stock(column: VBoxContainer) -> void:
 		plus.pressed.connect(_change_quantity.bind("set_purchase", ingredient.id, 1))
 		row.add_child(plus)
 		purchase_plus[ingredient.id] = plus
-	column.add_child(_label("프렙 · 영업 중 손질을 미리 준비"))
+	prep_heading = _label("프렙 · 영업 중 손질을 미리 준비")
+	column.add_child(prep_heading)
 	for recipe_id: String in definitions.menu_ids:
 		var recipe := definitions.recipe_for(recipe_id)
 		if recipe.prepared_ingredient_id.is_empty():
@@ -114,7 +118,7 @@ func _build_layout(column: VBoxContainer) -> void:
 	station_picker.custom_minimum_size = Vector2(64, 64)
 	station_picker.add_theme_font_size_override("font_size", 20)
 	for station: Definitions.StationDef in definitions.stations:
-		station_picker.add_item(station.display_name)
+		station_picker.add_item(tr(station.display_name))
 	station_picker.item_selected.connect(func(index: int) -> void: select_station(definitions.stations[index].id))
 	column.add_child(station_picker)
 	station_label = _label("")
@@ -133,12 +137,12 @@ func _build_layout(column: VBoxContainer) -> void:
 	for employee: Definitions.EmployeeDef in definitions.employees:
 		var row := HBoxContainer.new()
 		column.add_child(row)
-		row.add_child(_label(employee.display_name))
+		row.add_child(_label(tr(employee.display_name)))
 		var picker := OptionButton.new()
 		picker.custom_minimum_size = Vector2(180, 64)
 		picker.add_theme_font_size_override("font_size", 20)
 		for title: String in DUTY_NAMES:
-			picker.add_item(title)
+			picker.add_item(tr(title))
 		picker.item_selected.connect(func(index: int) -> void: command_requested.emit("set_duty", employee.id, DUTIES[index]))
 		row.add_child(picker)
 		duty_buttons[employee.id] = picker
@@ -164,7 +168,7 @@ func select_station(station_id: String) -> void:
 func _show_station() -> void:
 	for station: Dictionary in current.get("stations", []):
 		if station.id == selected_station_id:
-			station_label.text = "%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)" % [station.name, station.tile[0], station.tile[1], station.work_position[0], station.work_position[1]]
+			station_label.text = tr("%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)") % [tr(station.name), station.tile[0], station.tile[1], station.work_position[0], station.work_position[1]]
 
 
 func refresh(snapshot: Dictionary) -> void:
@@ -175,19 +179,19 @@ func refresh(snapshot: Dictionary) -> void:
 		if not ingredient.purchasable:
 			continue
 		var quantity: int = snapshot.purchases.get(ingredient.id, 0)
-		purchase_labels[ingredient.id].text = "%s %d개\n개당 %d" % [ingredient.display_name, quantity, ingredient.unit_cost]
+		purchase_labels[ingredient.id].text = tr("%s %d개\n개당 %d") % [tr(ingredient.display_name), quantity, ingredient.unit_cost]
 		purchase_minus[ingredient.id].disabled = quantity == 0
 	for recipe_id: String in prep_labels:
 		var recipe := definitions.recipe_for(recipe_id)
 		var quantity: int = snapshot.prep_quantities.get(recipe_id, 0)
-		prep_labels[recipe_id].text = "%s %d개\n노동 %d / 개" % [recipe.display_name, quantity, recipe.prep_labor_units]
+		prep_labels[recipe_id].text = tr("%s %d개\n노동 %d / 개") % [tr(recipe.display_name), quantity, recipe.prep_labor_units]
 		prep_minus[recipe_id].disabled = quantity == 0
 	for employee_id: String in duty_buttons:
 		duty_buttons[employee_id].select(DUTIES.find(snapshot.duties[employee_id]))
-	var lines: PackedStringArray = ["준비 확정 후 영업이 시작됩니다.", "원재료와 프렙은 이번 영업에만 사용합니다.", "", "시작 재고"]
+	var lines: PackedStringArray = [tr("준비 확정 후 영업이 시작됩니다."), tr("원재료와 프렙은 이번 영업에만 사용합니다."), "", tr("시작 재고")]
 	for ingredient: Definitions.IngredientDef in definitions.ingredients:
-		lines.append("%s · %d개" % [ingredient.display_name, snapshot.inventory[ingredient.id]])
-	lines.append("\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요.")
+		lines.append(tr("%s · %d개") % [tr(ingredient.display_name), snapshot.inventory[ingredient.id]])
+	lines.append(tr("\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요."))
 	summary.text = "\n".join(lines)
 	_show_station()
 
@@ -198,12 +202,29 @@ func _change_quantity(kind: String, target: String, amount: int) -> void:
 
 
 static func reason_text(reason: String) -> String:
-	return REASONS.get(reason, "준비를 적용할 수 없습니다 · 선택과 데이터를 확인하세요")
+	return TranslationServer.translate(REASONS.get(reason, "준비를 적용할 수 없습니다 · 선택과 데이터를 확인하세요"))
+
+
+func refresh_translations() -> void:
+	for index: int in tabs.size():
+		tabs[index].text = tr(["발주·프렙", "배치·담당", "요약"][index])
+	stock_heading.text = tr("원재료 발주 · 한 개씩 조절")
+	prep_heading.text = tr("프렙 · 영업 중 손질을 미리 준비")
+	reset_button.text = tr("기본 준비로 초기화")
+	for index: int in definitions.stations.size():
+		station_picker.set_item_text(index, tr(definitions.stations[index].display_name))
+	for employee_id: String in duty_buttons:
+		for index: int in DUTY_NAMES.size():
+			duty_buttons[employee_id].set_item_text(index, tr(DUTY_NAMES[index]))
+	for direction: String in ["up", "left", "down", "right"]:
+		move_buttons[direction].text = tr({"up": "↑ 위", "left": "← 왼쪽", "down": "↓ 아래", "right": "→ 오른쪽"}[direction])
+	move_buttons.rotate.text = tr("작업 방향 ↻ 회전")
+	refresh(current)
 
 
 static func _button(title: String, expand: bool = true) -> Button:
 	var button := Button.new()
-	button.text = title
+	button.text = TranslationServer.translate(title)
 	button.custom_minimum_size = Vector2(64, 64)
 	button.add_theme_font_size_override("font_size", 20)
 	if expand:
@@ -213,7 +234,7 @@ static func _button(title: String, expand: bool = true) -> Button:
 
 static func _label(title: String) -> Label:
 	var label := Label.new()
-	label.text = title
+	label.text = TranslationServer.translate(title)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.add_theme_font_size_override("font_size", 20)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

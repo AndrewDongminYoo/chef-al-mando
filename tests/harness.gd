@@ -2,6 +2,8 @@ extends RefCounted
 
 ## Shared base for headless suites and the rendered capture script.
 
+const HarnessSettingsStore := preload("res://persistence/settings_store.gd")
+
 var checked: int = 0
 var failures: int = 0
 
@@ -29,6 +31,12 @@ static func boot_main(tree: SceneTree, scenario_path: String = "res://content/m1
 		return null
 	var screen := scene.instantiate() as Control
 	screen.set("scenario_path", scenario_path)
+	var settings_path := "user://test_main_settings_%d.json" % Time.get_ticks_usec()
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	if not HarnessSettingsStore.new(settings_path).save_settings(settings).accepted:
+		return null
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	return screen

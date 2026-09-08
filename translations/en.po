@@ -157,3 +157,513 @@ msgstr "Employee 3"
 
 msgid "직원 4"
 msgstr "Employee 4"
+
+msgid "설정"
+msgstr "Settings"
+
+msgid "이어하기"
+msgstr "Continue"
+
+msgid "닫기"
+msgstr "Close"
+
+msgid "언어"
+msgstr "Language"
+
+msgid "효과음"
+msgstr "Sound effects"
+
+msgid "글자 크기"
+msgstr "Text size"
+
+msgid "기본"
+msgstr "Normal"
+
+msgid "크게"
+msgstr "Large"
+
+msgid "설정 저장 완료"
+msgstr "Settings saved"
+
+msgid "결과"
+msgstr "Results"
+
+msgid "영업을 저장하지 못했습니다"
+msgstr "Could not save service"
+
+msgid "진행 중인 영업 교체"
+msgstr "Replace service in progress"
+
+msgid "저장한 이어하기를 지우고 선택한 영업의 준비를 시작합니다."
+msgstr "Delete the saved checkpoint and prepare the selected service."
+
+msgid "새 영업으로 교체"
+msgstr "Replace with new service"
+
+msgid "이어하기 유지"
+msgstr "Keep checkpoint"
+
+msgid "현재 영업을 저장하고 목록으로 돌아갑니다.\n이어하기를 누르면 일시정지한 시점부터 계속할 수 있습니다."
+msgstr "Save this service and return to the list.\nSelect Continue to resume from the paused point."
+
+msgid "저장하고 목록으로"
+msgstr "Save and return to list"
+
+msgid "완료"
+msgstr "Completed"
+
+msgid "도전 가능"
+msgstr "Available"
+
+msgid "잠김 · 이전 영업 완료 필요"
+msgstr "Locked · complete the previous service"
+
+msgid "%02d · %s\n%s"
+msgstr "%02d · %s\n%s"
+
+msgid "\n최고 %d건 · 손익 %s"
+msgstr "\nBest %d served · profit %s"
+
+msgid "%s · %s"
+msgstr "%s · %s"
+
+msgid "%s %d건"
+msgstr "%s × %d"
+
+msgid "%s\n\n목표 · 제공 %d건 이상 / 손익 %s 이상\n\n예산 %s · 고정 인건비 %s\n직원 %d명 · 설비 %d개 · 준비 노동량 %d\n\n예상 주문 %d건 · 영업 300초\n%s"
+msgstr "%s\n\nGoal · serve at least %d / profit at least %s\n\nBudget %s · fixed labor %s\n%d employees · %d stations · preparation capacity %d\n\n%d expected orders · 300-second service\n%s"
+
+msgid "\n\n개별 최고 기록 · 제공 %d건 / 손익 %s\n두 최고 기록은 서로 다른 시도의 결과일 수 있습니다."
+msgstr "\n\nPersonal best · %d served / profit %s\nThese two records may come from different attempts."
+
+msgid "영업 저장 완료"
+msgstr "Service saved"
+
+msgid "캠페인 데이터를 불러올 수 없습니다"
+msgstr "Could not load campaign data"
+
+msgid "여덟 번의 영업을 마쳤습니다"
+msgstr "All eight services completed"
+
+msgid "준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요."
+msgstr "Your ingredients, routes, and duties made this kitchen work.\n\nYou can replay any completed service.\nTry to improve the best served count and profit for each one."
+
+msgid "엔딩 보기"
+msgstr "View ending"
+
+msgid "%s\n\n제공 %d건 / 목표 %d건\n손익 %s / 목표 %s\n\n%s"
+msgstr "%s\n\nServed %d / goal %d\nProfit %s / goal %s\n\n%s"
+
+msgid "목표 달성"
+msgstr "Goal achieved"
+
+msgid "목표 미달 · 준비를 바꿔 다시 도전할 수 있습니다"
+msgstr "Goal missed · adjust preparation and try again"
+
+msgid "%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요."
+msgstr "%s\n\nServe at least %d · profit at least %s\n\n%s\n\nAfter closing this dialog, select Resume to continue."
+
+msgid "백업에서 기록을 복구했습니다"
+msgstr "Campaign records recovered from backup"
+
+msgid "저장한 캠페인 기록을 불러왔습니다"
+msgstr "Saved campaign records loaded"
+
+msgid "새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다"
+msgstr "New campaign · completion and best records save at closing"
+
+msgid "이 앱에서 지원하지 않는 버전의 기록입니다. 기존 파일을 보존합니다."
+msgstr "This record version is not supported. The existing file is preserved."
+
+msgid "저장 기록을 정상적으로 읽을 수 없습니다. 백업을 복구하거나 저장 없이 시작할 수 있습니다."
+msgstr "The save could not be read. Recover the backup or start without saving."
+
+msgid "기록을 저장하거나 읽지 못했습니다. 이번 세션의 결과는 유지되며 저장을 다시 시도할 수 있습니다."
+msgstr "Could not read or save records. This session remains available for another save attempt."
+
+msgid "저장 없이 플레이 중 · 이번 세션이 끝나면 새 결과는 남지 않습니다"
+msgstr "Playing without saves · new results will be lost when this session ends"
+
+msgid "저장 없이 플레이 중 · 기존 파일을 보존하며 이번 세션의 결과는 저장하지 않습니다"
+msgstr "Playing without saves · the existing file is preserved and this session will not be saved"
+
+msgid "이 앱에서 지원하지 않는 설정 파일입니다. 기존 파일을 보존합니다."
+msgstr "This settings version is not supported. The existing file is preserved."
+
+msgid "설정을 저장하거나 읽지 못했습니다. 기존 설정을 유지합니다."
+msgstr "Could not read or save settings. Current settings remain active."
+
+msgid "준비 완료 · 시작을 눌러 주방을 확인하세요"
+msgstr "Preparation complete · select Start to inspect the kitchen"
+
+msgid "진행 중 · 언제든지 일시정지할 수 있습니다"
+msgstr "In progress · you can pause at any time"
+
+msgid "일시정지 · 재개를 눌러 계속하세요"
+msgstr "Paused · select Resume to continue"
+
+msgid "영업 종료 · 결과를 확인하고 다시 준비할 수 있습니다"
+msgstr "Service closed · review results or prepare again"
+
+msgid "대기"
+msgstr "Waiting"
+
+msgid "이동"
+msgstr "Moving"
+
+msgid "작업"
+msgstr "Working"
+
+msgid "제공 완료"
+msgstr "Served"
+
+msgid "미제공"
+msgstr "Unserved"
+
+msgid "재료 수거"
+msgstr "Collect ingredients"
+
+msgid "손질"
+msgstr "Prep"
+
+msgid "조리"
+msgstr "Cook"
+
+msgid "재료 부족"
+msgstr "Missing ingredients"
+
+msgid "담당 없음"
+msgstr "No responsible employee"
+
+msgid "담당 직원 작업 중"
+msgstr "Responsible employee busy"
+
+msgid "작업대 사용 중"
+msgstr "Station in use"
+
+msgid "경로 없음"
+msgstr "No route"
+
+msgid "전체 담당"
+msgstr "All duties"
+
+msgid "냉식 담당"
+msgstr "Cold duty"
+
+msgid "온식 담당"
+msgstr "Hot duty"
+
+msgid "담당 해제"
+msgstr "Off duty"
+
+msgid "%05.1f초"
+msgstr "%05.1f s"
+
+msgid "남은 시간 %05.1f초  ·  "
+msgstr "Time remaining %05.1f s  ·  "
+
+msgid "준비 다시 하기"
+msgstr "Prepare again"
+
+msgid "적용 대기 · 재개하면 반영됩니다"
+msgstr "Queued · resumes on the next tick"
+
+msgid "적용 대기 · 곧 반영됩니다"
+msgstr "Queued · applies on the next tick"
+
+msgid "명령을 적용할 수 없습니다 · 대상과 상태를 확인하세요"
+msgstr "Command rejected · check the target and state"
+
+msgid "준비 반영 완료"
+msgstr "Preparation updated"
+
+msgid "주방 데이터 오류 · 영업을 시작할 수 없습니다"
+msgstr "Kitchen data error · service cannot start"
+
+msgid "주방 데이터를 불러올 수 없습니다"
+msgstr "Could not load kitchen data"
+
+msgid "주문을 불러올 수 없습니다"
+msgstr "Could not load orders"
+
+msgid "%s%s %s · 우선 %d\n%s"
+msgstr "%s%s %s · priority %d\n%s"
+
+msgid "작업 중"
+msgstr "Working"
+
+msgid "현재 공정 후 담당 변경"
+msgstr "Duty changes after this process"
+
+msgid "직원 %d · %s"
+msgstr "Employee %d · %s"
+
+msgid "적용 대기 %d건%s"
+msgstr "%d commands queued%s"
+
+msgid " · 재개하면 반영"
+msgstr " · applies after resume"
+
+msgid "명령 반영 완료"
+msgstr "Command applied"
+
+msgid "주문 상태가 바뀌어 명령을 적용하지 못했습니다"
+msgstr "The command was rejected because the order state changed"
+
+msgid "준비 데이터 오류 · 영업을 시작할 수 없습니다"
+msgstr "Preparation data error · service cannot start"
+
+msgid "시작 예산 %s · 발주 %s · 고정 인건비 %s\n남은 예산 %s · 준비 노동량 %d / %d\n주문 %d건 · %s"
+msgstr "Starting budget %s · purchases %s · fixed labor %s\nRemaining budget %s · preparation capacity %d / %d\n%d orders · %s"
+
+msgid "영업 시작 가능"
+msgstr "Ready to start"
+
+msgid "준비를 확인하세요"
+msgstr "Check preparation"
+
+msgid "준비 중 · 발주·프렙과 배치·담당을 선택한 뒤 시작하세요"
+msgstr "Preparing · choose purchases, prep, placement, and duties before starting"
+
+msgid "제공 %d / %d건 (%.0f%%) · 취소 %d · 미제공 %d\n매출 %s · 재료비 %s · 인건비 %s\n폐기 %s · 손익 %s · 남은 예산 %s"
+msgstr "Served %d / %d (%.0f%%) · cancelled %d · unserved %d\nRevenue %s · ingredients %s · labor %s\nWaste %s · profit %s · cash %s"
+
+msgid "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건"
+msgstr "Menu · %s\nBudget %s · ingredients %s · labor %s\n%s · %d orders"
+
+msgid "제공 %d건 · 매출 %s\n남은 재료 · %s"
+msgstr "Served %d · revenue %s\nStock · %s"
+
+msgid "%s %d"
+msgstr "%s %d"
+
+msgid "\n프렙 · "
+msgstr "\nPrep · "
+
+msgid "%s · %.1f초 남음"
+msgstr "%s · %.1f s remaining"
+
+msgid "%s · 우선순위 %d\n%s"
+msgstr "%s · priority %d\n%s"
+
+msgid "신규 담당 없음"
+msgstr "No new duties"
+
+msgid "배정할 주문 없음"
+msgstr "No order to assign"
+
+msgid "주문별 누적 시간"
+msgstr "Cumulative order time"
+
+msgid "여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."
+msgstr "Totals include multiple orders.\nThey can exceed the service duration."
+
+msgid "%s · %.1f초"
+msgstr "%s · %.1f s"
+
+msgid "  담당 부재 %.1f초 / 작업 중 %.1f초"
+msgstr "  Unassigned %.1f s / busy %.1f s"
+
+msgid "이동 · %.1f초\n작업 · %.1f초"
+msgstr "Moving · %.1f s\nWorking · %.1f s"
+
+msgid "\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다."
+msgstr "\nLongest wait · %s\nThis value alone does not prove the cause of a loss."
+
+msgid "대기 없음"
+msgstr "No waiting"
+
+msgid "\n설비별 예약·사용 시간\n재료를 가져오는 이동 중 예약도 포함합니다."
+msgstr "\nStation reservation and use time\nIncludes reservations while collecting ingredients."
+
+msgid "발주·프렙"
+msgstr "Purchases and prep"
+
+msgid "배치·담당"
+msgstr "Placement and duties"
+
+msgid "요약"
+msgstr "Summary"
+
+msgid "원재료 발주 · 한 개씩 조절"
+msgstr "Raw ingredient purchases · adjust one at a time"
+
+msgid "프렙 · 영업 중 손질을 미리 준비"
+msgstr "Prep · prepare ingredients before service"
+
+msgid "↑ 위"
+msgstr "↑ Up"
+
+msgid "← 왼쪽"
+msgstr "← Left"
+
+msgid "↓ 아래"
+msgstr "↓ Down"
+
+msgid "→ 오른쪽"
+msgstr "→ Right"
+
+msgid "작업 방향 ↻ 회전"
+msgstr "Rotate work side ↻"
+
+msgid "기본 준비로 초기화"
+msgstr "Reset preparation"
+
+msgid "%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)"
+msgstr "%s · yellow outline\nTile (%d, %d) · work tile (%d, %d)"
+
+msgid "%s %d개\n개당 %d"
+msgstr "%s × %d\n%d each"
+
+msgid "%s %d개\n노동 %d / 개"
+msgstr "%s × %d\nCapacity %d each"
+
+msgid "준비 확정 후 영업이 시작됩니다."
+msgstr "Service starts after preparation is confirmed."
+
+msgid "원재료와 프렙은 이번 영업에만 사용합니다."
+msgstr "Raw ingredients and prep apply only to this service."
+
+msgid "시작 재고"
+msgstr "Starting stock"
+
+msgid "%s · %d개"
+msgstr "%s · %d"
+
+msgid "\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요."
+msgstr "\nNearby stations reduce movement.\nUse closing metrics to compare prep and priority choices."
+
+msgid "예산이 부족합니다 · 고정 인건비도 남겨 두세요"
+msgstr "Budget is too low · reserve the fixed labor cost"
+
+msgid "원재료가 부족합니다 · 발주를 늘리거나 프렙을 줄이세요"
+msgstr "Raw ingredients are short · purchase more or reduce prep"
+
+msgid "준비 노동량이 부족합니다 · 다른 프렙을 줄여 보세요"
+msgstr "Preparation capacity is short · reduce other prep"
+
+msgid "다른 설비나 장애물과 겹칩니다"
+msgstr "Overlaps another station or obstacle"
+
+msgid "벽이나 주방 밖에는 놓을 수 없습니다"
+msgstr "Cannot place on a wall or outside the kitchen"
+
+msgid "작업 위치는 설비 옆 한 칸이어야 합니다"
+msgstr "The work tile must be adjacent to the station"
+
+msgid "작업 위치가 막힙니다"
+msgstr "The work tile is blocked"
+
+msgid "직원 시작 위치를 막을 수 없습니다"
+msgstr "Cannot block an employee start tile"
+
+msgid "설비 사이의 이동 경로가 막힙니다"
+msgstr "The route between stations is blocked"
+
+msgid "만들 수 없는 메뉴가 있습니다 · 원재료나 프렙을 확보하세요"
+msgstr "A menu cannot be made · secure raw ingredients or prep"
+
+msgid "영업 중에는 준비를 바꿀 수 없습니다"
+msgstr "Preparation cannot change during service"
+
+msgid "준비를 적용할 수 없습니다 · 선택과 데이터를 확인하세요"
+msgstr "Could not apply preparation · check the selection and data"
+
+msgid "첫 영업"
+msgstr "First service"
+
+msgid "Chef al Mando · 첫 영업"
+msgstr "Chef al Mando · First service"
+
+msgid "기본 흐름"
+msgstr "Basic flow"
+
+msgid "채소 샐러드 한 메뉴로 시작합니다. 준비를 확인하고 영업을 시작하세요. 언제든 일시정지할 수 있습니다. 마감 후 제공 수와 손익을 확인합니다."
+msgstr "Start with one vegetable salad menu. Review preparation and begin service. You can pause at any time. At closing, review the served count and profit."
+
+msgid "점심 전 준비"
+msgstr "Lunch preparation"
+
+msgid "프렙 배분"
+msgstr "Prep allocation"
+
+msgid "수프의 손질은 샐러드보다 오래 걸립니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
+msgstr "Soup takes longer to prep than salad. With the same capacity, compare which advance preparation reduces waiting orders."
+
+msgid "화구 앞 대기"
+msgstr "Hot-station queue"
+
+msgid "온식 우선순위"
+msgstr "Hot-order priority"
+
+msgid "구이는 매출이 높지만 화구를 오래 사용합니다. 짧은 주문과 느린 주문의 우선순위를 바꾸고 화구 대기를 확인하세요."
+msgstr "Grilled dishes earn more but occupy the hot station longer. Change priorities for short and slow orders, then inspect the hot-station wait."
+
+msgid "나눠 쓰는 재료"
+msgstr "Shared ingredients"
+
+msgid "공동 재고와 발주"
+msgstr "Shared stock and purchasing"
+
+msgid "채소를 여러 메뉴가 나눠 씁니다. 발주와 프렙을 함께 조절해 재료 부족과 남는 재료의 비용을 비교하세요."
+msgstr "Several menus share vegetables. Adjust purchases and prep together, then compare shortages with leftover cost."
+
+msgid "먼 출고대"
+msgstr "Distant pass"
+
+msgid "설비 동선"
+msgstr "Station routes"
+
+msgid "가림벽 너머 출고대로 음식이 이동합니다. 준비 중 설비를 옮겨 접근 가능한 작업 위치와 실제 이동 시간을 확인하세요."
+msgstr "Food moves to a pass beyond a partition. During preparation, move stations and inspect reachable work tiles and actual travel time."
+
+msgid "네 사람의 주방"
+msgstr "Four-person kitchen"
+
+msgid "담당 분리"
+msgstr "Split duties"
+
+msgid "냉식 작업대와 화구가 둘씩 있습니다. 네 직원의 담당을 나누고, 담당 직원 대기와 작업대 사용 시간을 함께 확인하세요."
+msgstr "The kitchen has two cold stations and two hot stations. Split four employee duties, then inspect employee waits and station use time."
+
+msgid "몰려오는 주문"
+msgstr "Order rush"
+
+msgid "주문 유입과 프렙"
+msgstr "Order arrivals and prep"
+
+msgid "여덟 메뉴의 주문이 빠르게 들어옵니다. 주문 구성을 보고 프렙을 배분하고, 영업 중 우선순위로 밀리는 주문을 조절하세요."
+msgstr "Orders for eight menus arrive quickly. Allocate prep from the order mix, then adjust orders delayed by priorities during service."
+
+msgid "마지막 영업"
+msgstr "Final service"
+
+msgid "전체 운영 조합"
+msgstr "Combined operations"
+
+msgid "마지막 영업입니다. 느린 온식 주문이 먼저 들어옵니다. 발주, 프렙, 동선, 담당을 함께 조절해 목표를 달성하세요."
+msgstr "This is the final service. Slow hot orders arrive first. Combine purchasing, prep, routes, and duties to reach the goal."
+
+msgid "손질한 채소 샐러드 재료"
+msgstr "Prepped vegetable salad ingredients"
+
+msgid "손질한 곡물 수프 재료"
+msgstr "Prepped grain soup ingredients"
+
+msgid "손질한 곡물 샐러드 재료"
+msgstr "Prepped grain salad ingredients"
+
+msgid "손질한 단백질 구이 재료"
+msgstr "Prepped grilled protein ingredients"
+
+msgid "손질한 버섯 샐러드 재료"
+msgstr "Prepped mushroom salad ingredients"
+
+msgid "손질한 버섯 수프 재료"
+msgstr "Prepped mushroom soup ingredients"
+
+msgid "손질한 단백질 덮밥 재료"
+msgstr "Prepped protein rice-bowl ingredients"
+
+msgid "손질한 곡물 볶음 재료"
+msgstr "Prepped stir-fried grain ingredients"
