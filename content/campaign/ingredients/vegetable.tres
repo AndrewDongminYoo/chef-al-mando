@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_pm2qq"]
+
+[resource]
+script = ExtResource("1_pm2qq")
+id = "vegetable"
+display_name = "채소"
+unit_cost = 100

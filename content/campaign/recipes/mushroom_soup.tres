@@ -1,0 +1,49 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/m2/soup.svg" id="1_jn2px"]
+[ext_resource type="Script" path="res://content/process_def.gd" id="2_avitn"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="3_n0yxy"]
+
+[sub_resource type="Resource" id="Resource_fukot"]
+script = ExtResource("2_avitn")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "prep"
+
+[sub_resource type="Resource" id="Resource_t4u74"]
+script = ExtResource("2_avitn")
+id = "prep"
+station_role = "cold"
+duration_ticks = 60
+next_id = "cook"
+
+[sub_resource type="Resource" id="Resource_6bbj3"]
+script = ExtResource("2_avitn")
+id = "cook"
+station_role = "hot"
+duration_ticks = 160
+next_id = "serve"
+
+[sub_resource type="Resource" id="Resource_23lwm"]
+script = ExtResource("2_avitn")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+[resource]
+script = ExtResource("3_n0yxy")
+id = "mushroom_soup"
+display_name = "버섯 수프"
+ingredients = Dictionary[String, int]({
+"mushroom": 1,
+"vegetable": 2
+})
+cook_role = "hot"
+revenue = 1100
+patience_ticks = 500
+first_process_id = "pickup"
+processes = Array[ExtResource("2_avitn")]([SubResource("Resource_fukot"), SubResource("Resource_t4u74"), SubResource("Resource_6bbj3"), SubResource("Resource_23lwm")])
+prepared_ingredient_id = "prepped_mushroom_soup"
+prep_labor_units = 2
+icon = ExtResource("1_jn2px")

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_x334d"]
+
+[resource]
+script = ExtResource("1_x334d")
+id = "prepped_protein_bowl"
+display_name = "손질한 단백질 덮밥 재료"
+unit_cost = 650
+purchasable = false

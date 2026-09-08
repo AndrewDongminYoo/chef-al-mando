@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_mle77"]
+
+[resource]
+script = ExtResource("1_mle77")
+id = "mushroom"
+display_name = "버섯"
+unit_cost = 200

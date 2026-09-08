@@ -2,6 +2,8 @@ extends Control
 
 ## Displays service snapshots and submits commands at the next tick boundary.
 
+signal service_closed(snapshot: Dictionary)
+
 enum State { READY, RUNNING, PAUSED, CLOSED }
 
 const AppLifecycle := preload("res://platform/app_lifecycle.gd")
@@ -24,6 +26,7 @@ const WAIT_TEXT := {"missing_ingredients": "재료 부족", "no_responsible_empl
 const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
 
 @export_file("*.tres") var scenario_path: String = "res://content/m1_first_service.tres"
+var scenario_definition: Definitions
 
 var state: State = State.READY
 var input_actions: int = 0
@@ -116,6 +119,7 @@ func advance(delta: float) -> void:
 	elapsed_seconds = simulation.tick / 10.0
 	if simulation.closed:
 		_set_state(State.CLOSED)
+		service_closed.emit(simulation.snapshot())
 	elif previous_tick != simulation.tick:
 		_refresh_service()
 		_show_counter()
@@ -183,7 +187,7 @@ func _show_counter() -> void:
 
 
 func _new_service() -> void:
-	var source := load(scenario_path) as Definitions
+	var source := scenario_definition if scenario_definition != null else load(scenario_path) as Definitions
 	definitions = source
 	simulation = ServiceSim.new(source)
 	if source.supports_preparation():

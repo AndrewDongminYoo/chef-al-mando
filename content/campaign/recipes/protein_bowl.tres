@@ -1,0 +1,50 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/m2/grill.svg" id="1_jabud"]
+[ext_resource type="Script" path="res://content/process_def.gd" id="2_ls53t"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="3_xtbc8"]
+
+[sub_resource type="Resource" id="Resource_chmt1"]
+script = ExtResource("2_ls53t")
+id = "pickup"
+station_role = "storage"
+duration_ticks = 10
+next_id = "prep"
+
+[sub_resource type="Resource" id="Resource_kix2g"]
+script = ExtResource("2_ls53t")
+id = "prep"
+station_role = "cold"
+duration_ticks = 60
+next_id = "cook"
+
+[sub_resource type="Resource" id="Resource_oxlg3"]
+script = ExtResource("2_ls53t")
+id = "cook"
+station_role = "hot"
+duration_ticks = 200
+next_id = "serve"
+
+[sub_resource type="Resource" id="Resource_uhiuc"]
+script = ExtResource("2_ls53t")
+id = "serve"
+station_role = "pass"
+duration_ticks = 10
+
+[resource]
+script = ExtResource("3_xtbc8")
+id = "protein_bowl"
+display_name = "단백질 덮밥"
+ingredients = Dictionary[String, int]({
+"grain": 1,
+"protein": 1,
+"vegetable": 1
+})
+cook_role = "hot"
+revenue = 1600
+patience_ticks = 500
+first_process_id = "pickup"
+processes = Array[ExtResource("2_ls53t")]([SubResource("Resource_chmt1"), SubResource("Resource_kix2g"), SubResource("Resource_oxlg3"), SubResource("Resource_uhiuc")])
+prepared_ingredient_id = "prepped_protein_bowl"
+prep_labor_units = 2
+icon = ExtResource("1_jabud")

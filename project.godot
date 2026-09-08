@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Chef al Mando"
-run/main_scene="res://presentation/main.tscn"
+run/main_scene="res://presentation/campaign.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

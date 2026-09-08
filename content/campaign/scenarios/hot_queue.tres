@@ -1,0 +1,89 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/employee_def.gd" id="1_du1v0"]
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_lxj0s"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_rck0r"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_e7db0"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/protein.tres" id="5_m3q51"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="6_ktnlf"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="7_vcs2b"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grill.tres" id="8_67xwn"]
+[ext_resource type="Script" path="res://content/recipe_def.gd" id="9_qir1t"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/grill.tres" id="10_v7207"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/soup.tres" id="11_1wom0"]
+[ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="12_1ne53"]
+[ext_resource type="Script" path="res://content/scenario_def.gd" id="13_4ad4f"]
+[ext_resource type="Script" path="res://content/station_def.gd" id="14_dy6wk"]
+
+[sub_resource type="Resource" id="Resource_0q7r0"]
+script = ExtResource("1_du1v0")
+id = "employee_01"
+display_name = "직원 1"
+starting_tile = Vector2i(2, 4)
+
+[sub_resource type="Resource" id="Resource_1whw8"]
+script = ExtResource("1_du1v0")
+id = "employee_02"
+display_name = "직원 2"
+starting_tile = Vector2i(3, 4)
+
+[sub_resource type="Resource" id="Resource_bdec6"]
+script = ExtResource("14_dy6wk")
+id = "storage_01"
+display_name = "재료"
+role = "storage"
+tile = Vector2i(2, 2)
+work_position = Vector2i(2, 3)
+
+[sub_resource type="Resource" id="Resource_p83wi"]
+script = ExtResource("14_dy6wk")
+id = "cold_01"
+display_name = "냉식"
+role = "cold"
+tile = Vector2i(5, 2)
+work_position = Vector2i(5, 3)
+
+[sub_resource type="Resource" id="Resource_7v11o"]
+script = ExtResource("14_dy6wk")
+id = "hot_01"
+display_name = "화구"
+role = "hot"
+tile = Vector2i(8, 2)
+work_position = Vector2i(8, 3)
+
+[sub_resource type="Resource" id="Resource_23381"]
+script = ExtResource("14_dy6wk")
+id = "pass_01"
+display_name = "제공"
+role = "pass"
+tile = Vector2i(9, 5)
+work_position = Vector2i(9, 4)
+
+[resource]
+script = ExtResource("13_4ad4f")
+display_name = "화구 앞 대기"
+briefing = "구이는 매출이 높지만 화구를 오래 사용합니다. 짧은 주문과 느린 주문의 우선순위를 바꾸고 화구 대기를 확인하세요."
+operation_problem = "온식 우선순위"
+minimum_served = 14
+minimum_profit = 1500
+order_recipe_ids = PackedStringArray("grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad")
+id = "hot_queue"
+seed = 42
+closing_tick = 3000
+starting_budget = 9250
+labor_cost = 2000
+grid_size = Vector2i(12, 8)
+ingredients = Array[ExtResource("2_lxj0s")]([ExtResource("3_rck0r"), ExtResource("4_e7db0"), ExtResource("5_m3q51"), ExtResource("6_ktnlf"), ExtResource("7_vcs2b"), ExtResource("8_67xwn")])
+recipes = Array[ExtResource("9_qir1t")]([ExtResource("10_v7207"), ExtResource("11_1wom0"), ExtResource("12_1ne53")])
+stations = Array[ExtResource("14_dy6wk")]([SubResource("Resource_bdec6"), SubResource("Resource_p83wi"), SubResource("Resource_7v11o"), SubResource("Resource_23381")])
+employees = Array[ExtResource("1_du1v0")]([SubResource("Resource_0q7r0"), SubResource("Resource_1whw8")])
+purchases = Dictionary[String, int]({
+"grain": 5,
+"protein": 10,
+"vegetable": 15
+})
+menu_ids = PackedStringArray("grill", "soup", "salad")
+order_count = 20
+first_arrival_tick = 10
+arrival_interval_ticks = 130
+prep_labor_capacity = 12

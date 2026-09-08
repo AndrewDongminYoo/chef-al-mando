@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/scenario_def.gd" id="1_m5lp5"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/first_shift.tres" id="2_kvt4n"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/lunch_prep.tres" id="3_nsryi"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/hot_queue.tres" id="4_42ygq"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/shared_stock.tres" id="5_7ejba"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/long_route.tres" id="6_ttx5d"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/split_duties.tres" id="7_8htxm"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/rush_hour.tres" id="8_ttt77"]
+[ext_resource type="Resource" path="res://content/campaign/scenarios/final_service.tres" id="9_4p5l6"]
+[ext_resource type="Script" path="res://content/campaign_def.gd" id="10_eio2x"]
+
+[resource]
+script = ExtResource("10_eio2x")
+id = "first_restaurant"
+scenarios = Array[ExtResource("1_m5lp5")]([ExtResource("2_kvt4n"), ExtResource("3_nsryi"), ExtResource("4_42ygq"), ExtResource("5_7ejba"), ExtResource("6_ttx5d"), ExtResource("7_8htxm"), ExtResource("8_ttt77"), ExtResource("9_4p5l6")])
