@@ -2,6 +2,7 @@ extends "res://tests/capture_m0.gd"
 
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const CampaignScreen := preload("res://presentation/campaign_screen.gd")
+const StoreTests := preload("res://tests/test_campaign_store.gd")
 
 
 func run() -> void:
@@ -77,10 +78,36 @@ func run() -> void:
 			if not service.is_running():
 				await _finish(screen, directory)
 				return
+		var failed_store: StoreTests.FailedStore
+		if index == 0 or index == 7:
+			failed_store = StoreTests.FailedStore.new(screen.campaign, screen.save_path)
+			failed_store.failure = "write"
+			screen.store = failed_store
 		service.advance((3000 - service.simulation.tick) / 10.0)
 		await process_frame
 		await process_frame
 		checks.expect(screen.last_result.get("passed", false) and screen.result_dialog.visible, "rendered closing passes its actual campaign targets: " + scenario.id)
+		if failed_store != null:
+			checks.expect(screen.pending_save and screen.retry_save_button.visible, "rendered closing reaches a real save failure")
+			await save_frame("res://build/check/m3-save-failure-%d.png" % index)
+			for button: Button in [screen.next_button, screen.retry_service_button]:
+				checks.expect(button.disabled, "unsaved completion disables the result navigation button: " + button.text)
+				var dialog := button.get_viewport() as Window
+				await _viewport_click(button, Vector2(dialog.position) + button.get_global_rect().get_center())
+				checks.expect(screen.active_service == service and screen.last_result.get("passed", false), "a coordinate tap cannot discard the unsaved completion")
+			await _dialog_click(screen.result_dialog.get_ok_button(), screen.safe_area.get_global_rect())
+			checks.expect(service.restart_button.disabled, "unsaved completion disables the analysis restart button")
+			await _viewport_click(service.restart_button, service.restart_button.get_global_rect().get_center())
+			checks.expect(service.simulation.tick == 3000, "a coordinate tap cannot restart the unsaved service")
+			await _safe_click(screen.service_menu_button, service.safe_area.get_global_rect())
+			checks.expect(screen.active_service == service and screen.result_dialog.visible, "menu input restores the pending save dialog")
+			await _dialog_click(screen.retry_save_button, service.safe_area.get_global_rect())
+			checks.expect(screen.pending_save and screen.next_button.disabled, "another rendered save failure preserves the navigation gate")
+			failed_store.failure = ""
+			await _dialog_click(screen.retry_save_button, service.safe_area.get_global_rect())
+			checks.expect(not screen.pending_save and not service.restart_button.disabled, "a successful rendered save retry restores navigation")
+			var reopened := StoreTests.CampaignStore.new(screen.campaign, screen.save_path)
+			checks.expect(reopened.load_records().records == screen.progress.snapshot().records, "a new store reads the rendered retry result from disk")
 		if index == 0:
 			await save_frame("res://build/check/m3-first-result.png")
 			await _dialog_click(screen.result_dialog.get_ok_button(), screen.safe_area.get_global_rect())

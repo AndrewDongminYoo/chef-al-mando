@@ -253,6 +253,9 @@ func request_menu() -> void:
 
 
 func return_to_menu() -> void:
+	if pending_save:
+		_show_result()
+		return
 	result_dialog.hide()
 	goal_dialog.hide()
 	leave_dialog.hide()
@@ -295,7 +298,10 @@ func _show_result() -> void:
 		return
 	var final_service: bool = selected_scenario_id == campaign.scenarios[-1].id
 	next_button.text = "엔딩 보기" if final_service else "다음 영업"
-	next_button.disabled = not last_result.passed
+	next_button.disabled = pending_save or not last_result.passed
+	retry_service_button.disabled = pending_save
+	if active_service != null:
+		active_service.restart_button.disabled = pending_save
 	retry_save_button.visible = pending_save and not session_only
 	result_dialog.dialog_text = "%s\n\n제공 %d건 / 목표 %d건\n손익 %s / 목표 %s\n\n%s" % ["목표 달성" if last_result.passed else "목표 미달 · 준비를 바꿔 다시 도전할 수 있습니다",
 		last_result.served, last_result.minimum_served, KitchenScreen._money(last_result.profit), KitchenScreen._money(last_result.minimum_profit), save_label.text]
@@ -315,6 +321,9 @@ func _show_goal() -> void:
 
 
 func _result_action(action: String) -> void:
+	if pending_save and action != "save":
+		_show_result()
+		return
 	match action:
 		"save":
 			_save_progress()
@@ -342,7 +351,7 @@ func _clear_result() -> void:
 
 
 func _show_ending() -> void:
-	if progress == null or not progress.snapshot().ending_unlocked:
+	if pending_save or progress == null or not progress.snapshot().ending_unlocked:
 		return
 	return_to_menu()
 	catalog_panel.visible = false

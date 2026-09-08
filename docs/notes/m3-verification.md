@@ -192,3 +192,18 @@ bash scripts/check-export.sh \
 이 보고를 운영자 한 명의 설치본 플레이 확인으로 기록합니다.
 시나리오별 관찰 기록이나 성능·OS 생명주기 체크리스트의 통과로 확대하지 않습니다.
 사용자 5명 검증과 Android 실기기 검증은 기존 보류 상태를 유지합니다.
+
+## PR #6 저장 실패 회귀 수정
+
+[리뷰 지적](https://github.com/AndrewDongminYoo/chef-al-mando/pull/6#discussion_r3955540911)은 결과 저장 실패 후 다음 영업으로 이동하면 저장 재시도 경로가 사라지는 문제입니다.
+저장이 끝날 때까지 다음 영업·엔딩·다시 준비를 막고, 목록 이동 요청은 결과와 저장 재시도 창을 다시 엽니다.
+분석 화면은 계속 볼 수 있으며 저장 재시도가 성공하면 이동 버튼을 다시 활성화합니다.
+
+실제 영업 마감 뒤 파일 쓰기를 실패시키는 UI 회귀 테스트를 먼저 실행했습니다.
+수정 전에는 이동·재시도 경로 검사 11건이 실패했고, 수정 후 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 608건, 실패 0건입니다.
+첫 영업과 마지막 영업의 저장 실패를 재현한 렌더링 검증은 기본·넓은 폰·태블릿 창에서 각각 211건, 실패 0건입니다.
+검증은 비활성 버튼의 실제 좌표 클릭, 목록에서 재시도 창 복귀, 반복 저장 실패, 저장 성공 후 다음 영업·엔딩 이동과 새 저장 객체의 파일 재읽기를 포함합니다.
+근거 로그는 `build/check/m3-pr6-save-red.log`, `m3-pr6-save-green.log`, `m3-pr6-save-capture.log`, `m3-pr6-save-capture-phone-wide.log`, `m3-pr6-save-capture-tablet.log`입니다.
+
+이 수정은 위 운영자 플레이 확인 이후에 적용했습니다.
+iPhone에는 `850b3fd15b0e2b6910875377c6ecb679a948eb5b` 기반 설치본이 남아 있으며, 저장 실패 회귀 수정본을 다시 설치하거나 실기기에서 검증하지 않았습니다.

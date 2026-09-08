@@ -1,6 +1,7 @@
 extends "res://tests/harness.gd"
 
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
+const StoreTests := preload("res://tests/test_campaign_store.gd")
 
 
 func run(tree: SceneTree) -> void:
@@ -11,6 +12,7 @@ func run(tree: SceneTree) -> void:
 	var directory := "user://test_campaign_ui_%d" % Time.get_ticks_usec()
 	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "campaign UI fixture directory is created")
 	var file_path := directory + "/records.json"
+	await _save_failure_navigation(tree, entry, directory + "/failed.json")
 	var screen := _boot(tree, entry, file_path)
 	await tree.process_frame
 	expect(screen.get("scenario_buttons").size() == 8, "the real scene displays all eight services")
@@ -113,6 +115,42 @@ func run(tree: SceneTree) -> void:
 	for owned_file: String in DirAccess.get_files_at(directory):
 		DirAccess.remove_absolute(directory + "/" + owned_file)
 	DirAccess.remove_absolute(directory)
+
+
+func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String) -> void:
+	var screen := _boot(tree, entry, file_path)
+	await tree.process_frame
+	var store := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
+	store.failure = "write"
+	screen.set("store", store)
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	service.get("start_button").pressed.emit()
+	service.call("advance", 300.0)
+	expect(screen.get("last_result").passed and screen.get("pending_save"), "a real passing service reaches the failed save path")
+	expect(screen.get("next_button").disabled and screen.get("retry_service_button").disabled and service.get("restart_button").disabled, "pending saves disable next service and both restart controls")
+	for action: String in ["next", "retry", "menu", "direct_menu"]:
+		if action == "menu":
+			screen.call("request_menu")
+		elif action == "direct_menu":
+			screen.call("return_to_menu")
+		else:
+			screen.call("_result_action", action)
+		expect(screen.get("active_service") == service and service.get("simulation").tick == 3000, "pending save preserves the closed service after navigation: " + action)
+		expect(not screen.get("last_result").is_empty() and screen.get("result_dialog").visible and screen.get("retry_save_button").visible, "pending save keeps the result and retry action available: " + action)
+	screen.get("retry_save_button").pressed.emit()
+	expect(screen.get("pending_save") and screen.get("next_button").disabled, "another save failure keeps navigation blocked")
+	store.failure = ""
+	screen.get("retry_save_button").pressed.emit()
+	expect(not screen.get("pending_save") and not screen.get("next_button").disabled and not screen.get("retry_service_button").disabled and not service.get("restart_button").disabled, "successful save retry restores navigation")
+	var reopened := StoreTests.CampaignStore.new(screen.get("campaign"), file_path)
+	expect(reopened.load_records().records == screen.get("progress").snapshot().records, "a new store reads the retried completion from disk")
+	screen.get("next_button").pressed.emit()
+	var next_service: Control = screen.get("active_service")
+	expect(next_service != null and next_service != service and next_service.get("definitions").id == "lunch_prep", "next service opens after the save succeeds")
+	screen.queue_free()
+	await tree.process_frame
 
 
 func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
