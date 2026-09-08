@@ -122,14 +122,14 @@ Trunk가 처음 기존 문제로 분류한 새 정규식의 불필요한 YAML �
 이 판정은 아래 실기기·호스팅·사용자 검증의 보류를 해제하지 않습니다.
 로컬 구현 검증을 완료한 시점에는 커밋·푸시·PR 생성을 하지 않았습니다.
 이후 운영자가 M3 변경 커밋과 기존 iPhone 앱 위의 설치를 승인했습니다.
-설치 빌드·검사·기기 결과는 실제 작업 후 별도 절에 기록합니다.
+설치 빌드·검사·기기 결과는 아래 iPhone 설치 절에 기록합니다.
 
 ## 남은 수용 기준
 
 - Android 실기기와 양 플랫폼 전체 수용 기준은 보류 상태입니다.
-- 이번 M3 소스를 iPhone에 설치하거나 실행하지 않았습니다.
-  이 세션에서 마지막으로 설치한 iPhone 빌드는 이전 M2 소스 `654b625`입니다.
-- export 검사는 새 PCK의 콘텐츠와 실제 진입 장면을 읽습니다.
+- M3 소스를 iPhone에 설치했습니다.
+  설치 후 실제 플레이·터치·OS 생명주기 관찰은 아직 대기 중입니다.
+- PCK 검사 자체는 콘텐츠와 실제 진입 장면을 읽습니다.
   APK·IPA 빌드, 서명, 설치, 스토어 배포를 검사하지 않습니다.
 - 중간 영업 저장·복원은 M4 범위입니다.
   이번 저장은 마감 결과의 완료·최고 기록만 보존합니다.
@@ -140,3 +140,45 @@ Trunk가 처음 기존 문제로 분류한 새 정규식의 불필요한 YAML �
 개인 계정의 `chef-al-mando`에 대해 캠페인 진행·기록과 고정 시나리오·완료 기록을 조회했으나 적용 가능한 결과가 없었습니다: `[no precedent found]`.
 이는 해당 조회 결과의 범위이며 프로젝트에 선례가 전혀 없다는 뜻은 아닙니다.
 승인된 명세와 현재 저장소 규칙을 구현 기준으로 사용했습니다.
+
+## iPhone 설치
+
+운영자는 M3 변경의 커밋과 개인 iPhone 설치를 승인했습니다.
+앱 소스는 `850b3fd15b0e2b6910875377c6ecb679a948eb5b`이며 빌드 시작 시 작업 트리가 깨끗했습니다.
+기능 커밋은 `9b66b80`, export 검사 커밋은 `c9171c4`, 명세·로컬 검증 기록 커밋은 `850b3fd`입니다.
+이 설치 기록의 후속 문서 커밋은 앱 소스를 변경하지 않습니다.
+
+Godot `4.7.2.stable.official.ed1daf0bf`로 iOS 프로젝트를 새로 export하고, Xcode 26.6 빌드 `17F113`에서 Debug 개발 서명 앱을 만들었습니다.
+iOS export와 Xcode 빌드는 종료 코드 0이며 빌드 로그에 `BUILD SUCCEEDED`가 있습니다.
+실제 `.app`의 서명 무결성을 검사했고, 그 앱의 `chef_al_mando.pck`에서 M1·M2·M3 완료 표시 네 개를 확인했습니다.
+앱 식별자는 `kr.donminzzi.chefalmandodev`, 버전은 `0.0.1`, 빌드 번호는 `1`입니다.
+iPhone·iPad 대상이며 두 기기군 모두 가로 방향 두 가지가 선언되어 있습니다.
+
+```bash
+export GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot
+"$GODOT_BIN" --headless --path . --export-debug iOS build/ios/chef_al_mando.xcodeproj
+xcodebuild -project build/ios/chef_al_mando.xcodeproj -scheme chef_al_mando \
+  -configuration Debug -destination 'generic/platform=iOS' \
+  -derivedDataPath build/ios-derived -jobs 2 build
+codesign --verify --deep --strict --verbose=2 \
+  build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
+bash scripts/check-export.sh \
+  "$PWD/build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando.pck"
+```
+
+| 산출물                   |    바이트 | SHA-256                                                            |
+| ------------------------ | --------: | ------------------------------------------------------------------ |
+| `.app/chef_al_mando`     | 103163552 | `3be31a0ab374147860a9e97930028b06c90580e26dfe7ccd6766b3cbfd5bfa18` |
+| `.app/chef_al_mando.pck` |    214780 | `961cb0477be52af952de776bac3c58a1338e7615e44e8525f1bbe8d03141585c` |
+
+2026-09-08 14:36 KST에 연결된 iPhone 16 Pro, iOS 26.6.1의 기존 개발 앱 위에 설치했습니다.
+설치 전에 빌드와 교체 방식을 고지했고 `devicectl device install app`을 사용했습니다.
+설치 JSON의 `info.outcome`은 `success`이며 같은 앱 식별자를 반환했습니다.
+14:37 KST에 앱 목록을 다시 조회해 설치된 앱을 확인했습니다.
+이 작업에서는 별도 앱 실행 명령을 보내지 않았습니다.
+앱 삭제, 강제 종료 실행, 사용자 5명 검증 재개나 Android 설치를 하지 않았습니다.
+현재 iPhone에 남긴 빌드는 위 M3 소스이며 기존 M2 설치본을 교체했습니다.
+
+근거는 `build/check/m3-ios-export.log`, `m3-ios-build.log`, `m3-ios-codesign.log`, `m3-ios-pack.log`, `m3-ios-artifact.json`, `m3-iphone-install-850b3fd.json`, `m3-installed-after.json`입니다.
+생성 Xcode 프로젝트·앱·서명 자료와 기기 JSON은 Git에 포함하지 않습니다.
+이 설치 성공은 실기기 플레이 수용이나 사용자 5명 검증 통과를 뜻하지 않습니다.
