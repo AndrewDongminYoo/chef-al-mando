@@ -34,6 +34,8 @@ func run(_tree: SceneTree) -> void:
 	_test_active_state_relationships(service_sim_script)
 	_test_terminal_relationships(service_sim_script)
 	_test_command_canonicalization(service_sim_script)
+	_test_work_timing_relationships(service_sim_script)
+	_test_active_duty_relationships(service_sim_script)
 	_test_restore_checkpoints(service_sim_script)
 
 
@@ -539,6 +541,139 @@ func _test_command_canonicalization(service_sim_script: GDScript) -> void:
 		restored.simulation.step()
 	expect(restored.simulation.state_hash() == fixture.simulation.state_hash(),
 		"canonical command restoration preserves the final hash")
+
+
+func _test_work_timing_relationships(service_sim_script: GDScript) -> void:
+	var fixtures: Array[Dictionary] = []
+	var initial := _single_order_fixture(service_sim_script, 10)
+	while initial.simulation.tick < 100 and (initial.simulation.snapshot().orders.is_empty()
+		or initial.simulation.snapshot().orders[0].state != "working"):
+		initial.simulation.step()
+	fixtures.append({"label": "initial_raw", "fixture": initial})
+	for prepared: bool in [false, true]:
+		var later := _between_process_fixture(service_sim_script, prepared)
+		for sequence: int in [3, 4]:
+			var employee_id := "employee_0%d" % (sequence - 2)
+			expect(later.simulation.enqueue_command({"kind": "set_duty", "target_id": employee_id,
+				"value": "all", "apply_tick": later.simulation.tick + 1, "sequence": sequence}).accepted,
+				"the later-phase timing fixture enables an employee: " + str(prepared))
+		while later.simulation.tick < 700:
+			later.simulation.step()
+			var order: Dictionary = later.simulation.snapshot().orders[0]
+			if order.state == "working" and order.phase_index > 0:
+				break
+		fixtures.append({"label": "later_prepared" if prepared else "later_raw", "fixture": later})
+	for entry: Dictionary in fixtures:
+		var label: String = entry.label
+		var fixture: Dictionary = entry.fixture
+		var simulation: RefCounted = fixture.simulation
+		var view: Dictionary = simulation.snapshot()
+		var task: Dictionary = view.tasks[0]
+		expect(view.orders[0].state == "working" and task.started_tick >= view.orders[0].arrival_tick
+			and task.completion_tick > simulation.tick + 1,
+			"the timing fixture contains active work with room for a one-tick shift: " + label)
+		if label.begins_with("later"):
+			expect(view.orders[0].phase_index > 0, "the timing fixture reached a later process: " + label)
+		var state: Dictionary = simulation.export_state()
+		var restored: Dictionary = service_sim_script.call("restore", fixture.definitions, state, fixture.options)
+		expect(restored.get("accepted", false) and restored.simulation.state_hash() == simulation.state_hash(),
+			"restore accepts the actual working checkpoint: " + label)
+		var before_hash: String = simulation.state_hash()
+		print("M4_CORE_SOURCE_HASH working_time_%s %s" % [label, before_hash])
+		var shifted := state.duplicate(true)
+		shifted.tasks[0].started_tick -= 1
+		shifted.tasks[0].completion_tick -= 1
+		var shifted_restore: Dictionary = service_sim_script.call("restore", fixture.definitions,
+			shifted, fixture.options)
+		expect(not shifted_restore.get("accepted", false),
+			"restore rejects working timestamps shifted before accumulated work: " + label)
+		expect(simulation.state_hash() == before_hash,
+			"a rejected working-time shift preserves the source simulation: " + label)
+		if restored.get("accepted", false):
+			while not simulation.closed:
+				simulation.step()
+				restored.simulation.step()
+			expect(restored.simulation.state_hash() == simulation.state_hash(),
+				"the valid working checkpoint preserves the final hash: " + label)
+
+
+func _test_active_duty_relationships(service_sim_script: GDScript) -> void:
+	var moving := _single_order_fixture(service_sim_script, 10)
+	while moving.simulation.tick < 100 and (moving.simulation.snapshot().orders.is_empty()
+		or moving.simulation.snapshot().orders[0].state != "moving"):
+		moving.simulation.step()
+	var moving_state: Dictionary = moving.simulation.export_state()
+	var moving_employee_index: int = -1
+	for index: int in moving_state.employees.size():
+		if moving_state.employees[index].id == moving_state.tasks[0].employee_id:
+			moving_employee_index = index
+			break
+	expect(moving_state.orders[0].state == "moving" and moving_employee_index >= 0
+		and moving_state.employees[moving_employee_index].duty == "all",
+		"the active-duty fixture contains an assigned employee moving under the all duty")
+	var moving_restore: Dictionary = service_sim_script.call("restore", moving.definitions,
+		moving_state, moving.options)
+	expect(moving_restore.get("accepted", false), "restore accepts the actual active moving duty")
+	var moving_before_hash: String = moving.simulation.state_hash()
+	print("M4_CORE_SOURCE_HASH active_duty_moving %s" % moving_before_hash)
+	var off_duty_moving := moving_state.duplicate(true)
+	off_duty_moving.employees[moving_employee_index].duty = "off"
+	var off_duty_restore: Dictionary = service_sim_script.call("restore", moving.definitions,
+		off_duty_moving, moving.options)
+	expect(not off_duty_restore.get("accepted", false),
+		"restore rejects an active moving employee whose current duty is off")
+	expect(moving.simulation.state_hash() == moving_before_hash,
+		"a rejected moving-duty relation preserves the source simulation")
+
+	var working := _single_order_fixture(service_sim_script, 10)
+	while working.simulation.tick < 100 and (working.simulation.snapshot().orders.is_empty()
+		or working.simulation.snapshot().orders[0].state != "working"):
+		working.simulation.step()
+	var working_state: Dictionary = working.simulation.export_state()
+	var working_employee_index: int = -1
+	for index: int in working_state.employees.size():
+		if working_state.employees[index].id == working_state.tasks[0].employee_id:
+			working_employee_index = index
+			break
+	expect(working_state.orders[0].state == "working" and working_state.orders[0].recipe_id == "salad"
+		and working.definitions.recipe_for("salad").cook_role == "cold" and working_employee_index >= 0
+		and working_state.employees[working_employee_index].duty == "all",
+		"the active-duty fixture contains an assigned employee working on the cold recipe")
+	var working_restore: Dictionary = service_sim_script.call("restore", working.definitions,
+		working_state, working.options)
+	expect(working_restore.get("accepted", false), "restore accepts the actual active working duty")
+	var working_before_hash: String = working.simulation.state_hash()
+	print("M4_CORE_SOURCE_HASH active_duty_working %s" % working_before_hash)
+	var incompatible_working := working_state.duplicate(true)
+	incompatible_working.employees[working_employee_index].duty = "hot"
+	var incompatible_restore: Dictionary = service_sim_script.call("restore", working.definitions,
+		incompatible_working, working.options)
+	expect(not incompatible_restore.get("accepted", false),
+		"restore rejects an active working employee with an incompatible cooking duty")
+	expect(working.simulation.state_hash() == working_before_hash,
+		"a rejected working-duty relation preserves the source simulation")
+
+	var active_employee_id: String = working_state.employees[working_employee_index].id
+	expect(working.simulation.enqueue_command({"kind": "set_duty", "target_id": active_employee_id,
+		"value": "off", "apply_tick": working.simulation.tick + 1, "sequence": 1}).accepted,
+		"the active-duty fixture accepts a deferred off duty command")
+	working.simulation.step()
+	var deferred_state: Dictionary = working.simulation.export_state()
+	expect(deferred_state.orders[0].state == "working"
+		and deferred_state.employees[working_employee_index].duty == "all"
+		and deferred_state.employees[working_employee_index].pending_duty == "off",
+		"an active duty change preserves the current duty and records the pending duty")
+	var deferred_restore: Dictionary = service_sim_script.call("restore", working.definitions,
+		deferred_state, working.options)
+	expect(deferred_restore.get("accepted", false)
+		and deferred_restore.simulation.state_hash() == working.simulation.state_hash(),
+		"restore preserves a valid deferred duty change during active work")
+	if deferred_restore.get("accepted", false):
+		while not working.simulation.closed:
+			working.simulation.step()
+			deferred_restore.simulation.step()
+		expect(deferred_restore.simulation.state_hash() == working.simulation.state_hash(),
+			"the restored deferred duty change preserves the final hash")
 
 
 func _test_restore_checkpoints(service_sim_script: GDScript) -> void:

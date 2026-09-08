@@ -676,7 +676,7 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 		if not order_reason.is_empty():
 			return order_reason
 		var saved_order: Dictionary = state.orders[index]
-		order_ids[saved_order.id] = true
+		order_ids[saved_order.id] = saved_order
 		for ingredient_id: String in saved_order.reserved_inputs:
 			if not expected_reserved.has(ingredient_id):
 				return "invalid_reservation"
@@ -909,6 +909,12 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			if task.completion_tick != task.started_tick + phases[saved_order.phase_index].duration_ticks \
 				or task.completion_tick <= state.tick:
 				return "invalid_task"
+			var expected_working_ticks: int = state.tick - task.started_tick + 1
+			for index: int in saved_order.phase_index:
+				if not saved_order.uses_prepared or phases[index].id != "prep":
+					expected_working_ticks += phases[index].duration_ticks
+			if saved_order.metrics.working != expected_working_ticks:
+				return "invalid_metrics"
 	return ""
 
 
@@ -959,6 +965,10 @@ static func _employees_restore_error(data: Definitions, routes: GridRoutes, empl
 		else:
 			if not order_ids.has(saved_employee.order_id) or not task_by_order.has(saved_employee.order_id):
 				return "invalid_task_link"
+			var saved_order: Dictionary = order_ids[saved_employee.order_id]
+			var recipe: RecipeDef = data.recipe_for(saved_order.recipe_id)
+			if recipe == null or saved_employee.duty not in ["all", recipe.cook_role]:
+				return "invalid_employee"
 			var task: Dictionary = task_by_order[saved_employee.order_id]
 			if task.employee_id != saved_employee.id:
 				return "invalid_task_link"
