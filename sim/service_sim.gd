@@ -798,7 +798,8 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 	if saved_order.state in TERMINAL:
 		if saved_order.ended_tick < saved_order.arrival_tick or saved_order.ended_tick > state.tick:
 			return "invalid_order"
-		if saved_order.state == "served" and saved_order.ended_tick >= saved_order.deadline_tick:
+		if saved_order.state == "served" and (saved_order.ended_tick >= saved_order.deadline_tick \
+			or saved_order.ended_tick >= data.closing_tick):
 			return "invalid_order"
 		if saved_order.state == "cancelled" and saved_order.terminal_reason != "player_cancelled":
 			return "invalid_order"
@@ -808,10 +809,12 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			and saved_order.ended_tick != saved_order.deadline_tick:
 			return "invalid_order"
 		if saved_order.state == "expired" and saved_order.terminal_reason == "service_closed" \
-			and saved_order.ended_tick != data.closing_tick:
+			and (saved_order.ended_tick != data.closing_tick or saved_order.deadline_tick <= data.closing_tick):
 			return "invalid_order"
 	else:
 		if not saved_order.terminal_reason.is_empty() or saved_order.ended_tick != -1:
+			return "invalid_order"
+		if state.tick >= saved_order.deadline_tick:
 			return "invalid_order"
 	if not saved_order.wait_reason is String or saved_order.wait_reason not in WAIT_REASONS:
 		return "invalid_order"
@@ -847,18 +850,24 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			return "invalid_reservation"
 	if saved_order.carrying and (saved_order.state != "moving" or not saved_order.has_result):
 		return "invalid_order"
-	if saved_order.state in ["waiting", "moving", "working"] and saved_order.phase_index > 0 \
-		and not saved_order.has_result:
-		return "invalid_order"
-	if saved_order.state == "waiting" and saved_order.phase_index > 0:
-		var completed_preparation: bool = saved_order.uses_prepared
-		var completed_cooking: bool = false
+	if saved_order.state in ["waiting", "moving", "working"]:
+		var expected_has_result: bool = saved_order.state == "working" or saved_order.phase_index > 0
+		if saved_order.has_result != expected_has_result:
+			return "invalid_order"
+		if saved_order.input_consumed != expected_has_result:
+			return "invalid_consumption"
+		var expected_intermediate_ready: bool = saved_order.uses_prepared and saved_order.input_consumed
+		var expected_intermediate_consumed: bool = false
 		for index: int in saved_order.phase_index:
-			completed_preparation = completed_preparation or phases[index].id == "prep"
-			completed_cooking = completed_cooking or phases[index].id == "cook"
-		var has_intermediate: bool = not recipe.prepared_ingredient_id.is_empty()
-		var expected_intermediate_ready: bool = has_intermediate and completed_preparation and not completed_cooking
-		var expected_intermediate_consumed: bool = has_intermediate and completed_cooking
+			if phases[index].id == "cook" and expected_intermediate_ready:
+				expected_intermediate_ready = false
+				expected_intermediate_consumed = true
+			if phases[index].id == "prep":
+				expected_intermediate_ready = true
+		if saved_order.state == "working" and phases[saved_order.phase_index].id == "cook" \
+			and expected_intermediate_ready:
+			expected_intermediate_ready = false
+			expected_intermediate_consumed = true
 		if saved_order.intermediate_ready != expected_intermediate_ready \
 			or saved_order.intermediate_consumed != expected_intermediate_consumed:
 			return "invalid_consumption"
