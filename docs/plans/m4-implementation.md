@@ -122,6 +122,6 @@ writer가 실제 이동·작업 상태를 쓰고 완료 marker를 낸 뒤 그 �
 원본 iPhone 빌드, 실기기·사용자 검증 보류, 실제 실행하지 않은 조건을 구분합니다.
 전체 diff는 simulation/persistence와 presentation/platform으로 나눠 독립 검토하고 반대 관점의 최종 교차 검토를 받습니다.
 모든 유효한 차단 사항을 TDD로 수정한 뒤 현재 head에서 로컬 gate와 hosted CI·코드/보안 리뷰·미해결 thread 0건을 확인합니다.
-호스팅 리뷰 예산은 첫 trigger부터 90분·최대 3회입니다.
+호스팅 리뷰 예산은 공개 저장소에 대한 운영자 제공 `pr-loop` 기본값에 따라 첫 trigger부터 5시간·최대 5회입니다.
 허용된 squash merge 후 실제 MERGED와 merge SHA를 다시 조회합니다.
 브랜치·worktree는 삭제하지 않습니다.
