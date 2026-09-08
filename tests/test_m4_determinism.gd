@@ -27,6 +27,7 @@ func run(_tree: SceneTree) -> void:
 			"restore does not replay one-time simulation events")
 	_test_export_copy(original)
 	_test_inventory_corruption(started.definitions, started.options, original, service_sim_script)
+	_test_reserved_input_json_type(started.definitions, started.options, original, service_sim_script)
 	_test_corruption_table(started.definitions, started.options, original, service_sim_script)
 	_test_identity_and_type_corruption(started.definitions, started.options, service_sim_script)
 	_test_task_back_references(started.definitions, started.options, service_sim_script)
@@ -47,6 +48,25 @@ func _test_inventory_corruption(data: Resource, preparation: Dictionary, origina
 	var result: Dictionary = service_sim_script.call("restore", data, corrupted, preparation)
 	expect(not result.get("accepted", false), "restore rejects inventory that cannot follow from preparation and consumption")
 	expect(original.call("state_hash") == before, "failed restore leaves the existing simulation unchanged")
+
+
+func _test_reserved_input_json_type(data: Resource, preparation: Dictionary, original: RefCounted,
+	service_sim_script: GDScript) -> void:
+	var source_hash: String = original.state_hash()
+	var state: Dictionary = original.export_state()
+	expect(state is Dictionary and state.orders[0].state == "moving"
+		and state.orders[0].ingredients_reserved and state.orders[0].reserved_inputs.vegetable is int,
+		"the reservation type fixture is an API-valid moving state with reserved input")
+	var malformed_reservation: Variant = JSON.parse_string("{\"vegetable\":\"x\"}")
+	expect(malformed_reservation is Dictionary and malformed_reservation.vegetable is String,
+		"the malformed reservation is parsed from untyped JSON")
+	state.orders[0].reserved_inputs = malformed_reservation
+	var result: Dictionary = service_sim_script.call("restore", data, state, preparation)
+	print("M4_RESERVED_INPUT_DIRECT_RESULT " + JSON.stringify(result))
+	expect(not result.accepted and result.reason == "invalid_reservation",
+		"direct restore rejects a JSON string reservation with a structured reason")
+	expect(original.state_hash() == source_hash,
+		"the rejected JSON reservation leaves the source simulation unchanged")
 
 
 func _test_export_copy(original: RefCounted) -> void:

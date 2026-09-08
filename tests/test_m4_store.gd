@@ -114,6 +114,7 @@ func run(_tree: SceneTree) -> void:
 		"a fresh reader restores a closed session")
 	_test_write_failures(campaign, directory, records, session, replacement_session)
 	_test_recovery(campaign, directory, records, improved, session, replacement_session)
+	_test_reserved_input_json_recovery(campaign, directory)
 	_test_future_versions(campaign, directory, records, session)
 	_cleanup(directory)
 
@@ -143,6 +144,22 @@ func _closed_session(campaign: Resource) -> Dictionary:
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
 	while not simulation.closed:
 		simulation.step()
+	return ServiceSession.capture("first_shift", started.selection, simulation, 1, 0)
+
+
+func _moving_reserved_session(campaign: Resource) -> Dictionary:
+	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	expect(started.accepted, "the reservation recovery fixture starts")
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	while simulation.tick < 300 and (simulation.snapshot().orders.is_empty()
+		or simulation.snapshot().orders[0].state != "moving"):
+		simulation.step()
+	var state: Dictionary = simulation.export_state()
+	expect(state.orders[0].state == "moving" and state.orders[0].ingredients_reserved
+		and state.orders[0].reserved_inputs.vegetable == 1,
+		"the reservation recovery fixture contains a real moving reservation")
 	return ServiceSession.capture("first_shift", started.selection, simulation, 1, 0)
 
 
@@ -263,6 +280,43 @@ func _test_recovery(campaign: Resource, directory: String, records: Dictionary, 
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(loaded.accepted and loaded.reason == "new_campaign" and loaded.active_session == null,
 		"missing primary and backup start a new schema 2 campaign view")
+
+
+func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -> void:
+	var valid_session := _moving_reserved_session(campaign)
+	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
+		"content_version": 1, "sim_version": 1, "records": {}, "active_session": valid_session}))
+	expect(valid_document is Dictionary
+		and valid_document.active_session.simulation.orders[0].reserved_inputs.vegetable is float,
+		"the store recovery fixture round-trips the reservation through actual JSON")
+	var target := directory + "/reserved_input_type.json"
+	var valid_text := JSON.stringify(valid_document)
+	_write(target + ".backup", valid_text)
+	var corrupted_document: Variant = JSON.parse_string(valid_text)
+	corrupted_document.active_session.simulation.orders[0].reserved_inputs.vegetable = "x"
+	expect(corrupted_document.active_session.simulation.orders[0].reserved_inputs.vegetable is String,
+		"the primary file fixture contains the JSON string reservation")
+	_write(target, JSON.stringify(corrupted_document))
+	var primary_bytes := FileAccess.get_file_as_bytes(target)
+	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
+	var store := CampaignStore.new(campaign, target)
+	var loaded: Dictionary = store.load_records()
+	print("M4_RESERVED_INPUT_STORE_RESULT " + JSON.stringify(loaded))
+	expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+		"the store reports corrupt records and offers its valid backup")
+	expect(FileAccess.get_file_as_bytes(target) == primary_bytes
+		and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"the failed store load preserves the primary and backup bytes")
+	var recovered: Dictionary = store.recover_backup()
+	print("M4_RESERVED_INPUT_RECOVERY_RESULT accepted=%s reason=%s" % [recovered.accepted, recovered.reason])
+	expect(recovered.accepted and recovered.reason == "recovered",
+		"explicit recovery replaces the invalid reservation session from backup")
+	loaded = CampaignStore.new(campaign, target).load_records()
+	var expected_restore := ServiceSession.restore(campaign, valid_session, {})
+	expect(loaded.accepted and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
+		"the recovered reservation session restores to the original simulation hash")
+	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"explicit reservation recovery preserves the backup bytes")
 
 
 func _test_future_versions(campaign: Resource, directory: String, records: Dictionary,
