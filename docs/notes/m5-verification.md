@@ -7,17 +7,17 @@
 
 ## 1. 완료한 로컬 검사
 
-| 검사                                                                         | 직접 읽은 속성                                                                   | 결과                    |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------- |
-| `bash scripts/check.sh m4`                                                   | 저장·복원·설정·화면 명령 회귀                                                    | 1,085개 검사 통과       |
-| `bash scripts/check.sh m5`                                                   | 설정에서 연 라이선스 본문, 전체 저작권·파일·라이선스, 한·영 문구와 스크롤 값     | 558개 검사 통과         |
-| `python3 tests/test_export_check.py`                                         | export 실패·파일·필수 완료 표시 누락                                             | 10개 검사 통과          |
-| `bash scripts/check-export.sh`                                               | 새 Android preset PCK의 M1~M4 동작, 8개 실제 영업·기록 재로드·엔딩 화면·라이선스 | 필수 완료 표시 7개 확인 |
-| `bash scripts/check-export.sh /absolute/m5-candidate.pck`                    | 보강한 검사로 보존한 후보 PCK 재검증                                             | 통과                    |
-| `bash scripts/check-export.sh /absolute/chef_al_mando.app/chef_al_mando.pck` | iOS 개발 빌드에 포함된 실제 PCK의 동일 경로                                      | 통과                    |
-| `python3 tests/test_m4_restart.py`                                           | 별도 프로세스의 이동·작업 중 저장 복원, 마감 해시, 설정, 저장 교체 경계          | 9개 검사 통과           |
-| 두 PCK 환경변수와 위 재시작 명령                                             | M4 기준 PCK의 저장을 M5 PCK에서 읽는 프로세스 호환성                             | 9개 검사 통과           |
-| 변경 파일 대상 `trunk check`와 `git diff --check`                            | 선언된 정적 검사·포맷·공백 오류                                                  | 통과                    |
+| 검사                                                     | 직접 읽은 속성                                                                   | 결과                                 |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------ |
+| `bash scripts/check.sh m4`                               | 저장·복원·설정·화면 명령 회귀                                                    | 1,085개 검사 통과                    |
+| `bash scripts/check.sh m5`                               | 설정에서 연 라이선스 본문, 전체 저작권·파일·라이선스, 한·영 문구와 스크롤 값     | 579개 검사 통과                      |
+| `python3 tests/test_export_check.py`                     | export 실패·파일·필수 완료 표시 누락                                             | 10개 검사 통과                       |
+| `bash scripts/check-export.sh`                           | 새 Android preset PCK의 M1~M4 동작, 8개 실제 영업·기록 재로드·엔딩 화면·라이선스 | 필수 완료 표시 7개 확인              |
+| `bash scripts/check-export.sh /absolute/m5-reviewed.pck` | 보강한 검사로 보존한 후보 PCK 재검증                                             | 통과                                 |
+| PR 리뷰 전 iOS 개발 PCK 검사                             | `c0df215` 검사기에서 캠페인·고지 확인                                            | 당시 통과, 후속 현지화 수정은 미포함 |
+| `python3 tests/test_m4_restart.py`                       | 별도 프로세스의 이동·작업 중 저장 복원, 마감 해시, 설정, 저장 교체 경계          | 10개 검사 통과                       |
+| 두 PCK 환경변수와 위 재시작 명령                         | M4 기준 PCK의 저장을 M5 PCK에서 읽는 프로세스 호환성                             | 10개 검사 통과                       |
+| 변경 파일 대상 `trunk check`와 `git diff --check`        | 선언된 정적 검사·포맷·공백 오류                                                  | 통과                                 |
 
 모든 Godot 실행은 버전 조회를 포함해 `--headless`였습니다.
 실행 엔진은 `.godot-version`의 `4.7.2.stable.official.ed1daf0bf`와 일치했습니다.
@@ -47,7 +47,7 @@ headless 창의 기본 표시 크기는 실기기 크기를 나타내지 않으�
 
 ```bash
 M4_WRITER_PACK=/Users/dongminyu/Development/01_personal/chef-m5/build/check/m4-baseline.pck \
-M4_READER_PACK=/Users/dongminyu/Development/01_personal/chef-m5/build/check/m5-candidate.pck \
+M4_READER_PACK=/Users/dongminyu/Development/01_personal/chef-m5/build/check/m5-reviewed.pck \
 GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot \
 python3 tests/test_m4_restart.py
 ```
@@ -56,6 +56,10 @@ python3 tests/test_m4_restart.py
 실제 업데이트 수용의 선행 근거로만 사용합니다.
 
 ## 4. 개발 서명 산출물
+
+이 절의 개발 서명 산출물은 PR #10 최초 제출 커밋 `c0df2151b2d3cd659491a7297f200b2f1308ff99` 시점입니다.
+후속 라이선스 안내 문구의 현지화 수정은 이 모바일 산출물에 포함되지 않았습니다.
+후속 수정은 새 PCK와 아래 회귀 검사로 확인했으며 모바일 서명 재빌드·실기기 검증으로 확대해 해석하지 않습니다.
 
 기존 개발 ID `kr.donminzzi.chefalmandodev`, 버전 `0.0.1`, 빌드 `1`을 유지했습니다.
 로컬에 있는 개발 서명을 사용했으며 포털 갱신 옵션이나 배포 작업을 실행하지 않았습니다.
@@ -101,3 +105,25 @@ iOS `Info.plist`는 같은 ID·버전, iPhone·iPad 지원, 양 가로 방향을
 M5 전체 통과와 출시 준비 완료를 선언하지 않습니다.
 출시 자료와 자산 출처는 [자료 초안](m5-release-materials.md)과 [라이선스 목록](m5-asset-licenses.md)에 있습니다.
 Oracle의 프로젝트 한정 조회 결과는 `[no precedent found]`이며 기존 블루프린트와 현재 소스 검증을 사용했습니다.
+
+## 6. PR 리뷰 후속 검증
+
+PR #10의 P2 두 건을 현재 명세와 대조해 수정했습니다.
+재시작 검사기는 writer·reader를 시작하기 전에 `GODOT_BIN --headless --version`을 한 번 실행하여 `.godot-version`과 비교합니다.
+다른 버전 또는 종료 코드가 0이 아닌 probe는 거부합니다.
+독립 프로세스에 가짜 엔진을 주입한 검사는 버전 조회 한 번만 실행되고 writer·reader 명령이 실행되지 않았음을 확인합니다.
+이 회귀 검사는 수정 전 두 fixture에서 실패했고 수정 후 통과했습니다.
+
+라이선스의 안내 문구와 구성요소 제목을 한국어·영어로 번역하고, 열려 있는 창에서도 언어 변경을 반영합니다.
+기본 한국어 문구가 없는 상태에서 회귀 검사가 실패하는 것을 확인했습니다.
+엔진·구성요소의 라이선스 본문은 원문을 유지하며 언어 변경 후에도 전체 본문을 다시 비교합니다.
+현재 M5 검사 579개, 재시작 검사 10개, M4 회귀 1,085개, export 실패 처리 검사 10개와 새 PCK의 완료 표시 7개가 통과했습니다.
+기존 M4 PCK에서 후속 수정 PCK로 복원하는 검사도 10개가 통과했습니다.
+
+후속 PCK는 `build/check/m5-reviewed.pck`이며 SHA-256은 `1d6b3cfa4f6106245ca4bc1c2b5d6ca4107ad894a184c351168ec8cf09ec0d41`입니다.
+재현 로그는 `build/check/m5-review-version-red.log`, `m5-review-version-green.log`, `m5-review-locale-red.log`, `m5-review-locale-green.log`, `m5-reviewed-pack.log`, `m5-reviewed-upgrade.log`에 있습니다.
+
+Oracle은 `raw/sources/.claude/rules/evidence-basis-discipline.md`의 검증 원칙을 반환했습니다.
+검사가 실제 명령과 문구를 읽어야 하고 실패 입력을 먼저 확인해야 한다는 선례가 이번 검증 방향을 확인해 주었습니다.
+조회 revision은 `7049be0f6c7cefadb3d3d24a51ac74aa66e48824`이며 현재 wiki와의 일치 여부는 확인하지 않았습니다.
+엔진 버전에 직접 일치하는 프로젝트 선례는 `[no precedent found]`였습니다.

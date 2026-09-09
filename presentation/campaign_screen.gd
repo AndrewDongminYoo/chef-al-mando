@@ -345,6 +345,8 @@ func _refresh_strings() -> void:
 	licenses_dialog.title = tr("오픈 소스 라이선스")
 	licenses_dialog.ok_button_text = tr("닫기")
 	licenses_body.add_theme_font_size_override("normal_font_size", preferences.font_size(20))
+	if licenses_dialog.visible:
+		licenses_body.text = LicenseNotices.text()
 	settings_locale_label.text = tr("언어")
 	settings_sound.text = tr("효과음")
 	settings_text_size_label.text = tr("글자 크기")

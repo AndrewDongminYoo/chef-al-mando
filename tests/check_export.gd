@@ -111,7 +111,8 @@ func _check_m5(directory: String) -> bool:
 	await process_frame
 	var body: RichTextLabel = screen.get("licenses_body")
 	var valid: bool = ending_visible and screen.get("catalog_panel").visible and screen.get("ending_button").visible and screen.get("licenses_dialog").visible \
-		and body.is_visible_in_tree() and body.text.contains(Engine.get_license_text())
+		and body.is_visible_in_tree() and body.text.contains(Engine.get_license_text()) \
+		and body.text.contains("Godot 엔진 소스:") and body.text.contains("제삼자 구성요소")
 	for component: Dictionary in Engine.get_copyright_info():
 		valid = valid and body.text.contains(component.name)
 		for part: Dictionary in component.parts:
@@ -125,6 +126,11 @@ func _check_m5(directory: String) -> bool:
 	body.scroll_to_line(body.get_line_count() - 1)
 	await process_frame
 	valid = valid and scroll.value > 0 and scroll.value >= scroll.max_value - scroll.page - 1
+	screen.preferences.update_settings({"locale": "en"})
+	valid = valid and body.text.contains("Godot Engine source:") and body.text.contains("Third-party components") \
+		and body.text.contains(Engine.get_license_text())
+	for license_text: String in Engine.get_license_info().values():
+		valid = valid and body.text.contains(license_text)
 	screen.queue_free()
 	await process_frame
 	if not valid:

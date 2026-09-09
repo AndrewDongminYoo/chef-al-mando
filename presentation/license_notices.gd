@@ -3,8 +3,10 @@ extends RefCounted
 
 static func text() -> String:
 	var sections: PackedStringArray = ["Godot Engine", Engine.get_license_text(),
-		"Godot Engine source: https://github.com/godotengine/godot\nGodot licenses: https://godotengine.org/license/\nThe application icon is derived from the Godot icon.",
-		"Third-party components"]
+		TranslationServer.translate("Godot 엔진 소스: %s") % "https://github.com/godotengine/godot",
+		TranslationServer.translate("Godot 라이선스: %s") % "https://godotengine.org/license/",
+		TranslationServer.translate("이 앱의 아이콘은 Godot 아이콘을 바탕으로 만들었습니다."),
+		TranslationServer.translate("제삼자 구성요소")]
 	for component: Dictionary in Engine.get_copyright_info():
 		sections.append(component.name)
 		for part: Dictionary in component.parts:
