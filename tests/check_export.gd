@@ -33,6 +33,8 @@ func _check() -> void:
 		valid = false
 	if valid and not await _check_m4_resume(directory):
 		valid = false
+	if valid and not await _check_m5(directory):
+		valid = false
 	_cleanup(directory)
 	TranslationServer.set_locale("ko")
 	if not valid:
@@ -44,7 +46,90 @@ func _check() -> void:
 	print("PASS: exported M2 extra menu prepared and served")
 	print("PASS: exported M4 storage core")
 	print("PASS: exported M4 resume and localization")
+	print("PASS: exported M5 campaign ending and licenses")
 	quit(0)
+
+
+func _check_m5(directory: String) -> bool:
+	var policy_path: String = get_script().resource_path.get_base_dir() + "/fixtures/m3_policies.gd"
+	if not FileAccess.file_exists(policy_path):
+		printerr("FAIL: exported M5 policy fixture is missing")
+		return false
+	var policies: GDScript = load(policy_path)
+	var campaign: Resource = load("res://content/campaign/campaign.tres")
+	var progress_script: GDScript = load("res://sim/campaign_progress.gd")
+	var store_script: GDScript = load("res://persistence/campaign_store.gd")
+	var progress: RefCounted = progress_script.new(campaign)
+	var record_path := directory + "/m5-records.json"
+	for scenario: Resource in campaign.scenarios:
+		if not progress.is_unlocked(scenario.id):
+			printerr("FAIL: exported M5 scenario remains locked: " + scenario.id)
+			return false
+		var run: Dictionary = policies.run_policy(scenario, policies.reference_policy(scenario.id))
+		if not run.accepted:
+			printerr("FAIL: exported M5 policy rejected: " + scenario.id)
+			return false
+		var view: Dictionary = run.snapshot
+		var result: Dictionary = progress.record_result(scenario.id, view)
+		if not view.closed or view.tick != 3000 or not view.errors.is_empty() \
+			or view.orders.size() != scenario.order_count or not result.get("passed", false) \
+			or view.accounting.profit != view.accounting.revenue - view.accounting.purchased_cost - view.accounting.labor_cost:
+			printerr("FAIL: exported M5 service or goals failed: " + scenario.id)
+			return false
+		for quantity: int in view.inventory.values():
+			if quantity < 0:
+				printerr("FAIL: exported M5 inventory is negative")
+				return false
+		var store: RefCounted = store_script.new(campaign, record_path)
+		if not store.save_records(progress.snapshot().records).accepted:
+			printerr("FAIL: exported M5 closing record cannot be saved")
+			return false
+		var loaded: Dictionary = store_script.new(campaign, record_path).load_records()
+		if not loaded.accepted or loaded.records != progress.snapshot().records:
+			printerr("FAIL: exported M5 closing record differs after reload")
+			return false
+		progress = progress_script.new(campaign, loaded.records)
+		print("M5_EXPORTED_SERVICE ", scenario.id, " ", run.hash)
+	if not progress.snapshot().ending_unlocked:
+		printerr("FAIL: exported M5 ending remains locked")
+		return false
+	var screen: Control = load(ProjectSettings.get_setting("application/run/main_scene")).instantiate()
+	screen.set("save_path", record_path)
+	screen.set("settings_path", directory + "/settings.json")
+	root.add_child(screen)
+	await process_frame
+	screen.get("ending_button").pressed.emit()
+	await process_frame
+	var ending_visible: bool = screen.get("ending_panel").is_visible_in_tree() \
+		and screen.get("ending_title").text == "여덟 번의 영업을 마쳤습니다" \
+		and screen.get("ending_copy").is_visible_in_tree() and not screen.get("ending_copy").text.is_empty() \
+		and screen.get("ending_return_button").is_visible_in_tree() and not screen.get("catalog_panel").visible
+	screen.get("ending_return_button").pressed.emit()
+	await process_frame
+	screen.get("settings_button").pressed.emit()
+	screen.get("licenses_button").pressed.emit()
+	await process_frame
+	var body: RichTextLabel = screen.get("licenses_body")
+	var valid: bool = ending_visible and screen.get("catalog_panel").visible and screen.get("ending_button").visible and screen.get("licenses_dialog").visible \
+		and body.is_visible_in_tree() and body.text.contains(Engine.get_license_text())
+	for component: Dictionary in Engine.get_copyright_info():
+		valid = valid and body.text.contains(component.name)
+		for part: Dictionary in component.parts:
+			for entry: String in PackedStringArray(part.files) + PackedStringArray(part.copyright):
+				valid = valid and body.text.contains(entry)
+			valid = valid and body.text.contains(part.license)
+	for license_text: String in Engine.get_license_info().values():
+		valid = valid and body.text.contains(license_text)
+	var scroll := body.get_v_scroll_bar()
+	valid = valid and scroll.visible and scroll.max_value > scroll.page
+	body.scroll_to_line(body.get_line_count() - 1)
+	await process_frame
+	valid = valid and scroll.value > 0 and scroll.value >= scroll.max_value - scroll.page - 1
+	screen.queue_free()
+	await process_frame
+	if not valid:
+		printerr("FAIL: exported M5 ending or license screen failed")
+	return valid
 
 
 func _check_storage_core() -> bool:
