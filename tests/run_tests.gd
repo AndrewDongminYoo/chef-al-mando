@@ -9,6 +9,7 @@ const SUITES := {
 	"m2": "res://tests/test_m2.gd",
 	"m3": "res://tests/test_m3.gd",
 	"m4-core": "res://tests/test_m4_core.gd",
+	"m4": "res://tests/test_m4.gd",
 }
 
 

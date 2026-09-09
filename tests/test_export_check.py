@@ -36,6 +36,8 @@ else:
             print("PASS: exported M3 campaign and first served order")
         if os.environ["TEST_EXPORT_CASE"] != "missing_m4_core":
             print("PASS: exported M4 storage core")
+        if os.environ["TEST_EXPORT_CASE"] != "missing_m4":
+            print("PASS: exported M4 resume and localization")
 """
 
 
@@ -97,6 +99,11 @@ class ExportCheckTests(unittest.TestCase):
 
     def test_missing_m4_core_completion_marker_fails(self):
         result = self.run_check("missing_m4_core")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion marker is missing", result.stderr)
+
+    def test_missing_m4_completion_marker_fails(self):
+        result = self.run_check("missing_m4")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("completion marker is missing", result.stderr)
 

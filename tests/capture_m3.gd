@@ -19,6 +19,7 @@ func run() -> void:
 	var scene: PackedScene = load(ProjectSettings.get_setting("application/run/main_scene"))
 	var screen := scene.instantiate() as CampaignScreen
 	screen.save_path = directory + "/records.json"
+	screen.settings_path = directory + "/settings.json"
 	root.add_child(screen)
 	screen.set_process(false)
 	await _settle(screen)

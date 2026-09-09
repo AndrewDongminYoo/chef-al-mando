@@ -44,7 +44,8 @@ for marker in 'PASS: exported M1 content and first order' \
 	'PASS: exported M2 preparation and first order' \
 	'PASS: exported M2 extra menu prepared and served' \
 	'PASS: exported M3 campaign and first served order' \
-	'PASS: exported M4 storage core'; do
+	'PASS: exported M4 storage core' \
+	'PASS: exported M4 resume and localization'; do
 	if ! grep -Fxq "$marker" "$log_file"; then
 		echo "FAIL: exported runtime completion marker is missing: $marker" >&2
 		exit 1
