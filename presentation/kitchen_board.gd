@@ -64,7 +64,7 @@ func _draw() -> void:
 			for order: Dictionary in view.get("orders", []):
 				if order.id == employee.order_id and order.state == "working":
 					draw_arc(center, cell * 0.44, -PI * 0.9, -PI * 0.1, 10, Color("f1c56f"), 3)
-			draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, maxi(12, int(cell * 0.3)), Color("182728"))
+			draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, roundi(maxi(12, int(cell * 0.3)) * text_scale), Color("182728"))
 		else:
 			draw_circle(center, cell * 0.29, Color("f2dba0") if index == 0 else Color("b1d3e6"))
 			draw_string(font, center + Vector2(-cell * 0.25, font_size * 0.35), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.5, font_size, Color("182728"))
