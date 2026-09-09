@@ -9,6 +9,12 @@ func run(tree: SceneTree) -> void:
 		screen.free()
 		return
 	screen.set("scenario_path", "res://content/m2_first_service.tres")
+	var settings_path := "user://test_m2_ui_main_%d.json" % Time.get_ticks_usec()
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	expect(HarnessSettingsStore.new(settings_path).save_settings(settings).accepted,
+		"the M2 UI fixture disables audio in its isolated settings")
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame
@@ -56,6 +62,12 @@ func _extra_menu(tree: SceneTree) -> void:
 	var scene: PackedScene = load("res://presentation/main.tscn")
 	var screen: Control = scene.instantiate()
 	screen.set("scenario_path", "res://tests/fixtures/m2_extra_menu.tres")
+	var settings_path := "user://test_m2_ui_extra_%d.json" % Time.get_ticks_usec()
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	expect(HarnessSettingsStore.new(settings_path).save_settings(settings).accepted,
+		"the extra-menu fixture disables audio in its isolated settings")
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame

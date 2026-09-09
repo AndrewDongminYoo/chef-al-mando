@@ -8,10 +8,10 @@ Chef al Mando는 작은 레스토랑의 셰프가 되어 제한된 재료, 작�
 | 항목           | 상태                                                                                                                          |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | 제품·기술 기준 | 블루프린트 v0.1을 2026-09-07에 확정했습니다.                                                                                  |
-| 저장소         | M3 고정 영업 8개·메뉴 8종·엔딩과 캠페인 기록 저장을 연결했습니다.                                                             |
+| 저장소         | M3 캠페인에 M4 영업 저장·이어하기, 한국어·영어, 글자 크기·효과음 설정을 연결했습니다.                                         |
 | 엔진           | Godot Standard(버전은 저장소 루트의 `.godot-version`이 소유), 같은 버전의 export template, Compatibility 렌더러를 사용합니다. |
 | 마일스톤       | M1 최종 iPhone 빌드의 정상 동작을 승인했습니다. 양 플랫폼 전체 수용 기준은 Android 실기기 검증을 기다립니다.                  |
-| 다음 단계      | M3 로컬 구현·검증을 완료했습니다. 사용자 5명 검증은 운영자가 테스트 준비 완료를 명시할 때까지 보류합니다.                     |
+| 다음 단계      | M4 로컬 구현·검사를 완료했습니다. Android 실기기·사용자 5명 검증은 보류 상태입니다.                                           |
 
 블루프린트가 확정되었다는 사실은 제품 방향과 기술 경계를 승인했다는 뜻입니다.
 콘텐츠 수량, 가격, 성능 목표, 플레이테스트 기준을 이미 실측했거나 달성했다는 뜻은 아닙니다.
@@ -86,8 +86,10 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 - [M3 구현 명세](docs/specs/m3-campaign.md)는 고정 캠페인·목표·기록·엔딩과 사용자 검증 보류의 계약입니다.
 - [M4 저장 핵심 명세](docs/specs/m4-storage-core.md)는 화면 연결 전 세션 복원·파일 복구의 계약입니다.
 - [M4 PR 분할](docs/plans/m4-pr-split.md)은 저장 핵심과 화면 통합의 순서·검증 범위를 정의합니다.
+- [M4 구현 명세](docs/specs/m4-mobile.md)는 영업 저장·복원, 현지화, 화면·설정과 검증의 계약입니다.
 
-현재 검증 범위와 남은 기기 검사는 [M0 실행 기록](docs/notes/m0-verification.md), [M1 실행 기록](docs/notes/m1-verification.md), [M2 실행 기록](docs/notes/m2-verification.md)에 정리합니다.
+현재 검증 범위와 남은 기기 검사는 [M4 검증 기록](docs/notes/m4-verification.md)에 정리합니다.
+이전 설치·검사 근거는 각 마일스톤 검증 기록에서 확인할 수 있습니다.
 
 ## 로컬 실행과 검사
 
@@ -107,11 +109,13 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 `check.sh m3`는 캠페인 콘텐츠·순차 완주·해금·기록 보존·실제 장면 연결을 검사합니다.
 M3 실행 명령은 [캠페인 명세](docs/specs/m3-campaign.md), 결과와 검증 한계는 [M3 검증 기록](docs/notes/m3-verification.md)에 있습니다.
 `check.sh m4-core`는 영업 상태·세션·파일·명령 관계만 검사합니다.
-저장 핵심의 결과는 [검증 기록](docs/notes/m4-storage-core-verification.md)에 있으며 이어하기 화면과 설정은 후속 PR에서 연결합니다.
+`check.sh m4`는 상태 복원·저장 실패·설정·실제 화면 연동을 검사합니다.
+새 프로세스와 렌더링 명령은 [M4 명세](docs/specs/m4-mobile.md)에 있습니다.
 
 ```bash
-bash scripts/check.sh m3
 bash scripts/check.sh m4-core
+bash scripts/check.sh m4
+python3 tests/test_m4_restart.py
 python3 tests/test_export_check.py
 bash scripts/check-export.sh
 ```

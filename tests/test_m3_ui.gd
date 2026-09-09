@@ -81,6 +81,19 @@ func run(tree: SceneTree) -> void:
 		service.call("advance", (3000 - service.get("simulation").tick) / 10.0)
 		expect(screen.get("last_result").passed, "the actual scene passes its service goals: " + scenario.id)
 		expect(screen.get("result_dialog").dialog_text.contains("제공") and screen.get("result_dialog").dialog_text.contains("손익"), "result text shows both measured target values")
+		if index == 1 or index == campaign.scenarios.size() - 1:
+			var final_service: bool = index == campaign.scenarios.size() - 1
+			var korean_action := "엔딩 보기" if final_service else "다음 영업"
+			var english_action := "View ending" if final_service else "Next service"
+			var result_hash: String = service.get("simulation").state_hash()
+			expect(screen.get("result_dialog").visible and not screen.get("next_button").disabled
+				and screen.get("next_button").text == korean_action, "the passing result shows its enabled Korean action: " + scenario.id)
+			screen.get("settings_locale").item_selected.emit(1)
+			expect(screen.get("next_button").text == english_action, "the result locale refresh preserves its English action: " + scenario.id)
+			screen.get("settings_locale").item_selected.emit(0)
+			expect(screen.get("next_button").text == korean_action, "the result locale refresh restores its Korean action: " + scenario.id)
+			expect(screen.get("result_dialog").visible and not screen.get("next_button").disabled
+				and service.get("simulation").state_hash() == result_hash, "result locale changes preserve dialog visibility, action availability, and simulation state: " + scenario.id)
 		if index == 5:
 			expect(service.get("duty_buttons").size() == 4, "the service creates four employee controls")
 		screen.get("next_button").pressed.emit()
@@ -121,12 +134,12 @@ func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String)
 	var screen := _boot(tree, entry, file_path)
 	await tree.process_frame
 	var store := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
-	store.failure = "write"
 	screen.set("store", store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)
 	service.get("start_button").pressed.emit()
+	store.failure = "write"
 	service.call("advance", 300.0)
 	expect(screen.get("last_result").passed and screen.get("pending_save"), "a real passing service reaches the failed save path")
 	expect(screen.get("next_button").disabled and screen.get("retry_service_button").disabled and service.get("restart_button").disabled, "pending saves disable next service and both restart controls")
@@ -157,6 +170,12 @@ func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
 	var scene: PackedScene = load(scene_path)
 	var screen: Control = scene.instantiate()
 	screen.set("save_path", file_path)
+	var settings_path := file_path + ".settings.json"
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	if not HarnessSettingsStore.new(settings_path).save_settings(settings).accepted:
+		return null
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	return screen

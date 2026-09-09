@@ -28,9 +28,9 @@ The campaign uses fixed scenarios.
 Employees can pass through each other.
 The player can pause the simulation at any time.
 
-The repository has the M1 service loop, M2 preparation and analysis, and the M3 campaign with completion records.
+The repository has the M1 service loop, M2 preparation and analysis, the M3 campaign, and M4 session persistence, localization, and settings.
 It also has a lifecycle adapter, local checks, and mobile export presets.
-Use [the M3 verification record](docs/notes/m3-verification.md) for the current local campaign evidence and deferred acceptance checks.
+Use [the M4 verification record](docs/notes/m4-verification.md) for current local evidence and deferred acceptance checks.
 The `project.godot` file declares the `4.7` feature tag and the `GL Compatibility` renderer.
 The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
@@ -46,9 +46,18 @@ This approval permits M2 implementation while Android physical-device verificati
 It includes preparation, placement, result analysis, representative art, and available local, export, and iPhone checks.
 It does not establish full M0 or M1 acceptance or the M2 user-test result.
 
+On 2026-09-08, the operator merged M3 PR #6 and requested the next milestone through subagent TDD and the PR loop.
+This approval permits [M4 implementation](docs/specs/m4-mobile.md), local verification, PR review, and merge after the required checks pass.
+Android physical-device verification and the five-user test remain deferred.
+This scope does not authorize device writes or establish full M4 physical-device acceptance.
+
 The M0-M1 specification defines the exact stable Godot version, the matching export-template version, the reference iPhone, the three menu fixtures, the 20-order fixture, and the exact local and CI verification commands.
 The reference Android device is not defined yet.
 The 2026-09-07 exception above permits M1 work while the Android device and its verification remain pending.
+
+The operator approved the [M4 PR split](docs/plans/m4-pr-split.md) on 2026-09-09.
+Submit storage core first and presentation integration as a dependent PR.
+Keep original PR #7 as a draft until both replacement PRs are confirmed merged.
 
 ## Product Invariants
 

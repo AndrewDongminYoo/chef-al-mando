@@ -325,7 +325,7 @@ AI 이미지도 바로 스프라이트로 간주하지 않습니다.
 - [x] 2026-09-07 iPhone 수동 관찰 후 Android 실기기 검증을 보류하고 M1 구현에 착수하는 예외를 추가 승인했습니다.
 - [x] 2026-09-08 최종 M1 iPhone 설치본의 정상 동작과 [M2 구현 명세](../specs/m2-preparation.md)를 승인했습니다.
 - [x] 2026-09-08 사용자 5명 검증을 운영자의 재개 지시까지 보류하고 [M3 명세](../specs/m3-campaign.md) 작성·구현을 시작하는 예외를 승인했습니다.
-- [x] 2026-09-08 M3 PR #6 머지 후 M4 구현·로컬 검증과 PR loop를 승인했습니다. Android 실기기·사용자 5명 검증 보류는 유지합니다.
+- [x] 2026-09-08 M3 PR #6 머지 후 [M4 명세](../specs/m4-mobile.md)의 구현·검증과 PR loop를 승인했습니다. Android 실기기·사용자 5명 검증 보류는 유지합니다.
 - [ ] M0 통과 근거를 기록합니다.
 - [ ] M1 통과 근거를 기록합니다.
 - [ ] M2 통과 근거를 기록합니다.
@@ -373,7 +373,7 @@ Android 실기기 검증 보류는 유지합니다.
 2026-09-09 운영자는 기존 PR #7을 드래프트로 전환하고 [저장 핵심과 화면 통합의 PR 분할](m4-pr-split.md)을 승인했습니다.
 이 변경은 제출·검증 경계를 나누며 기존 제품 방향과 실기기 검증 보류를 유지합니다.
 
-현재 저장소에는 M0·M1·M2·M3·M4 저장 핵심 검증 runner와 Android·iOS export preset이 있습니다.
+현재 저장소에는 M0·M1·M2·M3·M4 검증 runner와 Android·iOS export preset이 있습니다.
 M0와 M1의 검증 명령 계약은 [구현 명세](../specs/m0-m1.md)에 정의했습니다.
 M0 로컬 검사와 실제 기기 검증 결과는 [M0 실행 기록](../notes/m0-verification.md)에 구분하여 기록합니다.
 M1은 `bash scripts/check.sh m1`으로 콘텐츠·규칙·결정론·화면 명령을 검사하며, `bash scripts/check-export.sh`로 내보낸 팩의 준비 화면과 첫 주문 실행을 확인합니다.
@@ -387,8 +387,9 @@ M3의 검증 명령과 fixture 계약은 [M3 명세](../specs/m3-campaign.md)에
 M4 저장 핵심의 정확한 검증 명령은 `bash scripts/check.sh m4-core`이며 [저장 핵심 명세](../specs/m4-storage-core.md)의 상태·세션·파일·명령 관계를 검사합니다.
 `python3 tests/test_export_check.py`는 필수 완료 표시 누락과 export 실패 처리를 검사하며, `bash scripts/check-export.sh`는 새 PCK에서 실제 복원·변조 거부를 검사합니다.
 실행 결과는 [저장 핵심 검증 기록](../notes/m4-storage-core-verification.md)에 있습니다.
-[승인된 PR 분할](m4-pr-split.md)에 따라 화면 통합·새 프로세스 검사는 후속 PR의 계약이며 현재 저장 핵심 검사로 통과를 주장하지 않습니다.
-화면 통합과 M5의 정확한 검증 명령은 이 PR 기준으로 `[UNKNOWN]`입니다.
+M4의 저장·새 프로세스·현지화·화면·export 검증 명령은 [M4 명세](../specs/m4-mobile.md)에 정의했습니다.
+실제 실행 결과와 실기기 수용 한계는 [M4 검증 기록](../notes/m4-verification.md)에 구분하여 기록합니다.
+M5의 정확한 검증 명령은 현재 `[UNKNOWN]`입니다.
 Android 실기기는 구매 예정이며 Android 기종·OS 확정과 실제 실행은 대기 상태입니다.
 각 후속 단계의 구현 명세도 해당 단계의 코드 작업 전에 정확한 명령, fixture, 수동 증거 형식을 고정해야 합니다.
 명령이 없는 상태에서 에디터 실행이나 정적 파싱만으로 마일스톤 통과를 주장하지 않습니다.

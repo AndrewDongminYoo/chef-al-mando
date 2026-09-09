@@ -9,6 +9,7 @@ const EMPLOYEE_TEXTURE := preload("res://assets/m2/employee.svg")
 var definitions: Definitions
 var view: Dictionary = {}
 var selected_station_id: String = ""
+var text_scale: float = 1.0
 
 
 func show_state(data: Definitions, snapshot: Dictionary) -> void:
@@ -31,7 +32,7 @@ func _draw() -> void:
 			var rect := Rect2(origin + Vector2(tile) * cell, Vector2.ONE * cell)
 			draw_rect(rect.grow(-1), Color("273839") if tile in obstacles else Color("51605b"))
 	var font := get_theme_default_font()
-	var font_size := clampi(int(cell * 0.42), 14, 24)
+	var font_size := clampi(int(cell * 0.42 * text_scale), 14, roundi(24 * text_scale))
 	var illustrated := definitions.supports_preparation()
 	for station: Definitions.StationDef in definitions.stations:
 		var rect := Rect2(origin + Vector2(station.tile) * cell, Vector2.ONE * cell)
@@ -42,7 +43,7 @@ func _draw() -> void:
 			draw_set_transform(Vector2.ZERO)
 		else:
 			draw_rect(rect.grow(-2), STATION_COLORS[station.role])
-			draw_string(font, rect.position + Vector2(2, cell * 0.65), STATION_NAMES[station.role], HORIZONTAL_ALIGNMENT_CENTER, cell - 4, font_size)
+			draw_string(font, rect.position + Vector2(2, cell * 0.65), tr(STATION_NAMES[station.role]), HORIZONTAL_ALIGNMENT_CENTER, cell - 4, font_size)
 		if station.id == selected_station_id:
 			draw_rect(rect.grow(-1), Color("f2dba0"), false, 3)
 		var work_center := origin + (Vector2(station.work_position) + Vector2.ONE * 0.5) * cell
@@ -63,7 +64,7 @@ func _draw() -> void:
 			for order: Dictionary in view.get("orders", []):
 				if order.id == employee.order_id and order.state == "working":
 					draw_arc(center, cell * 0.44, -PI * 0.9, -PI * 0.1, 10, Color("f1c56f"), 3)
-			draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, maxi(12, int(cell * 0.3)), Color("182728"))
+			draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, roundi(maxi(12, int(cell * 0.3)) * text_scale), Color("182728"))
 		else:
 			draw_circle(center, cell * 0.29, Color("f2dba0") if index == 0 else Color("b1d3e6"))
 			draw_string(font, center + Vector2(-cell * 0.25, font_size * 0.35), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.5, font_size, Color("182728"))
