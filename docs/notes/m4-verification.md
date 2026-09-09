@@ -213,6 +213,18 @@ Advisor는 이 조건부 검증을 권고했으며, 이번 `movement progress`·
 `m4-remaining-final-restart.log`의 새 프로세스 복원 6건과 `m4-remaining-final-export-harness.log`의 export 실패 처리 8건도 통과했습니다.
 `m4-remaining-final-pck.log`는 새 PCK의 M1–M4 완료 표시 다섯 개를 확인했습니다.
 
+## 최종 결과의 언어 전환 문구
+
+최종 영업의 결과 창이 열린 상태에서 언어를 바꾸면 엔딩 버튼이 다음 영업으로 표시되는 P2를 수정했습니다.
+번역 갱신에서도 결과 창과 같은 시나리오 조건으로 버튼 문구를 선택합니다.
+실제 캠페인을 완료하는 기존 M3 fixture에 일반·최종 결과의 한→영→한 전환 검사 여덟 건을 추가했습니다.
+버튼의 정확한 문구·활성 상태·결과 창 표시·simulation hash를 읽고, 기존 버튼 입력으로 다음 영업과 엔딩 진입을 확인합니다.
+언어 선택 신호를 직접 호출하는 헤드리스 검사이며 새 화면·좌표 입력 증거는 아닙니다.
+
+수정 전 `build/check/m4-ending-label-red.log`는 M3 616건 중 최종 결과의 영어·한국어 문구 두 건이 실패했습니다.
+수정 후 `m4-ending-label-green-m3.log`는 M3 616건, `m4-ending-label-green-m4.log`는 M4 794건이며 모두 실패가 없습니다.
+최소 재검증 명령은 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`입니다.
+
 ## 렌더링 증거와 헤드리스 실행 경계
 
 최종 capture 소스는 `a21224f`이며 SHA-256은 `5ff4f0f525a225cddfe1106204792d1a7455ff5ae717f0a714e38f91d5be6238`입니다.
