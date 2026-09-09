@@ -431,8 +431,8 @@ msgstr "Served %d / %d (%.0f%%) · cancelled %d · unserved %d\nRevenue %s · in
 msgid "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건"
 msgstr "Menu · %s\nBudget %s · ingredients %s · labor %s\n%s · %d orders"
 
-msgid "제공 %d건 · 매출 %s\n남은 재료 · %s"
-msgstr "Served %d · revenue %s\nStock · %s"
+msgid "주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s"
+msgstr "Orders %d / %d · served %d · unserved %d · cancelled %d\nRevenue %s · stock · %s"
 
 msgid "%s %d"
 msgstr "%s %d"

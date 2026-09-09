@@ -368,12 +368,17 @@ func select_order(order_id: String) -> void:
 func _change_priority(amount: int) -> void:
 	for order: Dictionary in latest_view.orders:
 		if order.id == selected_order_id:
-			var value: int = order.priority
-			for command: Dictionary in latest_view.commands:
-				if command.kind == "set_priority" and command.target_id == order.id:
-					value = command.value
+			var value := _requested_priority(order)
 			submit_command("set_priority", order.id, clampi(value + amount, 0, 2))
 			return
+
+
+func _requested_priority(order: Dictionary) -> int:
+	var value: int = order.priority
+	for command: Dictionary in latest_view.commands:
+		if command.kind == "set_priority" and command.target_id == order.id:
+			value = command.value
+	return value
 
 
 func _set_duty(index: int, employee_id: String) -> void:
@@ -455,7 +460,7 @@ func _refresh_service() -> void:
 			order_buttons[order.id] = button
 		var selected := "▶ " if order.id == selected_order_id else ""
 		var detail: String = _order_status(order)
-		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), order.priority, detail]
+		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), _requested_priority(order), detail]
 	_show_selected_order()
 	for index: int in latest_view.employees.size():
 		var employee: Dictionary = latest_view.employees[index]
@@ -700,7 +705,7 @@ func _show_summary() -> void:
 			menus.append(tr(definitions.recipe_for(recipe_id).display_name))
 		summary_label.text = tr("메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건") % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), _raw_stock(" · "), definitions.order_count]
 	else:
-		summary_label.text = tr("제공 %d건 · 매출 %s\n남은 재료 · %s") % [accounting.served, _money(accounting.revenue), _raw_stock(" / ")]
+		summary_label.text = tr("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s") % [latest_view.orders.size(), definitions.order_count, accounting.served, accounting.expired, accounting.cancelled, _money(accounting.revenue), _raw_stock(" / ")]
 		if preparation != null:
 			var prepared: PackedStringArray = []
 			for recipe_id: String in definitions.menu_ids:
@@ -744,23 +749,20 @@ func _order_status(order: Dictionary) -> String:
 
 
 func _show_selected_order() -> void:
-	priority_up_button.disabled = true
-	priority_down_button.disabled = true
-	cancel_button.disabled = true
 	detail_label.text = tr("주문을 선택하세요")
 	for order: Dictionary in latest_view.orders:
 		if order.id != selected_order_id:
 			continue
-		detail_label.text = tr("%s · 우선순위 %d\n%s") % [tr(order.name), order.priority, _order_status(order)]
-		if order.state not in ServiceSim.TERMINAL:
-			var priority: int = order.priority
-			for command: Dictionary in latest_view.commands:
-				if command.kind == "set_priority" and command.target_id == order.id:
-					priority = command.value
-			priority_up_button.disabled = priority >= 2
-			priority_down_button.disabled = priority <= 0
-			cancel_button.disabled = false
+		var priority := _requested_priority(order)
+		var terminal: bool = order.state in ServiceSim.TERMINAL
+		detail_label.text = tr("%s · 우선순위 %d\n%s") % [tr(order.name), priority, _order_status(order)]
+		priority_up_button.disabled = terminal or priority >= 2
+		priority_down_button.disabled = terminal or priority <= 0
+		cancel_button.disabled = terminal
 		return
+	priority_up_button.disabled = true
+	priority_down_button.disabled = true
+	cancel_button.disabled = true
 
 
 func _employee_wait(employee: Dictionary) -> String:

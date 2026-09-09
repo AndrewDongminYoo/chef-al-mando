@@ -2,6 +2,8 @@ extends "res://tests/harness.gd"
 
 
 func run(tree: SceneTree) -> void:
+	for speed: int in [1, 4]:
+		await _test_priority_press_survives_refresh(tree, speed)
 	var screen := boot_main(tree)
 	if screen == null or not screen.has_method("submit_command"):
 		expect(false, "the main screen must expose the M1 command flow")
@@ -21,6 +23,8 @@ func run(tree: SceneTree) -> void:
 	screen.get("priority_up_button").pressed.emit()
 	expect(sim.call("snapshot").orders[0].priority == 1 and sim.call("snapshot").commands.size() == 1, "a priority tap while paused queues one command")
 	expect(screen.get("feedback_label").text.contains("적용 대기"), "paused commands display their pending state")
+	expect(screen.get("detail_label").text.contains("우선순위 2")
+		and screen.get("order_buttons").order_01.text.contains("우선 2"), "paused priority taps immediately update both displayed priority values")
 	screen.call("advance", 10.0)
 	expect(sim.get("tick") == 10, "paused UI does not supply wall time to the simulation")
 	screen.get("resume_button").pressed.emit()
@@ -69,6 +73,44 @@ func run(tree: SceneTree) -> void:
 	screen.queue_free()
 	await tree.process_frame
 	await _test_reordered_employees(tree)
+
+
+func _test_priority_press_survives_refresh(tree: SceneTree, speed: int) -> void:
+	var screen := boot_main(tree)
+	await tree.process_frame
+	await tree.process_frame
+	screen.get("start_button").pressed.emit()
+	screen.get("speed_buttons")[0 if speed == 1 else 2].pressed.emit()
+	expect(screen.get("driver").speed == speed, "the held priority fixture uses the requested speed")
+	screen.call("advance", 1.0)
+	await tree.process_frame
+	var button: Button = screen.get("priority_up_button")
+	var point := button.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position = point
+	tree.root.push_input(motion, true)
+	var press := InputEventMouseButton.new()
+	press.position = point
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.button_mask = MOUSE_BUTTON_MASK_LEFT
+	press.pressed = true
+	tree.root.push_input(press, true)
+	expect(button.is_pressed(), "the priority input fixture holds the actual button before the next tick")
+	screen.call("advance", 0.2)
+	expect(button.is_pressed(), "a service refresh preserves a held priority press")
+	var release := InputEventMouseButton.new()
+	release.position = point
+	release.button_index = MOUSE_BUTTON_LEFT
+	tree.root.push_input(release, true)
+	var view: Dictionary = screen.get("simulation").snapshot()
+	expect(view.commands.size() == 1 and view.commands[0].kind == "set_priority"
+		and view.commands[0].value == 2, "release after service ticks submits exactly one priority command")
+	expect(screen.get("detail_label").text.contains("우선순위 2")
+		and screen.get("order_buttons").order_01.text.contains("우선 2"), "queued priority appears in the selected detail and order row before the next tick")
+	screen.call("advance", 0.1)
+	expect(screen.get("simulation").snapshot().orders[0].priority == 2, "the held priority tap reaches the simulation on the next tick")
+	screen.queue_free()
+	await tree.process_frame
 
 
 func _test_reordered_employees(tree: SceneTree) -> void:
