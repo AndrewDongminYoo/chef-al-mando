@@ -41,6 +41,17 @@ PR #9의 첫 hosted 코드 리뷰는 일러스트 주방 직원 번호에 큰 �
 `build/check/split-ui-label-scale-m4.log`의 M4 1061건은 실패 없이 통과했고, 변경한 두 파일의 CSpell·Trunk도 문제 0건입니다.
 이 수정의 헤드리스 회귀는 실제 픽셀 크기나 잘림을 증명하지 않으며, 폰·태블릿의 큰 글자 번호 표시는 다음 승인된 렌더링 검증에서 확인해야 합니다.
 
+운영자가 리뷰 대응 스킬을 다시 요청한 후 #8과 #9의 현재 커밋에 코드 리뷰를 한 회씩 요청했습니다.
+#8에서 보고된 M4 착수 예외 기록 누락은 기존 승인 내용을 블루프린트의 진행 추적·시작 조건·예외 절에 연결해 보완했습니다.
+전체 M3·M4 수용 상태를 통과로 바꾸지 않았습니다.
+#9에서 보고된 캠페인 초기화 실패 후 설정 변경 오류는 실제 저장한 잘못된 Resource 형식·빈 캠페인·내용 검증 실패 캠페인에서 재현했습니다.
+`build/check/review-followup/invalid-campaign-red.log`는 M4 1085건 중 오류 문구 갱신 4건과 null·배열 범위·미초기화 progress 접근 오류를 기록했습니다.
+초기화가 완료된 progress가 있을 때만 캠페인 마지막 영업과 목록을 읽도록 제한한 뒤 `invalid-campaign-green.log`는 1085건·실패 0건입니다.
+실제 설정 입력, 오류 문구의 한→영→한 전환, 새 설정 reader, 영업 시작 차단과 기록 파일 미생성을 확인했습니다.
+`invalid-campaign-m3.log`의 정상 캠페인 616건과 `invalid-campaign-pck.log`의 새 배포 팩 완료 표시 여섯 개도 통과했습니다.
+변경 경로 세 개의 CSpell·Trunk가 통과했고, 독립 리뷰는 초기화 세 상태와 정상 경로 보존을 확인해 승인했습니다.
+이번 Oracle의 `settings error`·`campaign validation` 조회는 `[no precedent found]`였으며 조회 revision의 최신 여부는 확인하지 않았습니다.
+
 ## 범위와 판정 경계
 
 운영자는 PR #6 머지 후 다음 마일스톤을 서브에이전트 TDD와 PR loop로 진행하도록 요청했습니다.

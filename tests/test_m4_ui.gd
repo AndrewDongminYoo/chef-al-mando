@@ -218,6 +218,7 @@ func run(tree: SceneTree) -> void:
 	await _test_lifecycle_audio(tree, entry, directory)
 	await _test_service_locale_refresh(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
+	await _test_invalid_campaign_settings(tree, entry, directory)
 	await _test_operational_option_popups(tree, entry, directory)
 	await _test_session_only_checkpoint_watermark(tree, entry, directory)
 	TranslationServer.set_locale("ko")
@@ -767,6 +768,57 @@ func _test_recovered_active_session(tree: SceneTree, entry: String, directory: S
 	screen.queue_free()
 	await tree.process_frame
 	await tree.process_frame
+
+
+func _test_invalid_campaign_settings(tree: SceneTree, entry: String, directory: String) -> void:
+	var empty_campaign: Resource = load("res://content/campaign_def.gd").new()
+	var invalid_campaign: Resource = load("res://content/campaign/campaign.tres").duplicate(true)
+	invalid_campaign.id = ""
+	var fixtures: Array[Resource] = [Resource.new(), empty_campaign, invalid_campaign]
+	for index: int in fixtures.size():
+		TranslationServer.set_locale("ko")
+		var campaign_path := directory + "/invalid-campaign-%d.tres" % index
+		var settings_path := directory + "/invalid-campaign-%d-settings.json" % index
+		var records_path := directory + "/invalid-campaign-%d-records.json" % index
+		expect(ResourceSaver.save(fixtures[index], campaign_path) == OK,
+			"invalid campaign fixture saves a readable resource")
+		var scene: PackedScene = load(entry)
+		var screen: Control = scene.instantiate()
+		screen.set("campaign_path", campaign_path)
+		screen.set("save_path", records_path)
+		screen.set("settings_path", settings_path)
+		tree.root.add_child(screen)
+		screen.set_process(false)
+		await tree.process_frame
+		expect(screen.get("progress") == null and screen.get("store") == null
+			and screen.get("save_label").text == "캠페인 데이터를 불러올 수 없습니다"
+			and screen.get("begin_button").disabled,
+			"invalid campaign stops initialization and shows its error before settings input")
+		expect((screen.get("campaign") == null) == (index == 0),
+			"fixtures cover both a failed campaign cast and failed campaign validation")
+		screen.get("settings_button").pressed.emit()
+		expect(screen.get("settings_dialog").visible,
+			"settings remain accessible after campaign initialization fails")
+		screen.get("settings_locale").item_selected.emit(1)
+		expect(screen.get("save_label").text == "Could not load campaign data",
+			"locale input refreshes the campaign error without campaign data")
+		screen.get("settings_sound").toggled.emit(false)
+		screen.get("settings_text_size").item_selected.emit(1)
+		expect(screen.get("save_label").text == "Could not load campaign data"
+			and screen.get("menu_title").get_theme_font_size("font_size") == 36,
+			"sound and large text inputs preserve the translated campaign error")
+		var fresh_preferences := AppPreferences.new(settings_path)
+		expect(fresh_preferences.load_settings().accepted
+			and fresh_preferences.snapshot() == {"locale": "en", "sound_enabled": false, "text_size": "large"},
+			"a new settings reader loads inputs made on the campaign error screen")
+		screen.get("settings_locale").item_selected.emit(0)
+		expect(screen.get("save_label").text == "캠페인 데이터를 불러올 수 없습니다"
+			and screen.get("scenario_buttons").is_empty() and screen.get("begin_button").disabled
+			and not screen.call("begin_service") and not FileAccess.file_exists(records_path),
+			"returning to Korean keeps invalid campaign actions blocked and records absent")
+		screen.queue_free()
+		await tree.process_frame
+		await tree.process_frame
 
 
 func _test_future_settings_error(tree: SceneTree, entry: String, directory: String) -> void:

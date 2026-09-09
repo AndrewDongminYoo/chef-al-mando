@@ -329,7 +329,7 @@ func _refresh_strings() -> void:
 	replace_dialog.cancel_button_text = tr("이어하기 유지")
 	result_dialog.title = tr("영업 결과")
 	result_dialog.ok_button_text = tr("분석 보기")
-	var final_service: bool = selected_scenario_id == campaign.scenarios[-1].id
+	var final_service: bool = progress != null and selected_scenario_id == campaign.scenarios[-1].id
 	next_button.text = tr("엔딩 보기") if final_service else tr("다음 영업")
 	retry_service_button.text = tr("다시 준비")
 	retry_save_button.text = tr("저장 재시도")
@@ -388,6 +388,8 @@ func _refresh_settings_message() -> void:
 
 
 func _refresh_catalog() -> void:
+	if progress == null:
+		return
 	for button: Button in scenario_buttons.values():
 		scenario_list.remove_child(button)
 		button.queue_free()
