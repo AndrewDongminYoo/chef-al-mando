@@ -8,6 +8,7 @@ const AppPreferences := preload("res://presentation/app_preferences.gd")
 const KitchenScreen := preload("res://presentation/main.gd")
 const ServiceScene := preload("res://presentation/main.tscn")
 const SafeAreaSource := preload("res://platform/safe_area.gd")
+const LicenseNotices := preload("res://presentation/license_notices.gd")
 
 @export_file("*.tres") var campaign_path: String = "res://content/campaign/campaign.tres"
 var save_path: String = "user://campaign_records.json"
@@ -64,6 +65,9 @@ var save_message_kind: String = ""
 var save_message_reason: String = ""
 var settings_message_kind: String = ""
 var settings_message_reason: String = ""
+var licenses_button: Button
+var licenses_dialog: AcceptDialog
+var licenses_body: RichTextLabel
 
 @onready var safe_area: MarginContainer = $SafeArea
 @onready var safe_area_source: SafeAreaSource = $SafeAreaSource
@@ -256,8 +260,29 @@ func _build_settings() -> void:
 	column.add_child(settings_text_size)
 	settings_message = _label("", 18)
 	column.add_child(settings_message)
+	licenses_button = _button("오픈 소스 라이선스", _show_licenses)
+	column.add_child(licenses_button)
+	licenses_dialog = AcceptDialog.new()
+	licenses_dialog.title = tr("오픈 소스 라이선스")
+	licenses_dialog.ok_button_text = tr("닫기")
+	add_child(licenses_dialog)
+	licenses_body = RichTextLabel.new()
+	licenses_body.custom_minimum_size = Vector2(0, 200)
+	licenses_body.bbcode_enabled = false
+	licenses_body.selection_enabled = true
+	licenses_dialog.add_child(licenses_body)
 	_sync_settings_controls()
 	preferences.apply_to(self)
+
+
+func _show_licenses() -> void:
+	settings_dialog.hide()
+	licenses_body.text = LicenseNotices.text()
+	licenses_body.add_theme_font_size_override("normal_font_size", preferences.font_size(20))
+	licenses_body.scroll_to_line(0)
+	licenses_dialog.popup_centered_clamped(Vector2i(900, 520))
+	_ensure_dialog_tap_sizes()
+	_ensure_dialog_tap_sizes.call_deferred()
 
 
 func _show_settings() -> void:
@@ -316,6 +341,12 @@ func _refresh_strings() -> void:
 	begin_button.text = tr("준비 시작")
 	settings_dialog.title = tr("설정")
 	settings_dialog.ok_button_text = tr("닫기")
+	licenses_button.text = tr("오픈 소스 라이선스")
+	licenses_dialog.title = tr("오픈 소스 라이선스")
+	licenses_dialog.ok_button_text = tr("닫기")
+	licenses_body.add_theme_font_size_override("normal_font_size", preferences.font_size(20))
+	if licenses_dialog.visible:
+		licenses_body.text = LicenseNotices.text()
 	settings_locale_label.text = tr("언어")
 	settings_sound.text = tr("효과음")
 	settings_text_size_label.text = tr("글자 크기")
@@ -355,13 +386,13 @@ func _refresh_strings() -> void:
 
 func _ensure_dialog_tap_sizes() -> void:
 	for dialog: AcceptDialog in [settings_dialog, result_dialog, goal_dialog, leave_dialog,
-		save_error_dialog, replace_dialog]:
+		save_error_dialog, replace_dialog, licenses_dialog]:
 		dialog.add_theme_constant_override("buttons_min_height", 64)
 		dialog.add_theme_constant_override("buttons_min_width", 64)
 	for button: Button in [settings_dialog.get_ok_button(), result_dialog.get_ok_button(), next_button,
 		retry_service_button, retry_save_button, goal_dialog.get_ok_button(), leave_dialog.get_ok_button(),
 		leave_dialog.get_cancel_button(), retry_checkpoint_button, replace_dialog.get_ok_button(),
-		replace_dialog.get_cancel_button()]:
+		replace_dialog.get_cancel_button(), licenses_dialog.get_ok_button()]:
 		button.custom_minimum_size = Vector2(maxf(button.custom_minimum_size.x, 64.0), 64.0)
 
 

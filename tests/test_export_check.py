@@ -38,6 +38,8 @@ else:
             print("PASS: exported M4 storage core")
         if os.environ["TEST_EXPORT_CASE"] != "missing_m4":
             print("PASS: exported M4 resume and localization")
+        if os.environ["TEST_EXPORT_CASE"] != "missing_m5":
+            print("PASS: exported M5 campaign ending and licenses")
 """
 
 
@@ -111,6 +113,11 @@ class ExportCheckTests(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.version_log.read_text(), "--headless --version")
+
+    def test_missing_m5_completion_marker_fails(self):
+        result = self.run_check("missing_m5")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("completion marker is missing", result.stderr)
 
     def test_nonzero_export_exit_stops_before_runtime(self):
         self.stale.write_bytes(b"old valid pack")
