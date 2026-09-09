@@ -37,7 +37,9 @@ jobs:
         run: bash scripts/check.sh m2
       - name: Check M3
         run: bash scripts/check.sh m3
+      - name: Check M4 storage core
+        run: bash scripts/check.sh m4-core
       - name: Check export failure handling
         run: python3 tests/test_export_check.py
-      - name: Check exported M1, M2, and M3
+      - name: Check exported M1 through M3 and M4 storage core
         run: bash scripts/check-export.sh

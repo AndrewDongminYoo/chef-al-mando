@@ -18,11 +18,44 @@ func _check() -> void:
 	if not await _check_campaign():
 		quit(1)
 		return
+	if not _check_storage_core():
+		printerr("FAIL: exported M4 storage core behavior failed")
+		quit(1)
+		return
 	print("PASS: exported M3 campaign and first served order")
 	print("PASS: exported M1 content and first order")
 	print("PASS: exported M2 preparation and first order")
 	print("PASS: exported M2 extra menu prepared and served")
+	print("PASS: exported M4 storage core")
 	quit(0)
+
+
+func _check_storage_core() -> bool:
+	var campaign: Resource = load("res://content/campaign/campaign.tres")
+	var plan: RefCounted = load("res://sim/preparation_plan.gd").new(campaign.scenario_for("first_shift"))
+	var started: Dictionary = plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	if not started.accepted:
+		return false
+	var simulation: RefCounted = load("res://sim/service_sim.gd").new(started.definitions, null, started.options)
+	for _tick: int in range(10):
+		simulation.step()
+	var session_script: GDScript = load("res://persistence/service_session.gd")
+	var session: Dictionary = session_script.capture("first_shift", started.selection, simulation)
+	if session.simulation.orders.size() != 1 or session.simulation.last_sequence != 0 \
+		or session.simulation.orders[0].priority != 1:
+		return false
+	var corrupted := session.duplicate(true)
+	corrupted.simulation.orders[0].priority = 2
+	var rejected: Dictionary = session_script.restore(campaign, corrupted, {})
+	var restored: Dictionary = session_script.restore(campaign, session, {})
+	if rejected.accepted or rejected.reason != "invalid_order" or not restored.accepted \
+		or restored.simulation.state_hash() != simulation.state_hash():
+		return false
+	while not simulation.closed:
+		simulation.step()
+		restored.simulation.step()
+	return restored.simulation.state_hash() == simulation.state_hash()
 
 
 func _check_scenario(scenario_path: String) -> bool:
