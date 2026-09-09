@@ -62,7 +62,45 @@ def kill_owned(process: subprocess.Popen[str]) -> str:
     return process.communicate(timeout=5)[0]
 
 
+class VersionProbeTests(unittest.TestCase):
+    def test_mismatch_or_failed_probe_stops_before_cross_pack_processes(self):
+        with tempfile.TemporaryDirectory(prefix="chef-version-probe-") as folder:
+            directory = Path(folder)
+            writer = directory / "old.pck"
+            reader = directory / "new.pck"
+            writer.write_bytes(b"old fixture")
+            reader.write_bytes(b"new fixture")
+            for version, probe_exit in [("wrong-engine-version", 0), ((REPO / ".godot-version").read_text().strip(), 2)]:
+                with self.subTest(version=version, probe_exit=probe_exit):
+                    calls = directory / "calls.jsonl"
+                    calls.write_text("")
+                    engine = directory / "godot"
+                    engine.write_text(
+                        f"#!{sys.executable}\nimport json, sys\nfrom pathlib import Path\n"
+                        f"with Path({str(calls)!r}).open('a') as log: log.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                        f"print({version!r})\nsys.exit({probe_exit})\n"
+                    )
+                    engine.chmod(0o700)
+                    result = subprocess.run(
+                        [sys.executable, str(Path(__file__).resolve()), "RestartCheckTests.test_fresh_process_restores_partial_session_and_preferences"],
+                        env=dict(os.environ, GODOT_BIN=str(engine), M4_WRITER_PACK=str(writer), M4_READER_PACK=str(reader)),
+                        capture_output=True,
+                        text=True,
+                        timeout=15,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Godot version must be", result.stdout + result.stderr)
+                    self.assertEqual([json.loads(line) for line in calls.read_text().splitlines()], [["--headless", "--version"]])
+
+
 class RestartCheckTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        expected = (REPO / ".godot-version").read_text().strip()
+        probe = subprocess.run([str(GODOT_BIN), "--headless", "--version"], capture_output=True, text=True, timeout=10)
+        if probe.returncode != 0 or probe.stdout.strip() != expected:
+            raise RuntimeError(f"Godot version must be {expected} (found {probe.stdout.strip()!r}, exit {probe.returncode})")
+
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory(prefix="chef-m4-restart-")
         self.addCleanup(self.scratch.cleanup)
