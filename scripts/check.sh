@@ -11,7 +11,7 @@ suite="${1:-m0}"
 
 godot_bin="${GODOT_BIN:-godot}"
 expected_version="$(tr -d '[:space:]' <.godot-version)"
-actual_version="$("$godot_bin" --version)"
+actual_version="$("$godot_bin" --headless --version)"
 if [[ $actual_version != "$expected_version" ]]; then
 	echo "FAIL: Godot version must be $expected_version (found $actual_version)" >&2
 	exit 1

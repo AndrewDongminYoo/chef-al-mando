@@ -9,7 +9,7 @@ if [[ $# -gt 1 || ($# -eq 1 && $1 != /*) ]]; then
 fi
 godot_bin="${GODOT_BIN:-godot}"
 expected_version="$(tr -d '[:space:]' <.godot-version)"
-if [[ $("$godot_bin" --version) != "$expected_version" ]]; then
+if [[ $("$godot_bin" --headless --version) != "$expected_version" ]]; then
 	echo "FAIL: Godot version must be $expected_version" >&2
 	exit 1
 fi
@@ -43,7 +43,8 @@ fi
 for marker in 'PASS: exported M1 content and first order' \
 	'PASS: exported M2 preparation and first order' \
 	'PASS: exported M2 extra menu prepared and served' \
-	'PASS: exported M3 campaign and first served order'; do
+	'PASS: exported M3 campaign and first served order' \
+	'PASS: exported M4 storage core'; do
 	if ! grep -Fxq "$marker" "$log_file"; then
 		echo "FAIL: exported runtime completion marker is missing: $marker" >&2
 		exit 1
