@@ -141,8 +141,12 @@ func _check_m5(directory: String) -> bool:
 func _check_storage_core() -> bool:
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	var plan: RefCounted = load("res://sim/preparation_plan.gd").new(campaign.scenario_for("first_shift"))
-	var started: Dictionary = plan.apply_command({"kind": "start", "target_id": "", "value": null,
+	var priority: Dictionary = plan.apply_command({"kind": "set_menu_priority", "target_id": "salad", "value": 0,
 		"apply_tick": 0, "sequence": 1})
+	if not priority.accepted:
+		return false
+	var started: Dictionary = plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 2})
 	if not started.accepted:
 		return false
 	var simulation: RefCounted = load("res://sim/service_sim.gd").new(started.definitions, null, started.options)
@@ -151,7 +155,7 @@ func _check_storage_core() -> bool:
 	var session_script: GDScript = load("res://persistence/service_session.gd")
 	var session: Dictionary = session_script.capture("first_shift", started.selection, simulation)
 	if session.simulation.orders.size() != 1 or session.simulation.last_sequence != 0 \
-		or session.simulation.orders[0].priority != 1:
+		or session.simulation.orders[0].priority != 0:
 		return false
 	var corrupted := session.duplicate(true)
 	corrupted.simulation.orders[0].priority = 2

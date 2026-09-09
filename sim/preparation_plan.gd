@@ -23,6 +23,8 @@ func _init(data: Definitions, selection: Dictionary = {}) -> void:
 			_errors.append("invalid_preparation")
 			return
 		_choices = selection.duplicate(true)
+		if not _choices.has("menu_priorities"):
+			_choices.menu_priorities = _defaults().menu_priorities
 	_errors = initial_state(_definition(_choices), _options(_choices), false).errors
 
 
@@ -30,6 +32,9 @@ func _defaults() -> Dictionary:
 	var placements: Dictionary = {}
 	var quantities: Dictionary[String, int] = {}
 	var duties: Dictionary[String, String] = {}
+	var priorities: Dictionary[String, int] = {}
+	for recipe_id: String in _source.menu_ids:
+		priorities[recipe_id] = 1
 	for station: Definitions.StationDef in _source.stations:
 		placements[station.id] = {"tile": _array(station.tile), "work_position": _array(station.work_position)}
 	for recipe: Definitions.RecipeDef in _source.recipes:
@@ -37,11 +42,13 @@ func _defaults() -> Dictionary:
 			quantities[recipe.id] = 0
 	for employee: Definitions.EmployeeDef in _source.employees:
 		duties[employee.id] = "all"
-	return {"purchases": _source.purchases.duplicate(), "prep_quantities": quantities, "placements": placements, "duties": duties}
+	return {"purchases": _source.purchases.duplicate(), "prep_quantities": quantities, "placements": placements, "duties": duties, "menu_priorities": priorities}
 
 
 func _valid_selection_shape(selection: Dictionary) -> bool:
-	if selection.size() != 4:
+	if selection.size() != (5 if selection.has("menu_priorities") else 4):
+		return false
+	if selection.has("menu_priorities") and not selection.menu_priorities is Dictionary:
 		return false
 	for field: String in ["purchases", "prep_quantities", "placements", "duties"]:
 		if not selection.get(field) is Dictionary:
@@ -81,7 +88,8 @@ func display_definition() -> Definitions:
 
 
 static func _options(selection: Dictionary) -> Dictionary:
-	return {"prep_quantities": selection.prep_quantities.duplicate(), "duties": selection.duties.duplicate()}
+	return {"prep_quantities": selection.prep_quantities.duplicate(), "duties": selection.duties.duplicate(),
+		"menu_priorities": selection.menu_priorities.duplicate()}
 
 
 func apply_command(command: Dictionary) -> Dictionary:
@@ -113,6 +121,10 @@ func apply_command(command: Dictionary) -> Dictionary:
 			if not candidate.duties.has(target) or not command.value is String or command.value not in DUTIES:
 				return _rejected("invalid_duty")
 			candidate.duties[target] = command.value
+		"set_menu_priority":
+			if not candidate.menu_priorities.has(target) or not command.value is int or command.value < 0 or command.value > 2:
+				return _rejected("invalid_priority")
+			candidate.menu_priorities[target] = command.value
 		"move_station", "rotate_station":
 			if not candidate.placements.has(target):
 				return _rejected("unknown_station")
@@ -163,6 +175,7 @@ func snapshot() -> Dictionary:
 	return {"can_start": resolved.errors.is_empty() and not _committed, "errors": resolved.errors.duplicate(),
 		"committed": _committed, "sequence": _sequence, "purchases": _choices.purchases.duplicate(),
 		"prep_quantities": _choices.prep_quantities.duplicate(), "inventory": resolved.inventory.duplicate(),
+		"menu_priorities": _choices.menu_priorities.duplicate(),
 		"labor_used": resolved.labor_used, "labor_capacity": data.prep_labor_capacity,
 		"purchased_cost": data.purchased_cost(), "budget_remaining": data.starting_budget - data.labor_cost - data.purchased_cost(),
 		"stations": stations, "duties": _choices.duties.duplicate(), "selection": _choices.duplicate(true)}
@@ -172,7 +185,8 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 	var errors := data.validate(false)
 	var inventory: Dictionary[String, int] = {}
 	var duties: Dictionary[String, String] = {}
-	var result := {"errors": errors, "inventory": inventory, "duties": duties, "labor_used": 0}
+	var priorities: Dictionary[String, int] = {}
+	var result := {"errors": errors, "inventory": inventory, "duties": duties, "menu_priorities": priorities, "labor_used": 0}
 	if not errors.is_empty():
 		return result
 	for ingredient: Definitions.IngredientDef in data.ingredients:
@@ -190,9 +204,21 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 			return result
 		remaining_budget -= quantity * ingredient.unit_cost
 	for field: Variant in options:
-		if field not in ["prep_quantities", "duties"] or not options[field] is Dictionary:
+		if field not in ["prep_quantities", "duties", "menu_priorities"] or not options[field] is Dictionary:
 			errors.append("invalid_preparation")
 			return result
+	for recipe_id: String in data.menu_ids:
+		priorities[recipe_id] = 1
+	if options.has("menu_priorities"):
+		if options.menu_priorities.size() != priorities.size():
+			errors.append("invalid_priority")
+			return result
+		for recipe_id: Variant in options.menu_priorities:
+			var priority: Variant = options.menu_priorities[recipe_id]
+			if not recipe_id is String or not priorities.has(recipe_id) or not priority is int or priority < 0 or priority > 2:
+				errors.append("invalid_priority")
+				return result
+			priorities[recipe_id] = priority
 	var quantities: Dictionary = options.get("prep_quantities", {})
 	var required: Dictionary[String, int] = {}
 	var labor_used: int = 0

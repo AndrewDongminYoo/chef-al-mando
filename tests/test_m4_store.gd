@@ -41,10 +41,10 @@ func run(_tree: SceneTree) -> void:
 	expect(CampaignStore.new(campaign, file_path).save_records(records).accepted,
 		"the next successful records write upgrades schema 1")
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
-	expect(migrated is Dictionary and migrated.size() == 5 and migrated.schema_version == 2
+	expect(migrated is Dictionary and migrated.size() == 5 and migrated.schema_version == 3
 		and migrated.content_version == 1 and migrated.sim_version == 1
 		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null,
-		"schema 1 upgrades to the exact schema 2 envelope")
+		"schema 1 upgrades to the exact schema 3 envelope")
 	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
 		"schema 1 record metrics remain exact after migration")
 	var session := _later_session(campaign, 1)

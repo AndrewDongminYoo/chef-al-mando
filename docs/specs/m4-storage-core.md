@@ -22,7 +22,8 @@
 JSON 정수와 정확한 필드 구성을 검증하고 준비 선택으로 definitions와 초기 상태를 재구성합니다.
 해금된 시나리오만 복원하며 새로운 PRNG나 외부 엔진 계층은 만들지 않습니다.
 
-`CampaignStore`의 schema 2는 `schema_version`, `content_version`, `sim_version`, `records`, `active_session`을 갖습니다.
+M4 도입 당시 `CampaignStore`의 schema 2는 `schema_version`, `content_version`, `sim_version`, `records`, `active_session`을 갖습니다.
+2026-09-09에 승인한 [메뉴별 기본 우선순위](menu-priorities.md)는 새 쓰기를 schema 3으로 확장하며 schema 1·2 읽기를 유지합니다.
 schema 1은 읽을 때 세션이 없는 것으로 해석하며 읽기만으로 파일을 다시 쓰지 않습니다.
 records-only 쓰기는 기존 세션을 보존하고, 세션 저장은 기록과 세션을 함께 교체합니다.
 임시 파일을 다시 읽어 검증하고 마지막 유효 백업을 보존합니다.
