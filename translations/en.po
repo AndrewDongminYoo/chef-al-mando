@@ -667,3 +667,6 @@ msgstr "Prepped protein rice-bowl ingredients"
 
 msgid "손질한 곡물 볶음 재료"
 msgstr "Prepped stir-fried grain ingredients"
+
+msgid "오픈 소스 라이선스"
+msgstr "Open source licenses"
