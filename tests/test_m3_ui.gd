@@ -81,6 +81,19 @@ func run(tree: SceneTree) -> void:
 		service.call("advance", (3000 - service.get("simulation").tick) / 10.0)
 		expect(screen.get("last_result").passed, "the actual scene passes its service goals: " + scenario.id)
 		expect(screen.get("result_dialog").dialog_text.contains("제공") and screen.get("result_dialog").dialog_text.contains("손익"), "result text shows both measured target values")
+		if index == 1 or index == campaign.scenarios.size() - 1:
+			var final_service: bool = index == campaign.scenarios.size() - 1
+			var korean_action := "엔딩 보기" if final_service else "다음 영업"
+			var english_action := "View ending" if final_service else "Next service"
+			var result_hash: String = service.get("simulation").state_hash()
+			expect(screen.get("result_dialog").visible and not screen.get("next_button").disabled
+				and screen.get("next_button").text == korean_action, "the passing result shows its enabled Korean action: " + scenario.id)
+			screen.get("settings_locale").item_selected.emit(1)
+			expect(screen.get("next_button").text == english_action, "the result locale refresh preserves its English action: " + scenario.id)
+			screen.get("settings_locale").item_selected.emit(0)
+			expect(screen.get("next_button").text == korean_action, "the result locale refresh restores its Korean action: " + scenario.id)
+			expect(screen.get("result_dialog").visible and not screen.get("next_button").disabled
+				and service.get("simulation").state_hash() == result_hash, "result locale changes preserve dialog visibility, action availability, and simulation state: " + scenario.id)
 		if index == 5:
 			expect(service.get("duty_buttons").size() == 4, "the service creates four employee controls")
 		screen.get("next_button").pressed.emit()
