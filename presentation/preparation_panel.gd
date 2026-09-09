@@ -175,6 +175,7 @@ func _build_layout(column: VBoxContainer) -> void:
 func show_tab(index: int) -> void:
 	for item: int in tabs.size():
 		tabs[item].disabled = item == index
+		tabs[item].theme_type_variation = &"ActiveButton" if item == index else &"Button"
 		pages[item].visible = item == index
 
 

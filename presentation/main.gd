@@ -420,11 +420,12 @@ func _refresh_service() -> void:
 		var analyzing := state == State.CLOSED
 		preparation_panel.visible = preparing
 		analysis_scroll.visible = analyzing
-		employee_controls.visible = not preparing
+		employee_controls.visible = not preparing and not analyzing
 		$SafeArea/Layout/Kitchen/Body/Side/Heading.visible = not preparing and not analyzing
 		$SafeArea/Layout/Kitchen/Body/Side/OrdersScroll.visible = not preparing and not analyzing
 		details_toggle.visible = not preparing and not analyzing and compact_layout
 		detail_panel.visible = not preparing and not analyzing and (details_expanded or not compact_layout)
+		_update_details_toggle()
 		if preparing and latest_view.errors.is_empty():
 			_show_preparation()
 			_refresh_feedback()
@@ -444,6 +445,7 @@ func _refresh_service() -> void:
 	_show_summary()
 	for index: int in speed_buttons.size():
 		speed_buttons[index].disabled = driver.speed == [1, 2, 4][index] or state == State.CLOSED
+		speed_buttons[index].theme_type_variation = &"ActiveButton" if driver.speed == [1, 2, 4][index] and state != State.CLOSED else &"Button"
 	for order: Dictionary in latest_view.orders:
 		if selected_order_id.is_empty():
 			selected_order_id = order.id
@@ -459,6 +461,7 @@ func _refresh_service() -> void:
 			app_preferences.apply_to(button)
 			order_buttons[order.id] = button
 		var selected := "▶ " if order.id == selected_order_id else ""
+		order_buttons[order.id].theme_type_variation = &"ActiveButton" if order.id == selected_order_id else &"Button"
 		var detail: String = _order_status(order)
 		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), _requested_priority(order), detail]
 	_show_selected_order()
@@ -546,6 +549,10 @@ func _show_settings() -> void:
 	_sync_settings_controls()
 	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 	settings_dialog.get_ok_button().custom_minimum_size = Vector2(64, 64)
+	await get_tree().process_frame
+	if settings_dialog.visible:
+		settings_dialog.size = Vector2i(620, 520)
+		settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 
 
 func _change_locale(index: int) -> void:

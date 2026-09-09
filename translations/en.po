@@ -686,8 +686,5 @@ msgstr "Godot Engine source: %s"
 msgid "Godot 라이선스: %s"
 msgstr "Godot licenses: %s"
 
-msgid "이 앱의 아이콘은 Godot 아이콘을 바탕으로 만들었습니다."
-msgstr "The application icon is derived from the Godot icon."
-
 msgid "제삼자 구성요소"
 msgstr "Third-party components"

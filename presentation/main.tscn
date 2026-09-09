@@ -1,16 +1,11 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://presentation/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://platform/app_lifecycle.gd" id="2_lifecycle"]
 [ext_resource type="Script" path="res://platform/safe_area.gd" id="3_safe_area"]
 [ext_resource type="Script" path="res://presentation/kitchen_board.gd" id="4_board"]
 
-[sub_resource type="SystemFont" id="SystemFont_korean"]
-font_names = PackedStringArray("Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR")
-
-[sub_resource type="Theme" id="Theme_main"]
-default_font = SubResource("SystemFont_korean")
-default_font_size = 26
+[ext_resource type="Theme" path="res://presentation/product_theme.tres" id="product_theme"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -19,7 +14,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme = SubResource("Theme_main")
+theme = ExtResource("product_theme")
 script = ExtResource("1_main")
 scenario_path = "res://content/m2_first_service.tres"
 
@@ -37,7 +32,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.055, 0.085, 0.09, 1)
+color = Color(0.071, 0.118, 0.122, 1)
 
 [node name="SafeArea" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -53,7 +48,7 @@ theme_override_constants/margin_bottom = 24
 
 [node name="Layout" type="VBoxContainer" parent="SafeArea"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 12
 
 [node name="Header" type="HBoxContainer" parent="SafeArea/Layout"]
 layout_mode = 2
@@ -146,6 +141,7 @@ size_flags_horizontal = 3
 text = "우선 +"
 
 [node name="Cancel" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side/Details/Actions"]
+theme_type_variation = &"DangerButton"
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -158,6 +154,7 @@ autowrap_mode = 2
 
 [node name="Status" type="Label" parent="SafeArea/Layout"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
 autowrap_mode = 2
 text = "준비 완료"
 
@@ -166,6 +163,7 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="Start" type="Button" parent="SafeArea/Layout/Controls"]
+theme_type_variation = &"PrimaryButton"
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -178,6 +176,7 @@ size_flags_horizontal = 3
 text = "일시정지"
 
 [node name="Resume" type="Button" parent="SafeArea/Layout/Controls"]
+theme_type_variation = &"PrimaryButton"
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -199,6 +198,7 @@ layout_mode = 2
 text = "4×"
 
 [node name="Restart" type="Button" parent="SafeArea/Layout/Controls"]
+theme_type_variation = &"PrimaryButton"
 visible = false
 custom_minimum_size = Vector2(160, 64)
 layout_mode = 2

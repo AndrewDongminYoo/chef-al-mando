@@ -2,6 +2,13 @@ extends "res://tests/harness.gd"
 
 
 func run(tree: SceneTree) -> void:
+	var icon_path: String = ProjectSettings.get_setting("application/config/icon")
+	expect(icon_path == "res://assets/branding/app-icon.png", "the application uses the product icon")
+	var icon: Texture2D = load(icon_path)
+	expect(icon != null and icon.get_width() == icon.get_height() and icon.get_width() >= 1024,
+		"the product icon is square and supports the largest export size")
+	if icon != null:
+		expect(icon.get_image().detect_alpha() == Image.ALPHA_NONE, "the product icon is opaque")
 	var directory := "user://m5_licenses_%d" % Time.get_ticks_usec()
 	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "license fixture directory is created")
 	var screen: Control = load("res://presentation/campaign.tscn").instantiate()
@@ -20,6 +27,8 @@ func run(tree: SceneTree) -> void:
 		expect(dialog.visible and body.is_visible_in_tree(), "settings opens the readable license body")
 		expect(not body.bbcode_enabled, "license text is displayed without markup interpretation")
 		expect(body.text.contains(Engine.get_license_text()), "the complete engine license is displayed")
+		expect(not body.text.contains("이 앱의 아이콘은 Godot 아이콘을 바탕으로 만들었습니다."),
+			"the product icon does not retain the obsolete attribution")
 		for component: Dictionary in Engine.get_copyright_info():
 			expect(body.text.contains(component.name), "component name is displayed: " + component.name)
 			for part: Dictionary in component.parts:
@@ -32,7 +41,6 @@ func run(tree: SceneTree) -> void:
 			expect(body.text.contains(license_text), "each complete third-party license is displayed")
 		expect(body.text.contains("https://github.com/godotengine/godot"), "engine source location is displayed")
 		expect(body.text.contains("Godot 엔진 소스:") and body.text.contains("Godot 라이선스:")
-			and body.text.contains("이 앱의 아이콘은 Godot 아이콘을 바탕으로 만들었습니다.")
 			and body.text.contains("제삼자 구성요소"), "license framing is Korean by default")
 		var scroll := body.get_v_scroll_bar()
 		expect(scroll.visible and scroll.max_value > scroll.page, "the full notices exceed the viewport and provide a scrollbar")
@@ -42,7 +50,6 @@ func run(tree: SceneTree) -> void:
 		screen.preferences.update_settings({"locale": "en", "text_size": "large"})
 		expect(button.text == "Open source licenses" and dialog.title == "Open source licenses", "license controls update to English")
 		expect(body.text.contains("Godot Engine source:") and body.text.contains("Godot licenses:")
-			and body.text.contains("The application icon is derived from the Godot icon.")
 			and body.text.contains("Third-party components"), "visible license framing updates to English")
 		expect(body.text.contains(Engine.get_license_text()), "localization preserves the verbatim engine license")
 		for license_text: String in Engine.get_license_info().values():

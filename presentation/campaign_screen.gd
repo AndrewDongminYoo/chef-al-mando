@@ -111,7 +111,14 @@ func _build_menu() -> void:
 	menu_panel.add_theme_constant_override("separation", 18)
 	safe_area.add_child(menu_panel)
 	var heading := HBoxContainer.new()
+	heading.add_theme_constant_override("separation", 16)
 	menu_panel.add_child(heading)
+	var brand_icon := TextureRect.new()
+	brand_icon.texture = preload("res://assets/branding/app-icon.png")
+	brand_icon.custom_minimum_size = Vector2(64, 64)
+	brand_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	brand_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	heading.add_child(brand_icon)
 	menu_title = _label("Chef al Mando · 영업 목록", 30)
 	menu_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(menu_title)
@@ -121,6 +128,7 @@ func _build_menu() -> void:
 	ending_button.visible = false
 	heading.add_child(ending_button)
 	continue_button = _button("이어하기", _resume_active_session)
+	continue_button.theme_type_variation = &"PrimaryButton"
 	continue_button.visible = false
 	heading.add_child(continue_button)
 	catalog_panel = HBoxContainer.new()
@@ -137,11 +145,13 @@ func _build_menu() -> void:
 	scenario_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scenario_list.add_theme_constant_override("separation", 10)
 	list_scroll.add_child(scenario_list)
+	var detail_card := PanelContainer.new()
+	detail_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	detail_card.size_flags_stretch_ratio = 1.2
+	catalog_panel.add_child(detail_card)
 	var details := VBoxContainer.new()
-	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	details.size_flags_stretch_ratio = 1.2
 	details.add_theme_constant_override("separation", 14)
-	catalog_panel.add_child(details)
+	detail_card.add_child(details)
 	briefing_title = _label("영업을 선택하세요", 28)
 	details.add_child(briefing_title)
 	var briefing_scroll := ScrollContainer.new()
@@ -152,6 +162,7 @@ func _build_menu() -> void:
 	briefing_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	briefing_scroll.add_child(briefing_label)
 	begin_button = _button("준비 시작", begin_service)
+	begin_button.theme_type_variation = &"PrimaryButton"
 	details.add_child(begin_button)
 	ending_panel = VBoxContainer.new()
 	ending_panel.visible = false
@@ -164,6 +175,7 @@ func _build_menu() -> void:
 	ending_copy = _label("준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요.", 26)
 	ending_panel.add_child(ending_copy)
 	ending_return_button = _button("영업 목록으로", return_to_menu)
+	ending_return_button.theme_type_variation = &"PrimaryButton"
 	ending_panel.add_child(ending_return_button)
 	save_label = _label("", 20)
 	menu_panel.add_child(save_label)
@@ -290,6 +302,10 @@ func _show_settings() -> void:
 	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 	_ensure_dialog_tap_sizes()
 	_ensure_dialog_tap_sizes.call_deferred()
+	await get_tree().process_frame
+	if settings_dialog.visible:
+		settings_dialog.size = Vector2i(620, 520)
+		settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 
 
 func _change_locale(index: int) -> void:
@@ -441,6 +457,7 @@ func _refresh_catalog() -> void:
 		button.disabled = not unlocked
 		button.toggle_mode = true
 		button.button_pressed = scenario.id == selected_scenario_id
+		button.theme_type_variation = &"ActiveButton" if button.button_pressed else &"Button"
 		scenario_list.add_child(button)
 		preferences.apply_to(button)
 		scenario_buttons[scenario.id] = button
@@ -455,6 +472,7 @@ func select_scenario(scenario_id: String) -> bool:
 	selected_scenario_id = scenario_id
 	for key: String in scenario_buttons:
 		scenario_buttons[key].set_pressed_no_signal(key == scenario_id)
+		scenario_buttons[key].theme_type_variation = &"ActiveButton" if key == scenario_id else &"Button"
 	_update_briefing()
 	return true
 
