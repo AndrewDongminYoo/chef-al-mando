@@ -84,6 +84,8 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 - [M0·M1 구현 계획](docs/plans/m0-m1-implementation.md)은 변경 경로, 의존성, 작업 순서와 단계별 통과 근거를 정의합니다.
 - [M2 구현 명세](docs/specs/m2-preparation.md)는 프렙·배치·마감 분석, 대표 아트와 사용자 검증의 계약입니다.
 - [M3 구현 명세](docs/specs/m3-campaign.md)는 고정 캠페인·목표·기록·엔딩과 사용자 검증 보류의 계약입니다.
+- [M4 저장 핵심 명세](docs/specs/m4-storage-core.md)는 화면 연결 전 세션 복원·파일 복구의 계약입니다.
+- [M4 PR 분할](docs/plans/m4-pr-split.md)은 저장 핵심과 화면 통합의 순서·검증 범위를 정의합니다.
 
 현재 검증 범위와 남은 기기 검사는 [M0 실행 기록](docs/notes/m0-verification.md), [M1 실행 기록](docs/notes/m1-verification.md), [M2 실행 기록](docs/notes/m2-verification.md)에 정리합니다.
 
@@ -104,9 +106,12 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 `check.sh m2`는 준비 명령·배치·분석과 기존 영업의 연결을 검사합니다.
 `check.sh m3`는 캠페인 콘텐츠·순차 완주·해금·기록 보존·실제 장면 연결을 검사합니다.
 M3 실행 명령은 [캠페인 명세](docs/specs/m3-campaign.md), 결과와 검증 한계는 [M3 검증 기록](docs/notes/m3-verification.md)에 있습니다.
+`check.sh m4-core`는 영업 상태·세션·파일·명령 관계만 검사합니다.
+저장 핵심의 결과는 [검증 기록](docs/notes/m4-storage-core-verification.md)에 있으며 이어하기 화면과 설정은 후속 PR에서 연결합니다.
 
 ```bash
 bash scripts/check.sh m3
+bash scripts/check.sh m4-core
 python3 tests/test_export_check.py
 bash scripts/check-export.sh
 ```
