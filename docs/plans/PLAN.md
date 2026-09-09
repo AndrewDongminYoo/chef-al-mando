@@ -365,7 +365,7 @@ M0·M1 양 플랫폼 전체 수용 기준과 M2 사용자 5명의 재미 검증�
 이 예외는 M3 착수를 허용하며 M2 재미 검증 통과를 뜻하지 않습니다.
 Android 실기기 검증 보류는 유지합니다.
 
-현재 저장소에는 M0·M1·M2·M3 검증 runner와 Android·iOS export preset이 있습니다.
+현재 저장소에는 M0·M1·M2·M3·M4 저장 핵심 검증 runner와 Android·iOS export preset이 있습니다.
 M0와 M1의 검증 명령 계약은 [구현 명세](../specs/m0-m1.md)에 정의했습니다.
 M0 로컬 검사와 실제 기기 검증 결과는 [M0 실행 기록](../notes/m0-verification.md)에 구분하여 기록합니다.
 M1은 `bash scripts/check.sh m1`으로 콘텐츠·규칙·결정론·화면 명령을 검사하며, `bash scripts/check-export.sh`로 내보낸 팩의 준비 화면과 첫 주문 실행을 확인합니다.
@@ -376,7 +376,11 @@ M2의 로컬 검사·선택 비교·export·기기 상태는 [M2 실행 기록](
 M3의 검증 명령과 fixture 계약은 [M3 명세](../specs/m3-campaign.md)에 정의했습니다.
 캠페인 완주·저장·실제 렌더·export의 로컬 결과와 남은 수용 기준은 [M3 실행 기록](../notes/m3-verification.md)에 구분하여 기록합니다.
 아직 실행하지 않은 신규 검사는 통과로 표시하지 않습니다.
-M4와 M5의 정확한 검증 명령은 현재 `[UNKNOWN]`입니다.
+M4 저장 핵심의 정확한 검증 명령은 `bash scripts/check.sh m4-core`이며 [저장 핵심 명세](../specs/m4-storage-core.md)의 상태·세션·파일·명령 관계를 검사합니다.
+`python3 tests/test_export_check.py`는 필수 완료 표시 누락과 export 실패 처리를 검사하며, `bash scripts/check-export.sh`는 새 PCK에서 실제 복원·변조 거부를 검사합니다.
+실행 결과는 [저장 핵심 검증 기록](../notes/m4-storage-core-verification.md)에 있습니다.
+[승인된 PR 분할](m4-pr-split.md)에 따라 화면 통합·새 프로세스 검사는 후속 PR의 계약이며 현재 저장 핵심 검사로 통과를 주장하지 않습니다.
+화면 통합과 M5의 정확한 검증 명령은 이 PR 기준으로 `[UNKNOWN]`입니다.
 Android 실기기는 구매 예정이며 Android 기종·OS 확정과 실제 실행은 대기 상태입니다.
 각 후속 단계의 구현 명세도 해당 단계의 코드 작업 전에 정확한 명령, fixture, 수동 증거 형식을 고정해야 합니다.
 명령이 없는 상태에서 에디터 실행이나 정적 파싱만으로 마일스톤 통과를 주장하지 않습니다.
