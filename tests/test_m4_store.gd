@@ -150,8 +150,30 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == migrated_records,
 		"migrated previous-target completion records remain exact on later loads")
-	var invalid_target := directory + "/invalid_current_completion.json"
 	var first: Resource = campaign.scenario_for("first_shift")
+	var corrupt_legacy_cases := {
+		"served": {"completed": true, "best_served": 9, "best_profit": 1000},
+		"profit": {"completed": true, "best_served": 10, "best_profit": 999},
+	}
+	for label: String in corrupt_legacy_cases:
+		var corrupt_legacy_target := directory + "/invalid_legacy_completion_" + label + ".json"
+		var corrupt_legacy_records := {"first_shift": corrupt_legacy_cases[label]}
+		_write(corrupt_legacy_target, JSON.stringify({"schema_version": 3, "content_version": 1,
+			"sim_version": 1, "records": corrupt_legacy_records, "active_session": null}))
+		_write(corrupt_legacy_target + ".backup", JSON.stringify({"schema_version": 3,
+			"content_version": 2, "sim_version": 1, "records": {}, "active_session": null}))
+		var corrupt_legacy_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target)
+		var valid_backup_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup")
+		var corrupt_legacy_store := CampaignStore.new(campaign, corrupt_legacy_target)
+		loaded = corrupt_legacy_store.load_records()
+		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a legacy completion below its original %s target is corrupt and offers its valid backup" % label)
+		expect(FileAccess.get_file_as_bytes(corrupt_legacy_target) == corrupt_legacy_bytes
+			and FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup") == valid_backup_bytes,
+			"legacy %s rejection preserves primary and backup bytes" % label)
+		expect(corrupt_legacy_store.recover_backup().accepted,
+			"explicit recovery replaces a corrupt legacy %s completion with its valid backup" % label)
+	var invalid_target := directory + "/invalid_current_completion.json"
 	var invalid_records := {"first_shift": {"completed": true,
 		"best_served": first.minimum_served - 1, "best_profit": -first.starting_budget}}
 	_write(invalid_target, JSON.stringify({"schema_version": 3, "content_version": 2, "sim_version": 1,
