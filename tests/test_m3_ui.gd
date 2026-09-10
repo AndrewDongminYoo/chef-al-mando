@@ -73,13 +73,32 @@ func run(tree: SceneTree) -> void:
 			var changed: Dictionary = service.call("submit_preparation", command.kind, command.target_id, command.value)
 			expect(changed.accepted, "campaign UI accepts the real reference preparation command")
 		service.get("start_button").pressed.emit()
+		if scenario.id == "hot_queue":
+			expect(service.get("summary_label").text.contains("주문 0 / 20건"), "the running summary distinguishes arrived orders from the full schedule")
 		for arrival: Dictionary in scenario.order_schedule():
-			service.call("advance", (arrival.arrival_tick - service.get("simulation").tick) / 10.0)
+			service.call("advance", (arrival.arrival_tick - service.get("simulation").tick) / (10.0 * service.get("driver").speed))
+			if scenario.id == "hot_queue" and arrival.id == "order_01":
+				expect(service.get("summary_label").text.contains("주문 1 / 20건"), "the running summary counts actual arrivals before any order is served")
 			if policy.priorities.has(arrival.recipe_id):
-				var changed: Dictionary = service.call("submit_command", "set_priority", arrival.id, policy.priorities[arrival.recipe_id])
-				expect(changed.accepted, "campaign UI submits priority through the normal command path")
+				if scenario.id == "hot_queue":
+					await _tap_hot_queue_priority(tree, service, arrival.id)
+				else:
+					var changed: Dictionary = service.call("submit_command", "set_priority", arrival.id, policy.priorities[arrival.recipe_id])
+					expect(changed.accepted, "campaign UI submits priority through the normal command path")
+		if scenario.id == "hot_queue":
+			var view: Dictionary = service.get("simulation").snapshot()
+			expect(view.orders.size() == 20 and view.accounting.expired > 0 and not view.closed, "the hot-queue fixture includes all arrivals and real expired orders before closing")
+			var counts: Array = [view.orders.size(), scenario.order_count, view.accounting.served, view.accounting.expired, view.accounting.cancelled]
+			expect(service.get("summary_label").text.contains("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d" % counts), "the Korean running summary separates arrivals, served orders, expirations, and cancellations")
+			var before_locale: String = service.get("simulation").state_hash()
+			screen.get("settings_locale").item_selected.emit(1)
+			expect(service.get("summary_label").text.contains("Orders %d / %d · served %d · unserved %d · cancelled %d" % counts), "the English running summary shows the same measured order counts")
+			screen.get("settings_locale").item_selected.emit(0)
+			expect(service.get("simulation").state_hash() == before_locale, "order summary locale changes preserve the simulation state")
 		service.call("advance", (3000 - service.get("simulation").tick) / 10.0)
 		expect(screen.get("last_result").passed, "the actual scene passes its service goals: " + scenario.id)
+		if scenario.id == "hot_queue":
+			print("HOT_QUEUE_BUTTON_RESULT ", JSON.stringify(service.get("simulation").snapshot().accounting))
 		expect(screen.get("result_dialog").dialog_text.contains("제공") and screen.get("result_dialog").dialog_text.contains("손익"), "result text shows both measured target values")
 		if index == 1 or index == campaign.scenarios.size() - 1:
 			var final_service: bool = index == campaign.scenarios.size() - 1
@@ -128,6 +147,46 @@ func run(tree: SceneTree) -> void:
 	for owned_file: String in DirAccess.get_files_at(directory):
 		DirAccess.remove_absolute(directory + "/" + owned_file)
 	DirAccess.remove_absolute(directory)
+
+
+func _tap_hot_queue_priority(tree: SceneTree, service: Control, order_id: String) -> void:
+	var row: Button = service.get("order_buttons")[order_id]
+	var scroll := row.get_parent().get_parent() as ScrollContainer
+	await tree.process_frame
+	await tree.process_frame
+	scroll.ensure_control_visible(row)
+	await tree.process_frame
+	await tree.process_frame
+	expect(scroll.get_global_rect().encloses(row.get_global_rect()), "the input fixture exposes the actual order row in its scroll viewport")
+	var sequence_before: int = service.get("command_sequence")
+	for button: Button in [row, service.get("priority_up_button")]:
+		var point := button.get_global_rect().get_center()
+		var motion := InputEventMouseMotion.new()
+		motion.position = point
+		tree.root.push_input(motion, true)
+		var press := InputEventMouseButton.new()
+		press.position = point
+		press.button_index = MOUSE_BUTTON_LEFT
+		press.button_mask = MOUSE_BUTTON_MASK_LEFT
+		press.pressed = true
+		tree.root.push_input(press, true)
+		expect(button.is_pressed(), "the playthrough holds the actual order or priority button")
+		var before_tick: int = service.get("simulation").tick
+		service.call("advance", 0.2)
+		expect(service.get("simulation").tick == before_tick + 2 * service.get("driver").speed
+			and button.is_pressed(), "the held pointer survives the real service ticks at the selected speed")
+		var release := InputEventMouseButton.new()
+		release.position = point
+		release.button_index = MOUSE_BUTTON_LEFT
+		tree.root.push_input(release, true)
+		expect(not button.is_pressed(), "each playthrough pointer returns to its released state")
+		expect(service.get("selected_order_id") == order_id, "the actual row tap selects the requested grill order")
+	expect(service.get("command_sequence") == sequence_before + 1, "one actual priority tap produces exactly one command")
+	expect(service.get("detail_label").text.contains("우선순위 2") and row.text.contains("우선 2"), "the actual priority tap displays its queued value immediately")
+	service.call("advance", 0.1 / service.get("driver").speed)
+	for order: Dictionary in service.get("simulation").snapshot().orders:
+		if order.id == order_id:
+			expect(order.priority == 2, "the priority selected through actual buttons is applied on the next tick")
 
 
 func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String) -> void:

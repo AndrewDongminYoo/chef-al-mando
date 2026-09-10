@@ -25,12 +25,18 @@ func _draw() -> void:
 	if cell <= 0:
 		return
 	var origin := (size - Vector2(definitions.grid_size) * cell) / 2.0
+	var kitchen_rect := Rect2(origin, Vector2(definitions.grid_size) * cell)
+	draw_rect(Rect2(kitchen_rect.position + Vector2(0, 3), kitchen_rect.size).grow(5), Color("142425"))
+	draw_rect(kitchen_rect.grow(3), Color("a9825b"))
 	var obstacles := definitions.blocked_tiles()
 	for y: int in definitions.grid_size.y:
 		for x: int in definitions.grid_size.x:
 			var tile := Vector2i(x, y)
 			var rect := Rect2(origin + Vector2(tile) * cell, Vector2.ONE * cell)
-			draw_rect(rect.grow(-1), Color("273839") if tile in obstacles else Color("51605b"))
+			var floor_color := Color("6d8474") if (x + y) % 2 == 0 else Color("748b7a")
+			draw_rect(rect, Color("243c3b") if tile in obstacles else floor_color)
+			if tile in obstacles:
+				draw_line(rect.position + Vector2(1, 1), rect.position + Vector2(cell - 1, 1), Color("3f5650"), 2)
 	var font := get_theme_default_font()
 	var font_size := clampi(int(cell * 0.42 * text_scale), 14, roundi(24 * text_scale))
 	var illustrated := definitions.supports_preparation()
@@ -45,9 +51,9 @@ func _draw() -> void:
 			draw_rect(rect.grow(-2), STATION_COLORS[station.role])
 			draw_string(font, rect.position + Vector2(2, cell * 0.65), tr(STATION_NAMES[station.role]), HORIZONTAL_ALIGNMENT_CENTER, cell - 4, font_size)
 		if station.id == selected_station_id:
-			draw_rect(rect.grow(-1), Color("f2dba0"), false, 3)
+			draw_rect(rect.grow(-1), Color("ffe0a3"), false, 3)
 		var work_center := origin + (Vector2(station.work_position) + Vector2.ONE * 0.5) * cell
-		draw_arc(work_center, cell * 0.3, 0, TAU, 20, Color("b7c7b6"), 2)
+		draw_arc(work_center, cell * 0.3, 0, TAU, 20, Color("d4debe"), 2)
 	for index: int in view.get("employees", []).size():
 		var employee: Dictionary = view.employees[index]
 		var tile := Vector2(employee.tile[0], employee.tile[1])

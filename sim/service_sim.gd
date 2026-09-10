@@ -84,6 +84,7 @@ var _last_sequence: int = 0
 var _revenue: int = 0
 var _events: Array[Dictionary] = []
 var _station_reserved_ticks: Dictionary[String, int] = {}
+var _menu_priorities: Dictionary[String, int] = {}
 
 
 func _init(data: Definitions, routes: GridRoutes = null, preparation: Dictionary = {}) -> void:
@@ -97,6 +98,8 @@ func _init(data: Definitions, routes: GridRoutes = null, preparation: Dictionary
 	if not errors.is_empty():
 		closed = true
 		return
+	if not initial.is_empty():
+		_menu_priorities.assign(initial.menu_priorities)
 	_routes = routes if routes != null else GridRoutes.new(data.grid_size, data.blocked_tiles())
 	_schedule = data.order_schedule()
 	_stations.assign(data.stations)
@@ -198,6 +201,7 @@ func _arrive_and_expire() -> void:
 		var order := OrderState.new()
 		order.id = arrival.id
 		order.recipe = _data.recipe_for(arrival.recipe_id)
+		order.priority = _menu_priorities.get(arrival.recipe_id, 1)
 		order.phases = order.recipe.ordered_processes()
 		order.arrival_tick = arrival.arrival_tick
 		order.deadline_tick = arrival.deadline_tick
@@ -563,7 +567,7 @@ static func restore(data: Definitions, state: Dictionary, preparation: Dictionar
 			return {"accepted": false, "reason": "invalid_employee"}
 	if commands_all_pending:
 		for saved_order: Dictionary in state.orders:
-			if saved_order.priority != 1 or saved_order.state == "cancelled":
+			if saved_order.priority != simulation._menu_priorities.get(saved_order.recipe_id, 1) or saved_order.state == "cancelled":
 				return {"accepted": false, "reason": "invalid_order"}
 	simulation.tick = state.tick
 	simulation.closed = state.closed

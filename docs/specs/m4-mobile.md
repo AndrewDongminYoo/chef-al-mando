@@ -56,6 +56,9 @@ JSON의 정수 값은 유한한 정확한 정수인지 확인한 뒤 변환하�
 
 ## 3. 단일 저장 파일과 호환성
 
+아래는 M4 도입 당시 계약입니다.
+2026-09-09에 승인한 [메뉴별 기본 우선순위](menu-priorities.md)는 새 쓰기를 schema 3으로 확장하며 schema 1·2 읽기를 유지합니다.
+
 기존 `user://campaign_records.json`을 단일 권위 파일로 유지합니다.
 schema 2는 `schema_version: 2`, `content_version: 1`, `sim_version: 1`, `records`, `active_session`을 갖습니다.
 `active_session`은 위 세션 또는 `null`입니다.

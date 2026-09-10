@@ -25,6 +25,9 @@ var purchase_minus: Dictionary[String, Button] = {}
 var prep_labels: Dictionary[String, Label] = {}
 var prep_plus: Dictionary[String, Button] = {}
 var prep_minus: Dictionary[String, Button] = {}
+var priority_labels: Dictionary[String, Label] = {}
+var priority_plus: Dictionary[String, Button] = {}
+var priority_minus: Dictionary[String, Button] = {}
 var move_buttons: Dictionary[String, Button] = {}
 var employee_labels: Dictionary[String, Label] = {}
 var duty_buttons: Dictionary[String, OptionButton] = {}
@@ -35,6 +38,7 @@ var reset_button: Button
 var selected_station_id: String = ""
 var stock_heading: Label
 var prep_heading: Label
+var priority_heading: Label
 
 
 func setup(data: Definitions) -> void:
@@ -112,6 +116,22 @@ func _build_stock(column: VBoxContainer) -> void:
 		plus.pressed.connect(_change_quantity.bind("set_prep", recipe.id, 1))
 		row.add_child(plus)
 		prep_plus[recipe.id] = plus
+	priority_heading = _label("메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능")
+	column.add_child(priority_heading)
+	for recipe_id: String in definitions.menu_ids:
+		var row := HBoxContainer.new()
+		column.add_child(row)
+		var label := _label("")
+		row.add_child(label)
+		priority_labels[recipe_id] = label
+		var minus := _button("−", false)
+		minus.pressed.connect(_change_priority.bind(recipe_id, -1))
+		row.add_child(minus)
+		priority_minus[recipe_id] = minus
+		var plus := _button("+", false)
+		plus.pressed.connect(_change_priority.bind(recipe_id, 1))
+		row.add_child(plus)
+		priority_plus[recipe_id] = plus
 
 
 func _build_layout(column: VBoxContainer) -> void:
@@ -155,6 +175,7 @@ func _build_layout(column: VBoxContainer) -> void:
 func show_tab(index: int) -> void:
 	for item: int in tabs.size():
 		tabs[item].disabled = item == index
+		tabs[item].theme_type_variation = &"ActiveButton" if item == index else &"Button"
 		pages[item].visible = item == index
 
 
@@ -191,9 +212,17 @@ func refresh(snapshot: Dictionary) -> void:
 		prep_minus[recipe_id].disabled = quantity == 0
 	for employee_id: String in duty_buttons:
 		duty_buttons[employee_id].select(DUTIES.find(snapshot.duties[employee_id]))
+	for recipe_id: String in priority_labels:
+		var priority: int = snapshot.menu_priorities[recipe_id]
+		priority_labels[recipe_id].text = tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), priority]
+		priority_minus[recipe_id].disabled = priority == 0
+		priority_plus[recipe_id].disabled = priority == 2
 	var lines: PackedStringArray = [tr("준비 확정 후 영업이 시작됩니다."), tr("원재료와 프렙은 이번 영업에만 사용합니다."), "", tr("시작 재고")]
 	for ingredient: Definitions.IngredientDef in definitions.ingredients:
 		lines.append(tr("%s · %d개") % [tr(ingredient.display_name), snapshot.inventory[ingredient.id]])
+	lines.append(tr("\n메뉴별 기본 우선순위"))
+	for recipe_id: String in definitions.menu_ids:
+		lines.append(tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), snapshot.menu_priorities[recipe_id]])
 	lines.append(tr("\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요."))
 	summary.text = "\n".join(lines)
 	_show_station()
@@ -202,6 +231,10 @@ func refresh(snapshot: Dictionary) -> void:
 func _change_quantity(kind: String, target: String, amount: int) -> void:
 	var quantities: Dictionary = current.purchases if kind == "set_purchase" else current.prep_quantities
 	command_requested.emit(kind, target, quantities.get(target, 0) + amount)
+
+
+func _change_priority(recipe_id: String, amount: int) -> void:
+	command_requested.emit("set_menu_priority", recipe_id, current.menu_priorities[recipe_id] + amount)
 
 
 static func reason_text(reason: String) -> String:
@@ -213,6 +246,7 @@ func refresh_translations() -> void:
 		tabs[index].text = tr(["발주·프렙", "배치·담당", "요약"][index])
 	stock_heading.text = tr("원재료 발주 · 한 개씩 조절")
 	prep_heading.text = tr("프렙 · 영업 중 손질을 미리 준비")
+	priority_heading.text = tr("메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능")
 	reset_button.text = tr("기본 준비로 초기화")
 	for index: int in definitions.stations.size():
 		station_picker.set_item_text(index, tr(definitions.stations[index].display_name))

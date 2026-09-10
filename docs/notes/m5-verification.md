@@ -4,6 +4,8 @@
 기준은 [M5 명세](../specs/m5-release-candidate.md)입니다.
 소스는 M4 머지 커밋 `02e3c38216159fadc06c64aaf117a9e76271f80d` 위의 `feat/m5-release-preparation` 변경입니다.
 이 기록은 로컬 준비 결과이며 M5 전체 통과가 아닙니다.
+1~6절은 M5 최초 구현과 PR 리뷰 당시의 근거입니다.
+현재 메뉴별 기본 우선순위 후보의 추가 검증은 7절에 기록합니다.
 
 ## 1. 완료한 로컬 검사
 
@@ -127,3 +129,44 @@ Oracle은 `raw/sources/.claude/rules/evidence-basis-discipline.md`의 검증 원
 검사가 실제 명령과 문구를 읽어야 하고 실패 입력을 먼저 확인해야 한다는 선례가 이번 검증 방향을 확인해 주었습니다.
 조회 revision은 `7049be0f6c7cefadb3d3d24a51ac74aa66e48824`이며 현재 wiki와의 일치 여부는 확인하지 않았습니다.
 엔진 버전에 직접 일치하는 프로젝트 선례는 `[no precedent found]`였습니다.
+
+## 7. 메뉴별 기본 우선순위 후보의 추가 검증
+
+2026-09-09 운영자는 [우선순위 보완본](hot-queue-followup.md)의 iPhone 플레이를 확인하고 다음 작업을 요청했습니다.
+현재 블루프린트의 마지막 마일스톤은 M5이며 M6는 정의하지 않았습니다.
+Android 실기기·사용자 5명 검증 보류는 유지합니다.
+
+현재 후보는 머지 커밋 `aff1826b5563d6eb98a06e8dec8abf69446b3d33` 위의 로컬 보완입니다.
+19:09에 설치한 개발 앱은 `kr.donminzzi.chefalmandodev`, 버전 `0.0.1`, 빌드 `1`입니다.
+산출물과 소스별 해시는 `build/check/menu-priorities-ios-artifact.json`에 기록했습니다.
+PCK SHA-256은 `865881a156fd4e957925abde194bc6f629ee23c91b47fdff0d26c30bfd6c5eca`입니다.
+설치 전후 캠페인 저장의 동일성과 운영자의 플레이 확인은 기록했지만, 스토어에서 다운로드한 빌드는 아닙니다.
+
+메뉴별 기본 우선순위가 없는 이전 앱 PCK에서 이동·작업 중 저장을 만들고 현재 schema 3 후보의 새 프로세스에서 읽었습니다.
+복원 직후와 마감 해시, 영어·큰 글자·효과음 설정, 강제 종료와 저장 교체 경계까지 포함해 10개 검사가 통과했습니다.
+명령과 로그는 다음과 같습니다.
+
+```bash
+M4_WRITER_PACK=/Users/dongminyu/Development/01_personal/chef-al-mando/build/check/priority-input-baseline.pck \
+M4_READER_PACK=/Users/dongminyu/Development/01_personal/chef-al-mando/build/ios-derived/Build/Products/Debug-iphoneos/chef_al_mando.app/chef_al_mando.pck \
+GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot \
+python3 tests/test_m4_restart.py
+```
+
+로그는 `build/check/m5-final-upgrade.log`입니다.
+기본값이 없는 기존 저장은 우선순위 `1`로 복원되며, 이 PCK 쌍 검사는 새 메뉴 기본값을 설정한 writer fixture는 아닙니다.
+새 기본값의 저장·도착·재개·개별 변경은 [보완 검증 기록](hot-queue-followup.md)의 M4 회귀와 현재 PCK 검사에서 별도로 확인했습니다.
+
+영어·큰 글자 준비 화면은 레이아웃 안정화 뒤 다시 렌더링했고, 우선순위 선택과 배속 버튼을 안전 영역 안에서 확인했습니다.
+이전 캡처의 밀림은 재현되지 않아 제품 코드를 변경하지 않았습니다.
+기존 명세의 전체 폰·태블릿·생명주기·오프라인·성능 수용 검증은 별도로 남습니다.
+
+다음 작업의 결정 항목은 제품 아이콘·스토어 화면 제작 범위, 출시 앱 ID와 기존 개발 저장의 이전 정책, 후보 버전·빌드 번호, 배포 채널입니다.
+지원 연락처·공개 개인정보 안내 URL도 제출 전에 확정해야 합니다.
+미확정 값을 임의로 채우거나 스토어 등록·업로드를 실행하지 않았습니다.
+
+Oracle은 `wiki/entities/release-cut.md`와 `wiki/concepts/build-number-convention-continuity.md`의 선례를 반환했습니다.
+원본 근거는 `raw/sources/.claude/skills/release-cut/SKILL.md`입니다.
+출시 준비와 실제 배포를 구분하고 버전·빌드 번호를 기존 규칙 없이 추측하지 않는 방향을 확인했습니다.
+조회 revision은 `7049be0f6c7cefadb3d3d24a51ac74aa66e48824`이며 현재 wiki와의 일치 여부는 미검증입니다.
+저장 스키마 전환에 직접 적용할 선례는 제한된 검색에서 찾지 못했으므로 현재 명세와 실행 근거로 판단했습니다.

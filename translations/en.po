@@ -431,8 +431,8 @@ msgstr "Served %d / %d (%.0f%%) · cancelled %d · unserved %d\nRevenue %s · in
 msgid "메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건"
 msgstr "Menu · %s\nBudget %s · ingredients %s · labor %s\n%s · %d orders"
 
-msgid "제공 %d건 · 매출 %s\n남은 재료 · %s"
-msgstr "Served %d · revenue %s\nStock · %s"
+msgid "주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s"
+msgstr "Orders %d / %d · served %d · unserved %d · cancelled %d\nRevenue %s · stock · %s"
 
 msgid "%s %d"
 msgstr "%s %d"
@@ -596,8 +596,17 @@ msgstr "Hot-station queue"
 msgid "온식 우선순위"
 msgstr "Hot-order priority"
 
-msgid "구이는 매출이 높지만 화구를 오래 사용합니다. 짧은 주문과 느린 주문의 우선순위를 바꾸고 화구 대기를 확인하세요."
-msgstr "Grilled dishes earn more but occupy the hot station longer. Change priorities for short and slow orders, then inspect the hot-station wait."
+msgid "구이는 매출이 높지만 화구를 오래 사용합니다. 구이를 미리 손질하고 재료·냉식·화구·제공대 사이의 동선을 줄이세요. 준비 화면에서 구이의 기본 우선순위를 높이면 새 주문에 자동으로 적용됩니다. 주문은 총 20건이며, 시간 초과된 주문은 미제공으로 집계됩니다."
+msgstr "Grilled dishes earn more but occupy the hot station longer. Prepare them before service and shorten routes between storage, cold, hot, and pass stations. Raise their default priority during preparation to apply it to new orders automatically. There are 20 orders in total. Expired orders count as unserved."
+
+msgid "메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능"
+msgstr "Default menu priorities · 0–2\nHigher values go first for new orders.\nChange individual orders during service."
+
+msgid "%s · 우선순위 %d"
+msgstr "%s · priority %d"
+
+msgid "\n메뉴별 기본 우선순위"
+msgstr "\nDefault menu priorities"
 
 msgid "나눠 쓰는 재료"
 msgstr "Shared ingredients"
@@ -676,9 +685,6 @@ msgstr "Godot Engine source: %s"
 
 msgid "Godot 라이선스: %s"
 msgstr "Godot licenses: %s"
-
-msgid "이 앱의 아이콘은 Godot 아이콘을 바탕으로 만들었습니다."
-msgstr "The application icon is derived from the Godot icon."
 
 msgid "제삼자 구성요소"
 msgstr "Third-party components"

@@ -368,12 +368,17 @@ func select_order(order_id: String) -> void:
 func _change_priority(amount: int) -> void:
 	for order: Dictionary in latest_view.orders:
 		if order.id == selected_order_id:
-			var value: int = order.priority
-			for command: Dictionary in latest_view.commands:
-				if command.kind == "set_priority" and command.target_id == order.id:
-					value = command.value
+			var value := _requested_priority(order)
 			submit_command("set_priority", order.id, clampi(value + amount, 0, 2))
 			return
+
+
+func _requested_priority(order: Dictionary) -> int:
+	var value: int = order.priority
+	for command: Dictionary in latest_view.commands:
+		if command.kind == "set_priority" and command.target_id == order.id:
+			value = command.value
+	return value
 
 
 func _set_duty(index: int, employee_id: String) -> void:
@@ -415,11 +420,12 @@ func _refresh_service() -> void:
 		var analyzing := state == State.CLOSED
 		preparation_panel.visible = preparing
 		analysis_scroll.visible = analyzing
-		employee_controls.visible = not preparing
+		employee_controls.visible = not preparing and not analyzing
 		$SafeArea/Layout/Kitchen/Body/Side/Heading.visible = not preparing and not analyzing
 		$SafeArea/Layout/Kitchen/Body/Side/OrdersScroll.visible = not preparing and not analyzing
 		details_toggle.visible = not preparing and not analyzing and compact_layout
 		detail_panel.visible = not preparing and not analyzing and (details_expanded or not compact_layout)
+		_update_details_toggle()
 		if preparing and latest_view.errors.is_empty():
 			_show_preparation()
 			_refresh_feedback()
@@ -439,6 +445,7 @@ func _refresh_service() -> void:
 	_show_summary()
 	for index: int in speed_buttons.size():
 		speed_buttons[index].disabled = driver.speed == [1, 2, 4][index] or state == State.CLOSED
+		speed_buttons[index].theme_type_variation = &"ActiveButton" if driver.speed == [1, 2, 4][index] and state != State.CLOSED else &"Button"
 	for order: Dictionary in latest_view.orders:
 		if selected_order_id.is_empty():
 			selected_order_id = order.id
@@ -454,8 +461,9 @@ func _refresh_service() -> void:
 			app_preferences.apply_to(button)
 			order_buttons[order.id] = button
 		var selected := "▶ " if order.id == selected_order_id else ""
+		order_buttons[order.id].theme_type_variation = &"ActiveButton" if order.id == selected_order_id else &"Button"
 		var detail: String = _order_status(order)
-		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), order.priority, detail]
+		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), _requested_priority(order), detail]
 	_show_selected_order()
 	for index: int in latest_view.employees.size():
 		var employee: Dictionary = latest_view.employees[index]
@@ -541,6 +549,10 @@ func _show_settings() -> void:
 	_sync_settings_controls()
 	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 	settings_dialog.get_ok_button().custom_minimum_size = Vector2(64, 64)
+	await get_tree().process_frame
+	if settings_dialog.visible:
+		settings_dialog.size = Vector2i(620, 520)
+		settings_dialog.popup_centered_clamped(Vector2i(620, 520))
 
 
 func _change_locale(index: int) -> void:
@@ -700,7 +712,7 @@ func _show_summary() -> void:
 			menus.append(tr(definitions.recipe_for(recipe_id).display_name))
 		summary_label.text = tr("메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건") % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), _raw_stock(" · "), definitions.order_count]
 	else:
-		summary_label.text = tr("제공 %d건 · 매출 %s\n남은 재료 · %s") % [accounting.served, _money(accounting.revenue), _raw_stock(" / ")]
+		summary_label.text = tr("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s") % [latest_view.orders.size(), definitions.order_count, accounting.served, accounting.expired, accounting.cancelled, _money(accounting.revenue), _raw_stock(" / ")]
 		if preparation != null:
 			var prepared: PackedStringArray = []
 			for recipe_id: String in definitions.menu_ids:
@@ -744,23 +756,20 @@ func _order_status(order: Dictionary) -> String:
 
 
 func _show_selected_order() -> void:
-	priority_up_button.disabled = true
-	priority_down_button.disabled = true
-	cancel_button.disabled = true
 	detail_label.text = tr("주문을 선택하세요")
 	for order: Dictionary in latest_view.orders:
 		if order.id != selected_order_id:
 			continue
-		detail_label.text = tr("%s · 우선순위 %d\n%s") % [tr(order.name), order.priority, _order_status(order)]
-		if order.state not in ServiceSim.TERMINAL:
-			var priority: int = order.priority
-			for command: Dictionary in latest_view.commands:
-				if command.kind == "set_priority" and command.target_id == order.id:
-					priority = command.value
-			priority_up_button.disabled = priority >= 2
-			priority_down_button.disabled = priority <= 0
-			cancel_button.disabled = false
+		var priority := _requested_priority(order)
+		var terminal: bool = order.state in ServiceSim.TERMINAL
+		detail_label.text = tr("%s · 우선순위 %d\n%s") % [tr(order.name), priority, _order_status(order)]
+		priority_up_button.disabled = terminal or priority >= 2
+		priority_down_button.disabled = terminal or priority <= 0
+		cancel_button.disabled = terminal
 		return
+	priority_up_button.disabled = true
+	priority_down_button.disabled = true
+	cancel_button.disabled = true
 
 
 func _employee_wait(employee: Dictionary) -> String:

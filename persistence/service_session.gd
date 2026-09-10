@@ -90,6 +90,8 @@ static func _normalize_json(value: Variant) -> Dictionary:
 
 static func _exact_preparation(scenario: Resource, selection: Dictionary) -> bool:
 	var fields: Array[String] = ["purchases", "prep_quantities", "placements", "duties"]
+	if selection.has("menu_priorities"):
+		fields.append("menu_priorities")
 	if not _exact_fields(selection, fields):
 		return false
 	var defaults: Variant = PreparationPlan.new(scenario).snapshot().get("selection")

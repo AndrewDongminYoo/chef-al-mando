@@ -1,14 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://presentation/campaign_screen.gd" id="campaign"]
 [ext_resource type="Script" path="res://platform/safe_area.gd" id="safe_area"]
 
-[sub_resource type="SystemFont" id="Font_korean"]
-font_names = PackedStringArray("Apple SD Gothic Neo", "Noto Sans CJK KR", "Noto Sans KR")
-
-[sub_resource type="Theme" id="Theme_campaign"]
-default_font = SubResource("Font_korean")
-default_font_size = 26
+[ext_resource type="Theme" path="res://presentation/product_theme.tres" id="product_theme"]
 
 [node name="Campaign" type="Control"]
 layout_mode = 3
@@ -17,7 +12,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme = SubResource("Theme_campaign")
+theme = ExtResource("product_theme")
 script = ExtResource("campaign")
 
 [node name="Background" type="ColorRect" parent="."]
@@ -28,7 +23,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.055, 0.085, 0.09, 1)
+color = Color(0.071, 0.118, 0.122, 1)
 
 [node name="SafeAreaSource" type="Node" parent="."]
 script = ExtResource("safe_area")

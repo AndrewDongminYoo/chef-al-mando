@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 2, "content_version": 1, "sim_version": 1}
+const VERSIONS := {"schema_version": 3, "content_version": 1, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 
 var file_path: String
@@ -147,7 +147,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("corrupt_records")
 		if version > VERSIONS[key]:
 			return _failure("future_version")
-		if key == "schema_version" and version == LEGACY_SCHEMA_VERSION:
+		if key == "schema_version" and (version == LEGACY_SCHEMA_VERSION or version == 2):
 			continue
 		if version != VERSIONS[key]:
 			return _failure("unsupported_version")
@@ -166,7 +166,7 @@ func _read(target: String) -> Dictionary:
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("corrupt_records")
 	var active_session: Variant = null
-	if schema_version == VERSIONS.schema_version:
+	if schema_version >= 2:
 		active_session = document.get("active_session", "missing")
 		if active_session != null:
 			if not active_session is Dictionary or not ServiceSession.restore(_campaign, active_session, records).accepted:
