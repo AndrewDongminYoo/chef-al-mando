@@ -23,7 +23,8 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			continue
 		var scenario := campaign.scenario_for(scenario_id)
 		var record: Variant = records[scenario_id]
-		if not record is Dictionary or record.size() != 3:
+		var has_legacy_completion: bool = record is Dictionary and record.get("legacy_completed") == true
+		if not record is Dictionary or (record.size() != 3 and not (record.size() == 4 and has_legacy_completion)):
 			problems.append("invalid record fields")
 			continue
 		if not record.get("completed") is bool or not record.get("best_served") is int or not record.get("best_profit") is int:
@@ -31,7 +32,10 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			continue
 		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > scenario.maximum_profit(record.best_served):
 			problems.append("record value is outside the service limits")
-		if record.completed and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+		if has_legacy_completion and not record.completed:
+			problems.append("legacy completion marker requires a completed record")
+		if record.completed and not has_legacy_completion \
+			and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
 			problems.append("completed record does not meet its targets")
 	if not problems.is_empty():
 		return problems
@@ -72,6 +76,8 @@ func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 	var record := {"completed": passed or previous.get("completed", false),
 		"best_served": maxi(accounting.served, previous.get("best_served", accounting.served)),
 		"best_profit": maxi(accounting.profit, previous.get("best_profit", accounting.profit))}
+	if previous.get("legacy_completed") == true and not passed:
+		record.legacy_completed = true
 	var candidate := _records.duplicate(true)
 	candidate[scenario_id] = record
 	if not validate_records(_campaign, candidate).is_empty():

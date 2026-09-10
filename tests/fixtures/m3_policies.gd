@@ -16,7 +16,6 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "grill", 4)
 			_moves(policy, "cold_01", "left", 2)
 			_moves(policy, "hot_01", "left", 3)
-			_moves(policy, "pass_01", "left", 5)
 			policy.priorities = {"grill": 2}
 		"shared_stock":
 			_add(policy, "set_prep", "soup", 4)
@@ -29,9 +28,6 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_moves(policy, "hot_01", "left", 5)
 			_add(policy, "rotate_station", "hot_02", null)
 			_moves(policy, "hot_02", "up", 2)
-			_moves(policy, "pass_01", "down", 1)
-			_moves(policy, "pass_01", "left", 6)
-			_moves(policy, "pass_01", "up", 3)
 		"split_duties":
 			_add(policy, "set_duty", "employee_01", "cold")
 			_add(policy, "set_duty", "employee_02", "cold")
@@ -40,10 +36,13 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "protein_bowl", 5)
 			_add(policy, "set_prep", "grain_grill", 2)
 			_add(policy, "set_prep", "salad", 1)
-		"rush_hour", "final_service":
+		"rush_hour":
 			_add(policy, "set_prep", "grill", 4)
 			_add(policy, "set_prep", "protein_bowl", 3)
-			_moves(policy, "pass_01", "left", 1)
+			policy.priorities = {"grill": 2, "protein_bowl": 2}
+		"final_service":
+			_add(policy, "set_prep", "grill", 6)
+			_moves(policy, "hot_02", "right", 1)
 			policy.priorities = {"grill": 2, "protein_bowl": 2}
 	return policy
 

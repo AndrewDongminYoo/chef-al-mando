@@ -49,6 +49,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_el7hk"]
 script = ExtResource("17_5v5tj")
@@ -73,6 +74,7 @@ display_name = "제공"
 role = "pass"
 tile = Vector2i(11, 6)
 work_position = Vector2i(11, 5)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_u0so7"]
 script = ExtResource("17_5v5tj")
@@ -93,11 +95,12 @@ work_position = Vector2i(9, 5)
 [resource]
 script = ExtResource("16_tmbfc")
 display_name = "네 사람의 주방"
-briefing = "냉식 작업대와 화구가 둘씩 있습니다. 네 직원의 담당을 나누고, 담당 직원 대기와 작업대 사용 시간을 함께 확인하세요."
+briefing = "냉식대와 화구가 둘씩 있고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
 operation_problem = "담당 분리"
-minimum_served = 19
-minimum_profit = 2500
+minimum_served = 26
+minimum_profit = 12000
 order_recipe_ids = PackedStringArray("salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad", "grain_grill", "protein_bowl", "salad", "mushroom_salad")
+order_arrival_ticks = PackedInt32Array(10, 10, 110, 210, 310, 560, 560, 660, 760, 860, 1110, 1110, 1210, 1310, 1410, 1660, 1660, 1760, 1860, 1960, 2210, 2210, 2310, 2410, 2510, 2610)
 id = "split_duties"
 seed = 42
 closing_tick = 3000
@@ -120,3 +123,4 @@ order_count = 26
 first_arrival_tick = 10
 arrival_interval_ticks = 100
 prep_labor_capacity = 15
+space_rules = true

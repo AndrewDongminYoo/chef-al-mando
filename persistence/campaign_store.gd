@@ -3,8 +3,9 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 3, "content_version": 1, "sim_version": 1}
+const VERSIONS := {"schema_version": 3, "content_version": 2, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
+const LEGACY_CONTENT_VERSION := 1
 
 var file_path: String
 var _campaign: CampaignDef
@@ -141,6 +142,7 @@ func _read(target: String) -> Dictionary:
 	if parser.parse(text) != OK or not parser.data is Dictionary:
 		return _failure("corrupt_records")
 	var document: Dictionary = parser.data
+	var content_updated := false
 	for key: String in VERSIONS:
 		var version: Variant = document.get(key)
 		if not _is_integer(version):
@@ -148,6 +150,9 @@ func _read(target: String) -> Dictionary:
 		if version > VERSIONS[key]:
 			return _failure("future_version")
 		if key == "schema_version" and (version == LEGACY_SCHEMA_VERSION or version == 2):
+			continue
+		if key == "content_version" and version == LEGACY_CONTENT_VERSION:
+			content_updated = true
 			continue
 		if version != VERSIONS[key]:
 			return _failure("unsupported_version")
@@ -163,8 +168,13 @@ func _read(target: String) -> Dictionary:
 			if not _is_integer(records[key].get(metric)):
 				return _failure("corrupt_records")
 			records[key][metric] = int(records[key][metric])
+		if content_updated and records[key].get("completed") == true:
+			records[key].legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("corrupt_records")
+	if content_updated:
+		return {"accepted": true, "reason": "content_updated", "records": records,
+			"active_session": null, "can_recover": false}
 	var active_session: Variant = null
 	if schema_version >= 2:
 		active_session = document.get("active_session", "missing")

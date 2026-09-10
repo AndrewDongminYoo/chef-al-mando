@@ -13,7 +13,7 @@ static func scenario(scenario_id: String, constrained: bool = true) -> ScenarioD
 	var data := load("res://content/campaign/scenarios/" + scenario_id + ".tres").duplicate(true) as ScenarioDef
 	data.space_rules = constrained
 	for station: Resource in data.stations:
-		station.fixed = constrained and (station.role == "pass" or (scenario_id == "long_route" and station.role == "storage"))
+		station.fixed = constrained and station.fixed
 	return data
 
 
@@ -27,6 +27,7 @@ static func policy(scenario_id: String, layout: String = "original", duties: Str
 		for choice: Dictionary in Policies.reference_policy(scenario_id).preparation:
 			if choice.kind in ["move_station", "rotate_station"]:
 				result.preparation.append(choice.duplicate(true))
+		_moves(result, "pass_01", "up", 1)
 	elif layout == "clustered":
 		if scenario_id == "hot_queue":
 			_moves(result, "cold_01", "left", 2)

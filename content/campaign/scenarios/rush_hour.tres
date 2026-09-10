@@ -57,6 +57,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_pv851"]
 script = ExtResource("25_ckp6s")
@@ -81,6 +82,7 @@ display_name = "제공"
 role = "pass"
 tile = Vector2i(11, 6)
 work_position = Vector2i(11, 5)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_6fanv"]
 script = ExtResource("25_ckp6s")
@@ -101,11 +103,12 @@ work_position = Vector2i(9, 5)
 [resource]
 script = ExtResource("24_br4xh")
 display_name = "몰려오는 주문"
-briefing = "여덟 메뉴의 주문이 빠르게 들어옵니다. 주문 구성을 보고 프렙을 배분하고, 영업 중 우선순위로 밀리는 주문을 조절하세요."
+briefing = "여덟 메뉴의 주문이 다섯 차례에 걸쳐 몰려옵니다. 재료 보관대와 출고대는 고정되어 있습니다. 주문 구성을 보고 프렙을 배분하고 우선순위로 매출 손실을 줄이세요."
 operation_problem = "주문 유입과 프렙"
-minimum_served = 22
-minimum_profit = 3000
+minimum_served = 23
+minimum_profit = 8500
 order_recipe_ids = PackedStringArray("salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl", "salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup")
+order_arrival_ticks = PackedInt32Array(10, 10, 95, 180, 265, 350, 520, 520, 605, 690, 775, 860, 1030, 1030, 1115, 1200, 1285, 1370, 1540, 1540, 1625, 1710, 1795, 1880, 2050, 2050, 2135, 2220, 2305, 2390)
 id = "rush_hour"
 seed = 42
 closing_tick = 3000
@@ -128,3 +131,4 @@ order_count = 30
 first_arrival_tick = 10
 arrival_interval_ticks = 85
 prep_labor_capacity = 18
+space_rules = true

@@ -35,6 +35,22 @@ func run(_tree: SceneTree) -> void:
 		expect(repeat.accepted and repeat.hash == run.hash, "fixed campaign policy repeats the final state hash: " + scenario.id)
 		expect(fast.accepted and fast.hash == run.hash, "one and four speed match at the same campaign ticks: " + scenario.id)
 		print("M3_PLAYTHROUGH ", scenario.id, " ", JSON.stringify({"accounting": view.accounting, "metrics": view.metrics, "hash": run.hash}, "", true))
+		if campaign.scenarios.find(scenario) >= 2:
+			var no_plan := Policies.run_policy(scenario)
+			expect(no_plan.accepted, "the no-plan comparison runs: " + scenario.id)
+			if no_plan.accepted:
+				var no_plan_view: Dictionary = no_plan.snapshot
+				var no_plan_passes: bool = no_plan_view.accounting.served >= scenario.minimum_served and no_plan_view.accounting.profit >= scenario.minimum_profit
+				expect(not no_plan_passes, "a pressure service requires a scenario-specific plan: " + scenario.id)
+				expect(view.accounting.served - scenario.minimum_served <= 1
+					and view.accounting.profit - scenario.minimum_profit <= 2000,
+					"the reference policy passes with at most one extra order and 2000 extra profit: " + scenario.id)
+				expect(no_plan_view.accounting != view.accounting or no_plan_view.metrics != view.metrics,
+					"the reference plan changes the pressure-service result: " + scenario.id)
+				print("M3_PRESSURE ", scenario.id, " ", JSON.stringify({
+					"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
+					"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
+					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
 	for owned_file: String in DirAccess.get_files_at(directory):
 		DirAccess.remove_absolute(directory + "/" + owned_file)

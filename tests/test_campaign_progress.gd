@@ -54,6 +54,25 @@ func run(_tree: SceneTree) -> void:
 	expect(progress.snapshot() == saved, "callers cannot mutate campaign records through a snapshot")
 	var reopened: RefCounted = progress_script.new(campaign, saved.records)
 	expect(reopened.is_unlocked(second.id), "new progress restores the recorded unlock")
+	var pressure: Resource = campaign.scenarios[2]
+	var legacy_records := {
+		first.id: {"completed": true, "best_served": first.minimum_served, "best_profit": first.minimum_profit},
+		second.id: {"completed": true, "best_served": second.minimum_served, "best_profit": second.minimum_profit},
+		pressure.id: {"completed": true, "best_served": 14, "best_profit": 1500, "legacy_completed": true},
+	}
+	var grandfathered: RefCounted = progress_script.new(campaign, legacy_records)
+	expect(grandfathered.errors.is_empty() and grandfathered.is_unlocked(campaign.scenarios[3].id),
+		"an explicitly migrated legacy completion remains unlocked below the current targets")
+	expect(grandfathered.record_result(pressure.id,
+		_result(pressure, pressure.minimum_served, pressure.minimum_profit)).passed,
+		"a grandfathered service can meet the current targets on a later attempt")
+	expect(not grandfathered.snapshot().records[pressure.id].has("legacy_completed"),
+		"meeting the current targets removes the legacy completion marker")
+	var unmarked_completion: RefCounted = progress_script.new(campaign,
+		{first.id: {"completed": true, "best_served": first.minimum_served - 1,
+			"best_profit": -first.starting_budget}})
+	expect(not unmarked_completion.errors.is_empty(),
+		"a current completion below the current targets requires migration provenance")
 	for scenario: Resource in campaign.scenarios:
 		expect(progress.record_result(scenario.id, _result(scenario, scenario.minimum_served, scenario.minimum_profit)).passed, "each passing service unlocks its successor: " + scenario.id)
 	expect(progress.snapshot().ending_unlocked, "the last service unlocks the ending")

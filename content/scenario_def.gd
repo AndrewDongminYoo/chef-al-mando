@@ -6,6 +6,7 @@ extends "res://content/definitions.gd"
 @export var minimum_served: int = 1
 @export var minimum_profit: int = 0
 @export var order_recipe_ids: PackedStringArray = PackedStringArray()
+@export var order_arrival_ticks: PackedInt32Array = PackedInt32Array()
 
 
 func validate(require_stock: bool = true) -> Array[String]:
@@ -18,6 +19,15 @@ func validate(require_stock: bool = true) -> Array[String]:
 		errors.append("invalid campaign target")
 	if order_recipe_ids.size() != order_count:
 		errors.append("campaign order sequence must match the order count")
+	if not order_arrival_ticks.is_empty():
+		if order_arrival_ticks.size() != order_count:
+			errors.append("campaign arrival schedule must match the order count")
+		else:
+			for index: int in order_arrival_ticks.size():
+				var arrival_tick := order_arrival_ticks[index]
+				if arrival_tick <= 0 or arrival_tick > closing_tick or (index > 0 and arrival_tick < order_arrival_ticks[index - 1]):
+					errors.append("campaign arrival schedule must be ordered within service time")
+					break
 	var seen: Dictionary = {}
 	for recipe_id: String in menu_ids:
 		if seen.has(recipe_id):
@@ -38,7 +48,7 @@ func order_schedule() -> Array[Dictionary]:
 		var recipe := recipe_for(order_recipe_ids[index])
 		if recipe == null:
 			return []
-		var arrival_tick := first_arrival_tick + arrival_interval_ticks * index
+		var arrival_tick := order_arrival_ticks[index] if not order_arrival_ticks.is_empty() else first_arrival_tick + arrival_interval_ticks * index
 		result.append({"id": "order_%02d" % (index + 1), "arrival_tick": arrival_tick,
 			"recipe_id": recipe.id, "deadline_tick": arrival_tick + recipe.patience_ticks})
 	return result

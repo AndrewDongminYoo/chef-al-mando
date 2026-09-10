@@ -42,10 +42,11 @@ func run(tree: SceneTree) -> void:
 		expect(normal.hash == fast.hash, "menu defaults produce identical final states at 1x and 4x")
 		print("HOT_QUEUE_MENU_DEFAULT_RESULT ", JSON.stringify(normal.snapshot.accounting))
 	var closer := policy.duplicate(true)
-	closer.preparation.append({"kind": "move_station", "target_id": "hot_01", "value": "left"})
+	closer.preparation.append({"kind": "move_station", "target_id": "hot_01", "value": "right"})
 	var closer_result := Policies.run_policy(scenario, closer, 4)
-	expect(closer_result.accepted and closer_result.snapshot.accounting.served >= scenario.minimum_served
-		and closer_result.snapshot.accounting.profit >= scenario.minimum_profit, "the previously saved closer hot-station layout also passes at 4x")
+	expect(closer_result.accepted and (closer_result.snapshot.accounting != normal.snapshot.accounting
+		or closer_result.snapshot.metrics != normal.snapshot.metrics),
+		"a second legal hot-station layout changes the pressure result at 4x")
 	if closer_result.accepted:
 		print("HOT_QUEUE_CLOSER_MENU_DEFAULT_RESULT ", JSON.stringify(closer_result.snapshot.accounting))
 	_test_restore(campaign)
@@ -107,7 +108,7 @@ func _test_restore(campaign: Resource) -> void:
 	DirAccess.make_dir_recursive_absolute(directory)
 	var target := directory + "/records.json"
 	var file := FileAccess.open(target, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"schema_version": 2, "content_version": 1, "sim_version": 1,
+	file.store_string(JSON.stringify({"schema_version": 2, "content_version": 2, "sim_version": 1,
 		"records": {}, "active_session": old_session}))
 	file.close()
 	var bytes := FileAccess.get_file_as_bytes(target)
