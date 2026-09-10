@@ -41,7 +41,7 @@
 | `scripts/check.sh m0`        | 엔진 버전·import·M0 상태·안전 영역                            | 25개 검사, 실패 0    |
 | `scripts/check.sh m1`        | 고정 tick·작업·회계·결정론·주 화면 명령                       | 192개 검사, 실패 0   |
 | `scripts/check.sh m2`        | 준비·배치·공간 규칙·분석                                      | 415개 검사, 실패 0   |
-| `scripts/check.sh m3`        | 캠페인 파동·전략 차이·목표·결정론·실제 장면                   | 1,007개 검사, 실패 0 |
+| `scripts/check.sh m3`        | 캠페인 파동·전략 차이·목표·결정론·실제 장면                   | 1,009개 검사, 실패 0 |
 | `scripts/check.sh m4-core`   | 영업 상태·세션·파일·명령 관계                                 | 863개 검사, 실패 0   |
 | `scripts/check.sh m4`        | 콘텐츠 마이그레이션·저장·복구·설정·화면 연결                  | 1,171개 검사, 실패 0 |
 | `scripts/check.sh m5`        | 출시 준비 자산·저장·완주                                      | 583개 검사, 실패 0   |

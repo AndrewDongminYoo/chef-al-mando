@@ -75,6 +75,14 @@ func run(_tree: SceneTree) -> void:
 	changed_scenario.order_arrival_ticks = backward_ticks
 	invalid.scenarios[2] = changed_scenario
 	expect(not invalid.call("validate").is_empty(), "an explicit arrival schedule cannot move backward")
+	changed_scenario = campaign.scenarios[2].duplicate(true)
+	expect(changed_scenario.call("validate").is_empty(),
+		"the closing-tick schedule fixture starts from a valid service")
+	var closing_ticks: PackedInt32Array = changed_scenario.order_arrival_ticks.duplicate()
+	closing_ticks[-1] = changed_scenario.closing_tick
+	changed_scenario.order_arrival_ticks = closing_ticks
+	expect("campaign arrival schedule must be ordered within service time" in changed_scenario.call("validate"),
+		"an explicit arrival must occur before the closing tick")
 
 
 func _test_pressure_service(scenario: Resource, schedule: Array) -> void:

@@ -25,7 +25,7 @@ func validate(require_stock: bool = true) -> Array[String]:
 		else:
 			for index: int in order_arrival_ticks.size():
 				var arrival_tick := order_arrival_ticks[index]
-				if arrival_tick <= 0 or arrival_tick > closing_tick or (index > 0 and arrival_tick < order_arrival_ticks[index - 1]):
+				if arrival_tick <= 0 or arrival_tick >= closing_tick or (index > 0 and arrival_tick < order_arrival_ticks[index - 1]):
 					errors.append("campaign arrival schedule must be ordered within service time")
 					break
 	var seen: Dictionary = {}
