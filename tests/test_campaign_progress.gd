@@ -73,6 +73,15 @@ func run(_tree: SceneTree) -> void:
 			"best_profit": -first.starting_budget}})
 	expect(not unmarked_completion.errors.is_empty(),
 		"a current completion below the current targets requires migration provenance")
+	for forged_record: Dictionary in [
+		{"completed": true, "best_served": 13, "best_profit": 1500, "legacy_completed": true},
+		{"completed": true, "best_served": 14, "best_profit": 1499, "legacy_completed": true},
+	]:
+		var forged_legacy_completion: RefCounted = progress_script.new(campaign, {
+			first.id: legacy_records[first.id], second.id: legacy_records[second.id], pressure.id: forged_record,
+		})
+		expect(not forged_legacy_completion.errors.is_empty(),
+			"a legacy marker below its original targets cannot unlock the next service")
 	for scenario: Resource in campaign.scenarios:
 		expect(progress.record_result(scenario.id, _result(scenario, scenario.minimum_served, scenario.minimum_profit)).passed, "each passing service unlocks its successor: " + scenario.id)
 	expect(progress.snapshot().ending_unlocked, "the last service unlocks the ending")

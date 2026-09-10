@@ -1,6 +1,16 @@
 extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
+const LEGACY_COMPLETION_TARGETS := {
+	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
+	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
+	"hot_queue": {"minimum_served": 14, "minimum_profit": 1500},
+	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
+	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
+	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},
+	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
+	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
+}
 
 var errors: Array[String] = []
 var _campaign: CampaignDef
@@ -32,8 +42,8 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			continue
 		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > scenario.maximum_profit(record.best_served):
 			problems.append("record value is outside the service limits")
-		if has_legacy_completion and not record.completed:
-			problems.append("legacy completion marker requires a completed record")
+		if has_legacy_completion and (not record.completed or not meets_legacy_completion_targets(scenario_id, record)):
+			problems.append("invalid legacy completion marker")
 		if record.completed and not has_legacy_completion \
 			and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
 			problems.append("completed record does not meet its targets")
@@ -47,6 +57,12 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			problems.append("record skips an incomplete earlier service")
 		previous_complete = previous_complete and records.get(scenario.id, {}).get("completed", false)
 	return problems
+
+
+static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
+	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
+	return targets is Dictionary and record.best_served >= targets.minimum_served \
+		and record.best_profit >= targets.minimum_profit
 
 
 func is_unlocked(scenario_id: String) -> bool:

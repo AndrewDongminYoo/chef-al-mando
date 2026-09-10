@@ -6,16 +6,6 @@ const ServiceSession := preload("res://persistence/service_session.gd")
 const VERSIONS := {"schema_version": 3, "content_version": 2, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
-const LEGACY_COMPLETION_TARGETS := {
-	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
-	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
-	"hot_queue": {"minimum_served": 14, "minimum_profit": 1500},
-	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
-	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
-	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},
-	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
-	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
-}
 
 var file_path: String
 var _campaign: CampaignDef
@@ -179,7 +169,7 @@ func _read(target: String) -> Dictionary:
 				return _failure("corrupt_records")
 			records[key][metric] = int(records[key][metric])
 		if content_updated and records[key].get("completed") == true:
-			if not _meets_legacy_completion_targets(key, records[key]):
+			if not CampaignProgress.meets_legacy_completion_targets(key, records[key]):
 				return _failure("corrupt_records")
 			records[key].legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
@@ -201,12 +191,6 @@ func _read(target: String) -> Dictionary:
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:
 	return active_session == null or (active_session is Dictionary
 		and ServiceSession.restore(_campaign, active_session, records).accepted)
-
-
-func _meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
-	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
-	return targets is Dictionary and record.best_served >= targets.minimum_served \
-		and record.best_profit >= targets.minimum_profit
 
 
 func _is_integer(value: Variant) -> bool:

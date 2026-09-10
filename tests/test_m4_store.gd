@@ -173,6 +173,24 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 			"legacy %s rejection preserves primary and backup bytes" % label)
 		expect(corrupt_legacy_store.recover_backup().accepted,
 			"explicit recovery replaces a corrupt legacy %s completion with its valid backup" % label)
+		var forged_target := directory + "/forged_legacy_marker_" + label + ".json"
+		var forged_records := corrupt_legacy_records.duplicate(true)
+		forged_records.first_shift.legacy_completed = true
+		_write(forged_target, JSON.stringify({"schema_version": 3, "content_version": 2,
+			"sim_version": 1, "records": forged_records, "active_session": null}))
+		_write(forged_target + ".backup", JSON.stringify({"schema_version": 3,
+			"content_version": 2, "sim_version": 1, "records": {}, "active_session": null}))
+		var forged_bytes := FileAccess.get_file_as_bytes(forged_target)
+		var forged_backup_bytes := FileAccess.get_file_as_bytes(forged_target + ".backup")
+		var forged_store := CampaignStore.new(campaign, forged_target)
+		loaded = forged_store.load_records()
+		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a current file cannot forge a legacy marker below its original %s target" % label)
+		expect(FileAccess.get_file_as_bytes(forged_target) == forged_bytes
+			and FileAccess.get_file_as_bytes(forged_target + ".backup") == forged_backup_bytes,
+			"forged legacy %s rejection preserves primary and backup bytes" % label)
+		expect(forged_store.recover_backup().accepted,
+			"explicit recovery replaces a forged legacy %s marker with its valid backup" % label)
 	var invalid_target := directory + "/invalid_current_completion.json"
 	var invalid_records := {"first_shift": {"completed": true,
 		"best_served": first.minimum_served - 1, "best_profit": -first.starting_budget}}
