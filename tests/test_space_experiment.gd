@@ -17,12 +17,12 @@ func run(_tree: SceneTree) -> void:
 	for scenario_id: String in ["hot_queue", "long_route"]:
 		var scenario: ScenarioDef = experiment.scenario(scenario_id)
 		var baseline: ScenarioDef = load("res://content/campaign/scenarios/" + scenario_id + ".tres")
-		expect(scenario != baseline and scenario.space_rules and not baseline.space_rules, "spatial experiments cannot change cached campaign resources")
+		expect(scenario != baseline and scenario.space_rules and baseline.space_rules, "spatial experiments clone the campaign space rules")
 		expect(scenario.order_schedule() == baseline.order_schedule() and scenario.purchases == baseline.purchases, "an experiment preserves orders and purchases: " + scenario_id)
 		for index: int in scenario.stations.size():
 			var station: Resource = scenario.stations[index]
-			var expected_fixed: bool = station.role == "pass" or (scenario_id == "long_route" and station.role == "storage")
-			expect(station.fixed == expected_fixed and not baseline.stations[index].fixed, "only the specified experiment anchors are fixed: " + scenario_id + "/" + station.role)
+			var expected_fixed: bool = baseline.stations[index].fixed
+			expect(station.fixed == expected_fixed, "the experiment preserves each campaign fixture anchor: " + scenario_id + "/" + station.role)
 			expect(scenario.stations[index].tile == baseline.stations[index].tile and scenario.stations[index].work_position == baseline.stations[index].work_position, "fixed experiment anchors use their original positions")
 		var results: Dictionary = {}
 		for layout: String in ["original", "clustered"]:
@@ -55,8 +55,8 @@ func run(_tree: SceneTree) -> void:
 
 func _test_session_rules(experiment: GDScript) -> void:
 	var baseline: CampaignDef = load("res://content/campaign/campaign.tres")
-	var campaign := baseline.duplicate(true) as CampaignDef
-	campaign.scenarios[2] = experiment.scenario("hot_queue")
+	var legacy_campaign := baseline.duplicate(true) as CampaignDef
+	legacy_campaign.scenarios[2] = experiment.scenario("hot_queue", false)
 	var progress := CampaignProgress.new(baseline)
 	for index: int in 2:
 		var scenario: Resource = baseline.scenarios[index]
@@ -68,7 +68,7 @@ func _test_session_rules(experiment: GDScript) -> void:
 		expect(recorded.accepted and recorded.passed, "session comparison uses genuine completion records")
 	var records: Dictionary = progress.snapshot().records
 	for variant: String in ["valid", "moved_pass", "shared_work"]:
-		var source: Resource = baseline.scenarios[2]
+		var source: Resource = legacy_campaign.scenarios[2]
 		var plan := PreparationPlan.new(source)
 		var selection: Dictionary = plan.snapshot().selection
 		if variant == "moved_pass":
@@ -86,10 +86,10 @@ func _test_session_rules(experiment: GDScript) -> void:
 		for tick: int in 11:
 			simulation.step()
 		var session: Dictionary = JSON.parse_string(JSON.stringify(ServiceSession.capture("hot_queue", started.selection, simulation)))
-		var legacy_restore := ServiceSession.restore(baseline, session, records)
-		expect(legacy_restore.accepted and legacy_restore.simulation.state_hash() == simulation.state_hash(), "baseline sessions still restore without a rules migration")
-		var experiment_restore := ServiceSession.restore(campaign, session, records)
+		var legacy_restore := ServiceSession.restore(legacy_campaign, session, records)
+		expect(legacy_restore.accepted and legacy_restore.simulation.state_hash() == simulation.state_hash(), "a legacy kitchen restores its original session")
+		var experiment_restore := ServiceSession.restore(baseline, session, records)
 		if variant == "valid":
-			expect(experiment_restore.accepted and experiment_restore.simulation.state_hash() == simulation.state_hash(), "a legal experimental session restores its exact running state")
+			expect(experiment_restore.accepted and experiment_restore.simulation.state_hash() == simulation.state_hash(), "a legal campaign session restores its exact running state")
 		else:
-			expect(not experiment_restore.accepted and experiment_restore.reason == "invalid_preparation", "experimental session restoration applies the same spatial rules: " + variant)
+			expect(not experiment_restore.accepted and experiment_restore.reason == "invalid_preparation", "campaign session restoration applies the current spatial rules: " + variant)

@@ -43,6 +43,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_8x4dc"]
 script = ExtResource("17_bfksa")
@@ -65,8 +66,9 @@ script = ExtResource("17_bfksa")
 id = "pass_01"
 display_name = "제공"
 role = "pass"
-tile = Vector2i(11, 6)
-work_position = Vector2i(11, 5)
+tile = Vector2i(5, 4)
+work_position = Vector2i(5, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_gv1ub"]
 script = ExtResource("17_bfksa")
@@ -79,11 +81,12 @@ work_position = Vector2i(6, 5)
 [resource]
 script = ExtResource("16_xqgvv")
 display_name = "먼 출고대"
-briefing = "가림벽 너머 출고대로 음식이 이동합니다. 준비 중 설비를 옮겨 접근 가능한 작업 위치와 실제 이동 시간을 확인하세요."
+briefing = "가림벽 너머 고정된 출고대로 주문이 네 차례에 걸쳐 몰려옵니다. 재료 보관대도 옮길 수 없습니다. 냉식대와 화구를 합법적으로 재배치해 이동 병목을 줄이세요."
 operation_problem = "설비 동선"
-minimum_served = 17
-minimum_profit = 2000
+minimum_served = 21
+minimum_profit = 12000
 order_recipe_ids = PackedStringArray("grill", "mushroom_soup", "protein_bowl", "grain_salad", "grill", "mushroom_soup", "protein_bowl", "grain_salad", "grill", "mushroom_soup", "protein_bowl", "grain_salad", "grill", "mushroom_soup", "protein_bowl", "grain_salad", "grill", "mushroom_soup", "protein_bowl", "grain_salad", "grill", "mushroom_soup", "protein_bowl", "grain_salad")
+order_arrival_ticks = PackedInt32Array(10, 10, 118, 226, 334, 442, 660, 660, 768, 876, 984, 1092, 1310, 1310, 1418, 1526, 1634, 1742, 1960, 1960, 2068, 2176, 2284, 2392)
 id = "long_route"
 seed = 42
 closing_tick = 3000
@@ -106,3 +109,4 @@ order_count = 24
 first_arrival_tick = 10
 arrival_interval_ticks = 108
 prep_labor_capacity = 12
+space_rules = true

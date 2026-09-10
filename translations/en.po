@@ -272,6 +272,9 @@ msgstr "Saved campaign records loaded"
 msgid "새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다"
 msgstr "New campaign · completion and best records save at closing"
 
+msgid "주방 운영 규칙을 갱신했습니다. 완료 기록은 보존하고 진행 중이던 영업은 다시 시작합니다."
+msgstr "Kitchen rules were updated. Completed records are preserved. Restart the service that was in progress."
+
 msgid "이 앱에서 지원하지 않는 버전의 기록입니다. 기존 파일을 보존합니다."
 msgstr "This record version is not supported. The existing file is preserved."
 
@@ -596,8 +599,8 @@ msgstr "Hot-station queue"
 msgid "온식 우선순위"
 msgstr "Hot-order priority"
 
-msgid "구이는 매출이 높지만 화구를 오래 사용합니다. 구이를 미리 손질하고 재료·냉식·화구·제공대 사이의 동선을 줄이세요. 준비 화면에서 구이의 기본 우선순위를 높이면 새 주문에 자동으로 적용됩니다. 주문은 총 20건이며, 시간 초과된 주문은 미제공으로 집계됩니다."
-msgstr "Grilled dishes earn more but occupy the hot station longer. Prepare them before service and shorten routes between storage, cold, hot, and pass stations. Raise their default priority during preparation to apply it to new orders automatically. There are 20 orders in total. Expired orders count as unserved."
+msgid "주문이 네 차례에 걸쳐 몰려옵니다. 재료 보관대와 출고대는 옮길 수 없습니다. 구이를 미리 손질하고 냉식대·화구 동선을 줄인 뒤 구이 우선순위를 높여 병목을 넘기세요."
+msgstr "Orders arrive in four rushes. Storage and the pass are fixed. Prep grilled dishes, shorten cold and hot routes, and raise grill priority to clear the bottleneck."
 
 msgid "메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능"
 msgstr "Default menu priorities · 0–2\nHigher values go first for new orders.\nChange individual orders during service."
@@ -614,8 +617,8 @@ msgstr "Shared ingredients"
 msgid "공동 재고와 발주"
 msgstr "Shared stock and purchasing"
 
-msgid "채소를 여러 메뉴가 나눠 씁니다. 발주와 프렙을 함께 조절해 재료 부족과 남는 재료의 비용을 비교하세요."
-msgstr "Several menus share vegetables. Adjust purchases and prep together, then compare shortages with leftover cost."
+msgid "채소를 여러 메뉴가 나눠 쓰고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 발주와 프렙을 함께 조절해 재료 부족과 남는 비용을 줄이세요."
+msgstr "Several menus share vegetables, and orders arrive in five rushes. Adjust purchasing and prep between the fixed storage and pass stations to reduce shortages and leftover cost."
 
 msgid "먼 출고대"
 msgstr "Distant pass"
@@ -623,8 +626,8 @@ msgstr "Distant pass"
 msgid "설비 동선"
 msgstr "Station routes"
 
-msgid "가림벽 너머 출고대로 음식이 이동합니다. 준비 중 설비를 옮겨 접근 가능한 작업 위치와 실제 이동 시간을 확인하세요."
-msgstr "Food moves to a pass beyond a partition. During preparation, move stations and inspect reachable work tiles and actual travel time."
+msgid "가림벽 너머 고정된 출고대로 주문이 네 차례에 걸쳐 몰려옵니다. 재료 보관대도 옮길 수 없습니다. 냉식대와 화구를 합법적으로 재배치해 이동 병목을 줄이세요."
+msgstr "Orders arrive in four rushes at the fixed pass beyond the partition. Storage is also fixed. Move cold and hot stations to legal positions that reduce travel bottlenecks."
 
 msgid "네 사람의 주방"
 msgstr "Four-person kitchen"
@@ -632,8 +635,8 @@ msgstr "Four-person kitchen"
 msgid "담당 분리"
 msgstr "Split duties"
 
-msgid "냉식 작업대와 화구가 둘씩 있습니다. 네 직원의 담당을 나누고, 담당 직원 대기와 작업대 사용 시간을 함께 확인하세요."
-msgstr "The kitchen has two cold stations and two hot stations. Split four employee duties, then inspect employee waits and station use time."
+msgid "냉식대와 화구가 둘씩 있고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
+msgstr "The kitchen has two cold stations and two hot stations, and orders arrive in five rushes. Split four employee duties and prep between the fixed storage and pass stations to serve every order."
 
 msgid "몰려오는 주문"
 msgstr "Order rush"
@@ -641,8 +644,8 @@ msgstr "Order rush"
 msgid "주문 유입과 프렙"
 msgstr "Order arrivals and prep"
 
-msgid "여덟 메뉴의 주문이 빠르게 들어옵니다. 주문 구성을 보고 프렙을 배분하고, 영업 중 우선순위로 밀리는 주문을 조절하세요."
-msgstr "Orders for eight menus arrive quickly. Allocate prep from the order mix, then adjust orders delayed by priorities during service."
+msgid "여덟 메뉴의 주문이 다섯 차례에 걸쳐 몰려옵니다. 재료 보관대와 출고대는 고정되어 있습니다. 주문 구성을 보고 프렙을 배분하고 우선순위로 매출 손실을 줄이세요."
+msgstr "Orders for eight menus arrive in five rushes. Storage and the pass are fixed. Allocate prep from the order mix and use priorities to reduce lost revenue."
 
 msgid "마지막 영업"
 msgstr "Final service"
@@ -650,8 +653,8 @@ msgstr "Final service"
 msgid "전체 운영 조합"
 msgstr "Combined operations"
 
-msgid "마지막 영업입니다. 느린 온식 주문이 먼저 들어옵니다. 발주, 프렙, 동선, 담당을 함께 조절해 목표를 달성하세요."
-msgstr "This is the final service. Slow hot orders arrive first. Combine purchasing, prep, routes, and duties to reach the goal."
+msgid "마지막 영업입니다. 여덟 메뉴의 주문이 네 차례에 걸쳐 몰려옵니다. 고정 설비를 기준으로 발주, 집중 프렙, 동선, 담당과 우선순위를 함께 조절하세요."
+msgstr "This is the final service. Orders for eight menus arrive in four rushes. Work around fixed fixtures and combine purchasing, focused prep, routes, duties, and priorities."
 
 msgid "손질한 채소 샐러드 재료"
 msgstr "Prepped vegetable salad ingredients"

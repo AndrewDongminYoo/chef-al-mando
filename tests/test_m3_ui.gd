@@ -78,7 +78,7 @@ func run(tree: SceneTree) -> void:
 		for arrival: Dictionary in scenario.order_schedule():
 			service.call("advance", (arrival.arrival_tick - service.get("simulation").tick) / (10.0 * service.get("driver").speed))
 			if scenario.id == "hot_queue" and arrival.id == "order_01":
-				expect(service.get("summary_label").text.contains("주문 1 / 20건"), "the running summary counts actual arrivals before any order is served")
+				expect(service.get("summary_label").text.contains("주문 2 / 20건"), "the running summary counts the first order batch before any order is served")
 			if policy.priorities.has(arrival.recipe_id):
 				if scenario.id == "hot_queue":
 					await _tap_hot_queue_priority(tree, service, arrival.id)

@@ -34,6 +34,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_p83wi"]
 script = ExtResource("14_dy6wk")
@@ -58,15 +59,17 @@ display_name = "제공"
 role = "pass"
 tile = Vector2i(9, 5)
 work_position = Vector2i(9, 4)
+fixed = true
 
 [resource]
 script = ExtResource("13_4ad4f")
 display_name = "화구 앞 대기"
-briefing = "구이는 매출이 높지만 화구를 오래 사용합니다. 구이를 미리 손질하고 재료·냉식·화구·제공대 사이의 동선을 줄이세요. 준비 화면에서 구이의 기본 우선순위를 높이면 새 주문에 자동으로 적용됩니다. 주문은 총 20건이며, 시간 초과된 주문은 미제공으로 집계됩니다."
+briefing = "주문이 네 차례에 걸쳐 몰려옵니다. 재료 보관대와 출고대는 옮길 수 없습니다. 구이를 미리 손질하고 냉식대·화구 동선을 줄인 뒤 구이 우선순위를 높여 병목을 넘기세요."
 operation_problem = "온식 우선순위"
-minimum_served = 14
-minimum_profit = 1500
+minimum_served = 12
+minimum_profit = 5000
 order_recipe_ids = PackedStringArray("grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad", "grill", "soup", "grill", "salad")
+order_arrival_ticks = PackedInt32Array(10, 10, 140, 270, 400, 700, 700, 830, 960, 1090, 1390, 1390, 1520, 1650, 1780, 2080, 2080, 2210, 2340, 2470)
 id = "hot_queue"
 seed = 42
 closing_tick = 3000
@@ -87,3 +90,4 @@ order_count = 20
 first_arrival_tick = 10
 arrival_interval_ticks = 130
 prep_labor_capacity = 12
+space_rules = true

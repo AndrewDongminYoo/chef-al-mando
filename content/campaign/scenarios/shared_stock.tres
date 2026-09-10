@@ -42,6 +42,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_48qu5"]
 script = ExtResource("16_krqm8")
@@ -66,15 +67,17 @@ display_name = "제공"
 role = "pass"
 tile = Vector2i(9, 5)
 work_position = Vector2i(9, 4)
+fixed = true
 
 [resource]
 script = ExtResource("15_fyd0s")
 display_name = "나눠 쓰는 재료"
-briefing = "채소를 여러 메뉴가 나눠 씁니다. 발주와 프렙을 함께 조절해 재료 부족과 남는 재료의 비용을 비교하세요."
+briefing = "채소를 여러 메뉴가 나눠 쓰고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 발주와 프렙을 함께 조절해 재료 부족과 남는 비용을 줄이세요."
 operation_problem = "공동 재고와 발주"
-minimum_served = 16
-minimum_profit = 1500
+minimum_served = 17
+minimum_profit = 4000
 order_recipe_ids = PackedStringArray("salad", "soup", "grain_salad", "mushroom_salad", "soup", "salad", "soup", "grain_salad", "mushroom_salad", "soup", "salad", "soup", "grain_salad", "mushroom_salad", "soup", "salad", "soup", "grain_salad", "mushroom_salad", "soup", "salad", "soup")
+order_arrival_ticks = PackedInt32Array(100, 100, 140, 180, 220, 650, 650, 690, 730, 770, 1200, 1200, 1240, 1280, 1320, 1750, 1750, 1790, 1830, 2250, 2250, 2290)
 id = "shared_stock"
 seed = 42
 closing_tick = 3000
@@ -95,3 +98,4 @@ order_count = 22
 first_arrival_tick = 10
 arrival_interval_ticks = 120
 prep_labor_capacity = 9
+space_rules = true

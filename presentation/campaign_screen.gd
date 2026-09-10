@@ -775,6 +775,8 @@ func _storage_message(reason: String) -> String:
 			return tr("저장한 캠페인 기록을 불러왔습니다")
 		"new_campaign":
 			return tr("새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다")
+		"content_updated":
+			return tr("주방 운영 규칙을 갱신했습니다. 완료 기록은 보존하고 진행 중이던 영업은 다시 시작합니다.")
 		"future_version", "unsupported_version":
 			return tr("이 앱에서 지원하지 않는 버전의 기록입니다. 기존 파일을 보존합니다.")
 		"corrupt_records", "missing", "recovery_required":

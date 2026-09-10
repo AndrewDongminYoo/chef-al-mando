@@ -1,6 +1,16 @@
 extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
+const LEGACY_COMPLETION_TARGETS := {
+	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
+	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
+	"hot_queue": {"minimum_served": 14, "minimum_profit": 1500},
+	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
+	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
+	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},
+	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
+	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
+}
 
 var errors: Array[String] = []
 var _campaign: CampaignDef
@@ -23,7 +33,8 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			continue
 		var scenario := campaign.scenario_for(scenario_id)
 		var record: Variant = records[scenario_id]
-		if not record is Dictionary or record.size() != 3:
+		var has_legacy_completion: bool = record is Dictionary and record.get("legacy_completed") == true
+		if not record is Dictionary or (record.size() != 3 and not (record.size() == 4 and has_legacy_completion)):
 			problems.append("invalid record fields")
 			continue
 		if not record.get("completed") is bool or not record.get("best_served") is int or not record.get("best_profit") is int:
@@ -31,7 +42,10 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			continue
 		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > scenario.maximum_profit(record.best_served):
 			problems.append("record value is outside the service limits")
-		if record.completed and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+		if has_legacy_completion and (not record.completed or not meets_legacy_completion_targets(scenario_id, record)):
+			problems.append("invalid legacy completion marker")
+		if record.completed and not has_legacy_completion \
+			and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
 			problems.append("completed record does not meet its targets")
 	if not problems.is_empty():
 		return problems
@@ -43,6 +57,12 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 			problems.append("record skips an incomplete earlier service")
 		previous_complete = previous_complete and records.get(scenario.id, {}).get("completed", false)
 	return problems
+
+
+static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
+	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
+	return targets is Dictionary and record.best_served >= targets.minimum_served \
+		and record.best_profit >= targets.minimum_profit
 
 
 func is_unlocked(scenario_id: String) -> bool:
@@ -72,6 +92,8 @@ func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 	var record := {"completed": passed or previous.get("completed", false),
 		"best_served": maxi(accounting.served, previous.get("best_served", accounting.served)),
 		"best_profit": maxi(accounting.profit, previous.get("best_profit", accounting.profit))}
+	if previous.get("legacy_completed") == true and not passed:
+		record.legacy_completed = true
 	var candidate := _records.duplicate(true)
 	candidate[scenario_id] = record
 	if not validate_records(_campaign, candidate).is_empty():

@@ -57,6 +57,7 @@ display_name = "재료"
 role = "storage"
 tile = Vector2i(2, 2)
 work_position = Vector2i(2, 3)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_yvkqv"]
 script = ExtResource("25_c22q5")
@@ -81,6 +82,7 @@ display_name = "제공"
 role = "pass"
 tile = Vector2i(11, 6)
 work_position = Vector2i(11, 5)
+fixed = true
 
 [sub_resource type="Resource" id="Resource_twgxa"]
 script = ExtResource("25_c22q5")
@@ -101,11 +103,12 @@ work_position = Vector2i(9, 5)
 [resource]
 script = ExtResource("24_llrtx")
 display_name = "마지막 영업"
-briefing = "마지막 영업입니다. 느린 온식 주문이 먼저 들어옵니다. 발주, 프렙, 동선, 담당을 함께 조절해 목표를 달성하세요."
+briefing = "마지막 영업입니다. 여덟 메뉴의 주문이 네 차례에 걸쳐 몰려옵니다. 고정 설비를 기준으로 발주, 집중 프렙, 동선, 담당과 우선순위를 함께 조절하세요."
 operation_problem = "전체 운영 조합"
-minimum_served = 24
-minimum_profit = 4000
+minimum_served = 25
+minimum_profit = 10000
 order_recipe_ids = PackedStringArray("protein_bowl", "grill", "soup", "mushroom_soup", "grain_grill", "grain_salad", "mushroom_salad", "salad", "protein_bowl", "grill", "soup", "mushroom_soup", "grain_grill", "grain_salad", "mushroom_salad", "salad", "protein_bowl", "grill", "soup", "mushroom_soup", "grain_grill", "grain_salad", "mushroom_salad", "salad", "protein_bowl", "grill", "soup", "mushroom_soup", "grain_grill", "grain_salad", "mushroom_salad", "salad")
+order_arrival_ticks = PackedInt32Array(10, 10, 90, 170, 250, 330, 410, 490, 650, 650, 730, 810, 890, 970, 1050, 1130, 1290, 1290, 1370, 1450, 1530, 1610, 1690, 1770, 1930, 1930, 2010, 2090, 2170, 2250, 2330, 2410)
 id = "final_service"
 seed = 42
 closing_tick = 3000
@@ -128,3 +131,4 @@ order_count = 32
 first_arrival_tick = 10
 arrival_interval_ticks = 80
 prep_labor_capacity = 18
+space_rules = true
