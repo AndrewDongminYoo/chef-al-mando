@@ -47,7 +47,7 @@ func run() -> void:
 	await save_frame("res://build/check/m2-layout.png")
 	await _safe_click(screen, screen.start_button)
 	checks.expect(screen.is_running() and screen.simulation.snapshot().inventory.prepped_grill == 2, "rendered start commits the prepared inventory")
-	checks.expect(screen.details_toggle.visible == screen.compact_layout and screen.detail_panel.visible, "M2 service uses a collapsible phone panel and parallel tablet details")
+	checks.expect(screen.details_toggle.visible == screen.compact_layout and screen.detail_panel.visible == not screen.compact_layout, "M2 service starts with collapsed phone details and parallel tablet details")
 	screen.advance(30.0)
 	await _safe_click(screen, screen.pause_button)
 	await save_frame("res://build/check/m2-service.png")

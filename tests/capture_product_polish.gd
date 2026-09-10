@@ -79,6 +79,11 @@ func _capture(tablet: bool, locale: String, text_size: String) -> void:
 		var expected_toggle := "주문 상세 접기" if service.detail_panel.visible else "주문 상세 펼치기"
 		checks.expect(service.details_toggle.text == TranslationServer.translate(expected_toggle),
 			"order detail action describes the current panel visibility")
+		if not service.detail_panel.visible:
+			service.details_toggle.pressed.emit()
+			await _settle(service, tablet)
+			checks.expect(service.detail_panel.visible,
+				"the compact detail action opens the selected order before the cancel-state capture")
 	_check_target(service.pause_button, service.safe_area.get_global_rect())
 	await _frame("service")
 	await _capture_cancel_states(service)
@@ -97,6 +102,8 @@ func _capture(tablet: bool, locale: String, text_size: String) -> void:
 	screen.result_dialog.hide()
 	await _settle(service, tablet)
 	await _frame("analysis")
+	checks.expect(service.analysis_label.text.begins_with(service.summary_label.text),
+		"analysis keeps the accounting summary visible when the order panel is hidden")
 	if text_size == "large":
 		await _capture_completed_campaign(screen, tablet)
 	screen.queue_free()

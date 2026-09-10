@@ -393,7 +393,7 @@ msgid "작업 중"
 msgstr "Working"
 
 msgid "현재 공정 후 담당 변경"
-msgstr "Duty changes after this process"
+msgstr "Switch after step"
 
 msgid "직원 %d · %s"
 msgstr "Employee %d · %s"
