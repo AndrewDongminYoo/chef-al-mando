@@ -5,19 +5,24 @@ const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
+const ScenarioDef := preload("res://content/scenario_def.gd")
+const CampaignDef := preload("res://content/campaign_def.gd")
 
 
 func run(_tree: SceneTree) -> void:
 	if not ResourceLoader.exists("res://tests/fixtures/space_experiment.gd"):
 		expect(false, "the spatial experiment must provide the two real scenario clones")
 		return
-	var experiment = load("res://tests/fixtures/space_experiment.gd")
+	var experiment: GDScript = load("res://tests/fixtures/space_experiment.gd")
 	for scenario_id: String in ["hot_queue", "long_route"]:
-		var scenario = experiment.scenario(scenario_id)
-		var baseline = load("res://content/campaign/scenarios/" + scenario_id + ".tres")
+		var scenario: ScenarioDef = experiment.scenario(scenario_id)
+		var baseline: ScenarioDef = load("res://content/campaign/scenarios/" + scenario_id + ".tres")
 		expect(scenario != baseline and scenario.space_rules and not baseline.space_rules, "spatial experiments cannot change cached campaign resources")
 		expect(scenario.order_schedule() == baseline.order_schedule() and scenario.purchases == baseline.purchases, "an experiment preserves orders and purchases: " + scenario_id)
 		for index: int in scenario.stations.size():
+			var station: Resource = scenario.stations[index]
+			var expected_fixed: bool = station.role == "pass" or (scenario_id == "long_route" and station.role == "storage")
+			expect(station.fixed == expected_fixed and not baseline.stations[index].fixed, "only the specified experiment anchors are fixed: " + scenario_id + "/" + station.role)
 			expect(scenario.stations[index].tile == baseline.stations[index].tile and scenario.stations[index].work_position == baseline.stations[index].work_position, "fixed experiment anchors use their original positions")
 		var results: Dictionary = {}
 		for layout: String in ["original", "clustered"]:
@@ -49,8 +54,8 @@ func run(_tree: SceneTree) -> void:
 
 
 func _test_session_rules(experiment: GDScript) -> void:
-	var baseline = load("res://content/campaign/campaign.tres")
-	var campaign = baseline.duplicate(true)
+	var baseline: CampaignDef = load("res://content/campaign/campaign.tres")
+	var campaign := baseline.duplicate(true) as CampaignDef
 	campaign.scenarios[2] = experiment.scenario("hot_queue")
 	var progress := CampaignProgress.new(baseline)
 	for index: int in 2:

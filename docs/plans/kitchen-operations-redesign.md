@@ -71,14 +71,19 @@
 
 각 작업의 직접 관련 검사를 먼저 실행하고, 통합 후 M1~M5 회귀를 실행합니다.
 실험 검사는 기존 M2/M3 suite에 등록합니다.
+`GODOT_BIN`에는 `.godot-version`과 일치하는 Godot 실행 파일 경로를 설정합니다.
+`check.sh`는 실행 전에 버전 일치 여부를 검사합니다.
 
 ```bash
-GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2
-GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3
-GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4
-/Applications/Godot.app/Contents/MacOS/Godot --path . --max-fps 60 --script tests/capture_product_polish.gd
-/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script tests/compare_space_policies.gd
-/Applications/Godot.app/Contents/MacOS/Godot --path . --script tests/play_space_experiment.gd -- --scenario hot_queue
+: "${GODOT_BIN:?Set GODOT_BIN to the pinned Godot executable}"
+export GODOT_BIN
+for suite in m1 m2 m3 m4 m5; do
+  bash scripts/check.sh "$suite" || exit 1
+done
+"$GODOT_BIN" --path . --max-fps 60 --script tests/test_kitchen_screen.gd
+"$GODOT_BIN" --path . --max-fps 60 --script tests/capture_product_polish.gd
+"$GODOT_BIN" --headless --path . --script tests/compare_space_policies.gd
+"$GODOT_BIN" --path . --script tests/play_space_experiment.gd -- --scenario hot_queue
 ```
 
 화면 담당은 화면·직원 아트·화면 검사만 수정하고, 루트는 공간 제약·실험·통합·문서를 맡습니다.
