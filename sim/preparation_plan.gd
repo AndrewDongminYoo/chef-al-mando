@@ -25,6 +25,10 @@ func _init(data: Definitions, selection: Dictionary = {}) -> void:
 		_choices = selection.duplicate(true)
 		if not _choices.has("menu_priorities"):
 			_choices.menu_priorities = _defaults().menu_priorities
+	var placement_reason := _placement_error(_choices)
+	if not placement_reason.is_empty():
+		_errors.append(placement_reason)
+		return
 	_errors = initial_state(_definition(_choices), _options(_choices), false).errors
 
 
@@ -87,6 +91,15 @@ func display_definition() -> Definitions:
 	return null if not _errors.is_empty() else _definition(_choices)
 
 
+func _placement_error(selection: Dictionary) -> String:
+	for station: Definitions.StationDef in _source.stations:
+		if station.fixed:
+			var placement: Dictionary = selection.placements[station.id]
+			if _vector(placement.tile) != station.tile or _vector(placement.work_position) != station.work_position:
+				return "fixed_station"
+	return _definition(selection).placement_error()
+
+
 static func _options(selection: Dictionary) -> Dictionary:
 	return {"prep_quantities": selection.prep_quantities.duplicate(), "duties": selection.duties.duplicate(),
 		"menu_priorities": selection.menu_priorities.duplicate()}
@@ -140,7 +153,7 @@ func apply_command(command: Dictionary) -> Dictionary:
 				if command.value != null:
 					return _rejected("invalid_command")
 				placement.work_position = _array(tile + ROTATION[(ROTATION.find(work - tile) + 1) % 4])
-			var placement_reason := _definition(candidate).placement_error()
+			var placement_reason := _placement_error(candidate)
 			if not placement_reason.is_empty():
 				return _rejected(placement_reason)
 		"reset":
@@ -171,14 +184,34 @@ func snapshot() -> Dictionary:
 	var stations: Array[Dictionary] = []
 	for station: Definitions.StationDef in data.stations:
 		stations.append({"id": station.id, "name": station.display_name,
-			"tile": _array(station.tile), "work_position": _array(station.work_position)})
+			"tile": _array(station.tile), "work_position": _array(station.work_position),
+			"fixed": station.fixed, "placement_options": _placement_options(station) if data.space_rules else {}})
 	return {"can_start": resolved.errors.is_empty() and not _committed, "errors": resolved.errors.duplicate(),
+		"space_rules": data.space_rules,
 		"committed": _committed, "sequence": _sequence, "purchases": _choices.purchases.duplicate(),
 		"prep_quantities": _choices.prep_quantities.duplicate(), "inventory": resolved.inventory.duplicate(),
 		"menu_priorities": _choices.menu_priorities.duplicate(),
 		"labor_used": resolved.labor_used, "labor_capacity": data.prep_labor_capacity,
 		"purchased_cost": data.purchased_cost(), "budget_remaining": data.starting_budget - data.labor_cost - data.purchased_cost(),
 		"stations": stations, "duties": _choices.duties.duplicate(), "selection": _choices.duplicate(true)}
+
+
+func _placement_options(station: Definitions.StationDef) -> Dictionary:
+	var options: Dictionary = {}
+	for direction: String in ["up", "left", "down", "right", "rotate"]:
+		if station.fixed:
+			options[direction] = "fixed_station"
+			continue
+		var candidate := _choices.duplicate(true)
+		var placement: Dictionary = candidate.placements[station.id]
+		if direction == "rotate":
+			var offset := station.work_position - station.tile
+			placement.work_position = _array(station.tile + ROTATION[(ROTATION.find(offset) + 1) % 4])
+		else:
+			placement.tile = _array(station.tile + DIRECTIONS[direction])
+			placement.work_position = _array(station.work_position + DIRECTIONS[direction])
+		options[direction] = _placement_error(candidate)
+	return options
 
 
 static func initial_state(data: Definitions, options: Dictionary = {}, require_stock: bool = true) -> Dictionary:

@@ -688,3 +688,21 @@ msgstr "Godot licenses: %s"
 
 msgid "제삼자 구성요소"
 msgstr "Third-party components"
+
+msgid "다른 설비의 작업 위치와 겹칩니다"
+msgstr "This overlaps another station's work position"
+
+msgid "고정 설비는 위치와 작업 방향을 바꿀 수 없습니다"
+msgstr "A fixed station cannot move or turn"
+
+msgid "냉식대와 화구 사이에 한 칸 이상 띄우세요"
+msgstr "Leave at least one tile between cold and hot stations"
+
+msgid "공간 규칙 · 작업 위치 중첩 금지 / 냉식대·화구 이격"
+msgstr "Layout rules: separate work positions and cold/hot stations"
+
+msgid "밝은 버튼의 방향으로 배치할 수 있습니다"
+msgstr "Use the available direction buttons to place this station"
+
+msgid "\n고정 설비와 작업 위치를 확인하세요.\n배치와 담당의 효과는 마감 지표로 비교하세요."
+msgstr "\nCheck fixed stations and work positions.\nCompare layout and duty choices in the closing analysis."
