@@ -1,0 +1,99 @@
+# 주방 화면 안정화와 공간 전략 실험
+
+작성일: 2026-09-10.
+운영자는 화면 문제를 먼저 분리하고 기존 시나리오 두 개에서 공간 제약과 정책 비교를 실행하도록 승인했습니다.
+이 문서는 그 구현 순서를 기록합니다.
+전면 충돌·숙련도·사고 시스템과 여덟 시나리오의 일괄 변경은 포함하지 않습니다.
+
+## 목표와 기준
+
+완료 기준은 더 어려워졌다는 사실이 아니라 맵과 주문에 따라 유리한 배치·담당이 달라지고 그 원인을 설명할 수 있는지입니다.
+자동 비교는 제공 수·손익·이동·대기를 읽고, 플레이어의 이해는 실제 플레이에서 확인합니다.
+직원 통과, 작업 배정 순서, 공정 시간, 주문과 비용은 유지합니다.
+
+주요 기준은 [블루프린트](PLAN.md), [M2 준비 명세](../specs/m2-preparation.md), [M4 저장 핵심 명세](../specs/m4-storage-core.md)입니다.
+기존 캠페인과 저장은 보존하고 `hot_queue`, `long_route`의 복제본에만 공간 규칙을 적용합니다.
+실험용 실행 명령은 실제 준비·영업 화면을 열며 별도의 임시 설정과 자산 경로를 사용합니다.
+
+## 1. 화면 안정화
+
+대상은 `presentation/main.tscn`, `presentation/main.gd`, `presentation/kitchen_board.gd`, 직원 방향 아트와 관련 검사입니다.
+변경 전 보드·요약·직원 문구가 같은 세로 공간을 나누고, 담당 변경 대기 문구가 줄바꿈되어 보드가 줄어들었습니다.
+
+- [x] 실제 담당 변경 대기·긴 재고·네 직원 상태를 만들어 기존 보드 크기와 방향 검사의 실패를 확인합니다.
+- [x] 보드 영역을 설명 문구와 독립시키고 휴대폰 주문 상세는 처음에 접습니다.
+- [x] 같은 화면 크기에서 담당 변경·긴 문구·큰 글씨·상세 전환에도 주방 영역이 변하지 않게 합니다.
+- [x] 폰 1566 × 720의 14 × 9 주방에서 셀 크기 36픽셀 이상을 초기 목표로 확인합니다.
+      실제 가독성은 렌더 이미지와 후속 기기 확인으로 판단합니다.
+- [x] 직원은 이동 방향과 사용 중인 작업대를 바라보는 네 방향 모습을 표시합니다.
+      정면 SVG를 옆으로 눕히지 않으며 그림이 작업 완료를 결정하지 않습니다.
+- [x] 태블릿은 주방과 주문 상세의 병렬 배치를 유지합니다.
+
+검증은 `tests/capture_product_polish.gd`와 `tests/test_kitchen_screen.gd`에서 수행합니다.
+재현 fixture가 실제로 `pending_duty`와 긴 문구를 만들었는지 먼저 검사합니다.
+
+## 2. 공간 전략 실험
+
+대상은 `content/definitions.gd`, `content/station_def.gd`, `sim/preparation_plan.gd`, `presentation/preparation_panel.gd`, 번역, `tests/fixtures/space_experiment.gd`, 공간 규칙 검사와 실험 실행 도구입니다.
+
+- [x] 실험 복제본에서만 `space_rules`를 켭니다.
+      기본 콘텐츠의 규칙과 저장 버전은 유지합니다.
+- [x] 서로 다른 설비의 작업 위치 중첩을 준비 단계에서 거부합니다.
+      현재 `_station_available()`의 동시 작업 배타성과 별개의 검사입니다.
+- [x] 두 실험에서 출고대 위치와 방향을 고정합니다.
+      `long_route`에서는 창고도 고정해 맵의 운반 문제를 유지합니다.
+- [x] 냉식대와 화구 본체의 상하좌우 직접 인접을 금지합니다.
+      두 본체 사이 Manhattan 거리는 2 이상이어야 합니다.
+      이는 현실 주방 전체의 보편 규정이 아닌 명시적인 게임 규칙입니다.
+- [x] 배치 전에 고정 여부와 각 이동·회전의 가능 여부 및 거부 이유를 표시합니다.
+      거부된 배치는 상태와 명령 순번을 바꾸지 않습니다.
+- [x] 초기 데이터, 준비 명령, 준비 선택 재생성, 실험 세션 복원에서 같은 제약을 검사합니다.
+- [x] 작업 위치 중첩·고정 이동·회전·냉온 인접의 실패→통과 증거를 남기고, 기존 경로 단절 거부 검사를 유지합니다.
+
+실험은 기본 캠페인에 새 규칙을 일괄 적용하거나 이전 저장을 변환하지 않습니다.
+기본 캠페인 반영은 비교 결과를 확인한 뒤 결정합니다.
+
+## 3. 정책 비교
+
+대상은 `tests/fixtures/space_experiment.gd`, `tests/test_space_experiment.gd`, `tests/compare_space_policies.gd`입니다.
+
+- [x] 같은 시나리오의 모든 비교에서 주문·seed·구매·프렙·주문 우선순위를 동일하게 유지합니다.
+- [x] 기존 규칙의 밀집 정책을 별도 기준으로 기록합니다.
+      새 규칙이 거부한 정책을 제공 실패로 집계하지 않습니다.
+- [x] 새 규칙 안에서 기본 배치·이동을 줄인 밀집 배치와 전체·전담 배치를 교차 비교합니다.
+- [x] 실제 제공 수, 손익, 이동 tick, 원인별 대기 tick, 최종 상태 해시를 기록합니다.
+- [x] 대표 정책을 반복 실행하고 같은 tick의 1x·4x 해시를 비교합니다.
+- [x] 공간 제약만으로 담당의 이득이 생기는지 결과를 읽습니다.
+      불리한 결과를 숨기거나 충돌·숙련도를 즉시 추가하지 않습니다.
+- [ ] 실험 화면에서 차이의 원인을 설명할 수 있는지 후속 플레이로 확인합니다.
+
+## 실행과 검증
+
+각 작업의 직접 관련 검사를 먼저 실행하고, 통합 후 M1~M5 회귀를 실행합니다.
+실험 검사는 기존 M2/M3 suite에 등록합니다.
+
+```bash
+GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2
+GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3
+GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4
+/Applications/Godot.app/Contents/MacOS/Godot --path . --max-fps 60 --script tests/capture_product_polish.gd
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --script tests/compare_space_policies.gd
+/Applications/Godot.app/Contents/MacOS/Godot --path . --script tests/play_space_experiment.gd -- --scenario hot_queue
+```
+
+화면 담당은 화면·직원 아트·화면 검사만 수정하고, 루트는 공간 제약·실험·통합·문서를 맡습니다.
+별도 읽기 전용 담당은 비교할 정책을 조사합니다.
+모바일 설치·배포는 실행하지 않습니다.
+코드 구현의 완료, 자동 비교 결과, 사람의 플레이 검증을 구분해 보고합니다.
+
+## 문서와 선례
+
+기존 감사에서 발견한 M5 자산 목록, README의 메뉴 선택 표현, AGENTS의 현재 기준도 실제 구현과 맞춥니다.
+블루프린트에는 두 시나리오 복제본의 실험 범위만 추가하고 직원 통과 계약을 유지합니다.
+
+Oracle는 개인 `chef-al-mando`의 `movement collision`, `kitchen layout` 및 축소 검색에 대해 `[no precedent found]`를 반환했습니다.
+현재 코드와 운영자의 관찰·승인한 실험 범위를 근거로 진행합니다.
+
+자동 구현·비교 결과와 남은 제품 수용 조건은 [검증 기록](../notes/kitchen-space-verification.md)에 정리했습니다.
+새 규칙에서 시험한 정책은 기존 필수 목표에 미달했고, 두 맵 모두 밀집·전체 담당이 가장 많이 제공했습니다.
+따라서 배치 전략의 다양성과 플레이어의 설명 가능성은 통과로 판정하지 않습니다.
