@@ -63,6 +63,12 @@ This scope covers phone board size, stable layout, chef facing, and placement co
 Keep the baseline campaign and saves unchanged while comparing layout and duty policies.
 Employee collision, new assignment rules, specialization, and accidents are outside this experiment.
 
+Later on 2026-09-10, the operator played the installed PR #13 build through the ending.
+The operator reported that the campaign was too easy, lacked tension and strategy variety, and used unrealistic kitchens.
+The operator authorized the next PR loop to apply order waves, tighter goals, and fixed-fixture space rules to the six services after onboarding.
+Keep the three kitchen-layout cap, employee pass-through rule, assignment rules, proficiency model, and accident exclusions unchanged.
+Preserve version 1 completion records when the content update restarts an incompatible active service.
+
 ## Product Invariants
 
 - Make preparation and operational decisions the main source of mastery.
