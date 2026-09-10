@@ -426,6 +426,10 @@ func _refresh_service() -> void:
 	if preparation_panel != null:
 		var preparing := state == State.READY
 		var analyzing := state == State.CLOSED
+		var summary_parent: Node = preparation_panel.pages[0].get_child(0) if preparing else order_list
+		if summary_label.get_parent() != summary_parent:
+			summary_label.reparent(summary_parent)
+			summary_parent.move_child(summary_label, 0)
 		preparation_panel.visible = preparing
 		analysis_scroll.visible = analyzing
 		employee_controls.visible = not preparing and not analyzing

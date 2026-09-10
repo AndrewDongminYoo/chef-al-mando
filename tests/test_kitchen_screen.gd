@@ -16,6 +16,11 @@ func run() -> void:
 		printerr("FAIL: kitchen screen test requires a rendered window")
 		quit(1)
 		return
+	var directory_error := DirAccess.make_dir_recursive_absolute("res://build/check")
+	checks.expect(directory_error == OK, "the rendered test creates its output directory")
+	if directory_error != OK:
+		quit(1)
+		return
 	root.size = Vector2i(1566, 720)
 	var screen := Harness.boot_main(self, "res://content/campaign/scenarios/split_duties.tres")
 	if screen == null:
@@ -23,6 +28,10 @@ func run() -> void:
 		quit(1)
 		return
 	await _settle(screen)
+	checks.expect(screen.summary_label.is_visible_in_tree(), "the rendered preparation screen shows its budget")
+	checks.expect(screen.preparation_panel.pages[0].get_global_rect().encloses(screen.summary_label.get_global_rect()), "the preparation budget fits inside the visible stock scroll area")
+	await RenderingServer.frame_post_draw
+	checks.expect(root.get_texture().get_image().save_png("res://build/check/kitchen-screen-preparation.png") == OK, "the preparation budget saves a rendered frame")
 	for command: Dictionary in Policies.reference_policy("split_duties").preparation:
 		checks.expect(screen.submit_preparation(command.kind, command.target_id, command.value).accepted,
 			"the dense fixture accepts its real preparation command")
@@ -188,6 +197,8 @@ func _assert_english_pending_layout(tablet: bool) -> void:
 		checks.expect(_employee_by_id(screen.latest_view.employees, working.id).pending_duty == "off", "English layout fixture actually has a pending duty")
 		checks.expect(screen.board.get_global_rect() == before, "English pending duty cannot resize or move the board: %s -> %s" % [before, screen.board.get_global_rect()])
 		var viewport_bounds := root.get_visible_rect()
+		checks.expect(viewport_bounds.encloses(screen.board.get_global_rect()), "English pending duty keeps the board inside the actual viewport")
+		checks.expect(viewport_bounds.encloses(screen.get_node("SafeArea/Layout/Kitchen/Body/Side").get_global_rect()), "English pending duty keeps the side panel inside the actual viewport")
 		checks.expect(viewport_bounds.encloses(screen.get_node("SafeArea/Layout/Header").get_global_rect()), "English pending duty keeps the header inside the actual viewport: %s header=%s screen=%s safe=%s" % [viewport_bounds, screen.get_node("SafeArea/Layout/Header").get_global_rect(), screen.size, screen.safe_area.get_global_rect()])
 		checks.expect(viewport_bounds.encloses(screen.pause_button.get_global_rect()), "English pending duty keeps time controls inside the actual viewport")
 		checks.expect(viewport_bounds.encloses(screen.duty_buttons[-1].get_global_rect()), "English pending duty keeps staff controls inside the actual viewport")
