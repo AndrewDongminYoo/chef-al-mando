@@ -13,6 +13,9 @@ const REASONS := {"insufficient_budget": "예산이 부족합니다 · 고정 �
 	"outside_kitchen": "벽이나 주방 밖에는 놓을 수 없습니다", "station_overlap": "다른 설비나 장애물과 겹칩니다",
 	"invalid_work_position": "작업 위치는 설비 옆 한 칸이어야 합니다", "blocked_work_position": "작업 위치가 막힙니다",
 	"employee_start_blocked": "직원 시작 위치를 막을 수 없습니다", "no_route": "설비 사이의 이동 경로가 막힙니다",
+	"work_position_overlap": "다른 설비의 작업 위치와 겹칩니다",
+	"fixed_station": "고정 설비는 위치와 작업 방향을 바꿀 수 없습니다",
+	"cold_hot_adjacent": "냉식대와 화구 사이에 한 칸 이상 띄우세요",
 	"service_started": "영업 중에는 준비를 바꿀 수 없습니다"}
 
 var definitions: Definitions
@@ -33,6 +36,7 @@ var employee_labels: Dictionary[String, Label] = {}
 var duty_buttons: Dictionary[String, OptionButton] = {}
 var station_picker: OptionButton
 var station_label: Label
+var placement_preview: Label
 var summary: Label
 var reset_button: Button
 var selected_station_id: String = ""
@@ -155,6 +159,9 @@ func _build_layout(column: VBoxContainer) -> void:
 	rotate.pressed.connect(func() -> void: command_requested.emit("rotate_station", selected_station_id, null))
 	column.add_child(rotate)
 	move_buttons["rotate"] = rotate
+	placement_preview = _label("")
+	placement_preview.visible = false
+	column.add_child(placement_preview)
 	for employee: Definitions.EmployeeDef in definitions.employees:
 		var row := HBoxContainer.new()
 		column.add_child(row)
@@ -193,6 +200,21 @@ func _show_station() -> void:
 	for station: Dictionary in current.get("stations", []):
 		if station.id == selected_station_id:
 			station_label.text = tr("%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)") % [tr(station.name), station.tile[0], station.tile[1], station.work_position[0], station.work_position[1]]
+			placement_preview.visible = current.get("space_rules", false)
+			var lines := PackedStringArray([tr("공간 규칙 · 작업 위치 중첩 금지 / 냉식대·화구 이격")])
+			var titles := {"up": "↑ 위", "left": "← 왼쪽", "down": "↓ 아래", "right": "→ 오른쪽", "rotate": "작업 방향 ↻ 회전"}
+			for direction: String in move_buttons:
+				var reason: String = station.get("placement_options", {}).get(direction, "")
+				var blocked := not reason.is_empty()
+				if move_buttons[direction].disabled != blocked:
+					move_buttons[direction].disabled = blocked
+				if not reason.is_empty() and not station.get("fixed", false):
+					lines.append(tr("%s · %s") % [tr(titles[direction]), reason_text(reason)])
+			if station.get("fixed", false):
+				lines.append(reason_text("fixed_station"))
+			else:
+				lines.append(tr("밝은 버튼의 방향으로 배치할 수 있습니다"))
+			placement_preview.text = "\n".join(lines)
 
 
 func refresh(snapshot: Dictionary) -> void:
@@ -223,7 +245,10 @@ func refresh(snapshot: Dictionary) -> void:
 	lines.append(tr("\n메뉴별 기본 우선순위"))
 	for recipe_id: String in definitions.menu_ids:
 		lines.append(tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), snapshot.menu_priorities[recipe_id]])
-	lines.append(tr("\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요."))
+	if snapshot.get("space_rules", false):
+		lines.append(tr("\n고정 설비와 작업 위치를 확인하세요.\n배치와 담당의 효과는 마감 지표로 비교하세요."))
+	else:
+		lines.append(tr("\n설비를 가까이 두면 이동이 줄어듭니다.\n프렙과 우선순위의 효과는 마감 지표로 비교하세요."))
 	summary.text = "\n".join(lines)
 	_show_station()
 

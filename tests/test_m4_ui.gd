@@ -592,9 +592,8 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	expect(service.get("state") == 2 and service.get("shown_tenths") == 10
 		and service.get("simulation").tick == 10 and details_toggle.visible,
 		"the paused locale fixture has a warm displayed time cache and a visible compact control")
-	details_toggle.pressed.emit()
 	expect(not detail_panel.visible and details_toggle.text == "주문 상세 펼치기",
-		"the paused compact fixture starts its collapsed check with Korean text")
+		"the paused compact fixture starts collapsed with Korean text")
 	var paused_hash: String = service.get("simulation").state_hash()
 	var paused_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
 	service.get("settings_locale").item_selected.emit(1)

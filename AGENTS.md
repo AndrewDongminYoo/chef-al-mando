@@ -28,9 +28,9 @@ The campaign uses fixed scenarios.
 Employees can pass through each other.
 The player can pause the simulation at any time.
 
-The repository has the M1 service loop, M2 preparation and analysis, the M3 campaign, and M4 session persistence, localization, and settings.
+The repository has the M1 service loop, M2 preparation and analysis, the M3 campaign, M4 session persistence, localization, and settings, and M5 local release preparation.
 It also has a lifecycle adapter, local checks, and mobile export presets.
-Use [the M4 verification record](docs/notes/m4-verification.md) for current local evidence and deferred acceptance checks.
+Use [the M5 verification record](docs/notes/m5-verification.md) and [the screen and icon record](docs/notes/product-polish-verification.md) for local evidence and deferred acceptance checks.
 The `project.godot` file declares the `4.7` feature tag and the `GL Compatibility` renderer.
 The M0 implementation specification pins the Godot version recorded in `.godot-version` and the matching export templates.
 Use [the M0 verification record](docs/notes/m0-verification.md) to distinguish local checks from physical-device evidence.
@@ -56,8 +56,12 @@ The reference Android device is not defined yet.
 The 2026-09-07 exception above permits M1 work while the Android device and its verification remain pending.
 
 The operator approved the [M4 PR split](docs/plans/m4-pr-split.md) on 2026-09-09.
-Submit storage core first and presentation integration as a dependent PR.
-Keep original PR #7 as a draft until both replacement PRs are confirmed merged.
+Both replacement PRs (#8 and #9) merged, and the original PR #7 closed.
+
+On 2026-09-10, the operator approved [screen stabilization and a spatial strategy experiment](docs/plans/kitchen-operations-redesign.md).
+This scope covers phone board size, stable layout, chef facing, and placement constraints on isolated copies of two existing scenarios.
+Keep the baseline campaign and saves unchanged while comparing layout and duty policies.
+Employee collision, new assignment rules, specialization, and accidents are outside this experiment.
 
 ## Product Invariants
 

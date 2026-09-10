@@ -1,7 +1,7 @@
 extends "res://tests/harness.gd"
 
 const ChildHarness := preload("res://tests/harness.gd")
-const SUITES: Array[String] = ["res://tests/test_m3_content.gd", "res://tests/test_campaign_progress.gd", "res://tests/test_campaign_store.gd", "res://tests/test_m3_playthrough.gd", "res://tests/test_m3_ui.gd"]
+const SUITES: Array[String] = ["res://tests/test_m3_content.gd", "res://tests/test_campaign_progress.gd", "res://tests/test_campaign_store.gd", "res://tests/test_m3_playthrough.gd", "res://tests/test_space_experiment.gd", "res://tests/test_m3_ui.gd"]
 
 
 func run(tree: SceneTree) -> void:

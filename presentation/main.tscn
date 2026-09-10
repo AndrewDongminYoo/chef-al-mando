@@ -42,15 +42,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
+theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_bottom = 4
 
 [node name="Layout" type="VBoxContainer" parent="SafeArea"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 
 [node name="Header" type="HBoxContainer" parent="SafeArea/Layout"]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
 
 [node name="Title" type="Label" parent="SafeArea/Layout/Header"]
@@ -78,14 +79,10 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Summary" type="Label" parent="SafeArea/Layout/Kitchen/Body/KitchenView"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 22
-autowrap_mode = 2
-
 [node name="Board" type="Control" parent="SafeArea/Layout/Kitchen/Body/KitchenView"]
+custom_minimum_size = Vector2(520, 340)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 0
 mouse_filter = 2
 script = ExtResource("4_board")
 
@@ -94,7 +91,7 @@ layout_mode = 2
 theme_override_constants/separation = 12
 
 [node name="Side" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body"]
-custom_minimum_size = Vector2(380, 0)
+custom_minimum_size = Vector2(520, 0)
 layout_mode = 2
 theme_override_constants/separation = 8
 
@@ -110,6 +107,11 @@ horizontal_scroll_mode = 0
 [node name="Orders" type="VBoxContainer" parent="SafeArea/Layout/Kitchen/Body/Side/OrdersScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="Summary" type="Label" parent="SafeArea/Layout/Kitchen/Body/Side/OrdersScroll/Orders"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 2
 
 [node name="DetailsToggle" type="Button" parent="SafeArea/Layout/Kitchen/Body/Side"]
 custom_minimum_size = Vector2(64, 64)
@@ -153,6 +155,7 @@ theme_override_font_sizes/font_size = 20
 autowrap_mode = 2
 
 [node name="Status" type="Label" parent="SafeArea/Layout"]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 autowrap_mode = 2

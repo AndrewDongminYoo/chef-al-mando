@@ -21,6 +21,12 @@ func run(tree: SceneTree) -> void:
 	var plan: RefCounted = screen.get("preparation")
 	var panel: Control = screen.get("preparation_panel")
 	expect(panel.visible and screen.get("simulation").tick == 0, "M2 starts in preparation with no running game time")
+	expect(screen.get("summary_label").is_visible_in_tree(), "preparation budget is visible on the initial stock tab")
+	var initial_summary: String = screen.get("summary_label").text
+	var ingredient_id: String = panel.get("purchase_plus").keys()[0]
+	panel.get("purchase_plus")[ingredient_id].pressed.emit()
+	expect(screen.get("summary_label").is_visible_in_tree() and screen.get("summary_label").text != initial_summary, "a purchase updates the visible preparation budget")
+	panel.get("purchase_minus")[ingredient_id].pressed.emit()
 	panel.get("prep_plus")["grill"].pressed.emit()
 	panel.get("prep_plus")["grill"].pressed.emit()
 	expect(plan.call("snapshot").inventory.prepped_grill == 2, "preparation buttons submit real conversion commands")
@@ -35,6 +41,7 @@ func run(tree: SceneTree) -> void:
 	screen.get("start_button").pressed.emit()
 	var sim: RefCounted = screen.get("simulation")
 	expect(not panel.visible and sim.call("snapshot").inventory.prepped_grill == 2, "start commits the prepared inventory and switches to service")
+	expect(screen.get("summary_label").is_visible_in_tree(), "service keeps its stock summary visible after preparation")
 	expect(sim.call("snapshot").employees[0].duty == "cold", "start applies the selected initial duty")
 	var original: String = sim.call("state_hash")
 	screen.get("start_button").pressed.emit()
@@ -50,6 +57,7 @@ func run(tree: SceneTree) -> void:
 	plan = screen.get("preparation")
 	expect(panel.visible and plan.call("snapshot").inventory.prepped_grill == 2 and plan.call("snapshot").purchased_cost == 6600, "retry reconstructs the previous choices with fresh purchases")
 	expect(screen.get("simulation").tick == 0 and screen.get("driver").paused, "retry cannot inherit service progress")
+	expect(screen.get("summary_label").is_visible_in_tree(), "retry restores the visible preparation budget")
 	panel.get("reset_button").pressed.emit()
 	expect(plan.call("snapshot").inventory.prepped_grill == 0 and screen.get("definitions").stations[3].tile == Vector2i(9, 5), "reset restores default preparation and layout")
 	screen.queue_free()

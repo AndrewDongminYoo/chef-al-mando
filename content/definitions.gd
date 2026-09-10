@@ -23,6 +23,7 @@ const GridRoutes := preload("res://sim/grid_routes.gd")
 @export var first_arrival_tick: int = 0
 @export var arrival_interval_ticks: int = 0
 @export var prep_labor_capacity: int = 0
+@export var space_rules: bool = false
 
 
 func validate(require_stock: bool = true) -> Array[String]:
@@ -161,6 +162,7 @@ func placement_error() -> String:
 		return "invalid_layout"
 	var interior := Rect2i(Vector2i.ONE, grid_size - Vector2i(2, 2))
 	var occupied: Array[Vector2i] = []
+	var work_positions: Array[Vector2i] = []
 	for station: StationDef in stations:
 		if station == null:
 			return "invalid_layout"
@@ -172,6 +174,18 @@ func placement_error() -> String:
 		var offset := station.work_position - station.tile
 		if absi(offset.x) + absi(offset.y) != 1:
 			return "invalid_work_position"
+		if space_rules and station.work_position in work_positions:
+			return "work_position_overlap"
+		work_positions.append(station.work_position)
+	if space_rules:
+		for cold: StationDef in stations:
+			if cold.role != "cold":
+				continue
+			for hot: StationDef in stations:
+				if hot.role == "hot":
+					var separation := (hot.tile - cold.tile).abs()
+					if separation.x + separation.y < 2:
+						return "cold_hot_adjacent"
 	var routes := GridRoutes.new(grid_size, blocked_tiles())
 	for station: StationDef in stations:
 		if not routes.is_walkable(station.work_position):

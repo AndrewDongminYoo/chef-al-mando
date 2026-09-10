@@ -5,3 +5,4 @@ extends Resource
 @export var role: String = ""
 @export var tile: Vector2i = Vector2i.ZERO
 @export var work_position: Vector2i = Vector2i.ZERO
+@export var fixed: bool = false

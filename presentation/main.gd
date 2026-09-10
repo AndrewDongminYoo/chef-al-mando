@@ -49,7 +49,7 @@ var duty_buttons: Array[OptionButton] = []
 var duty_labels: Array[Label] = []
 var speed_buttons: Array[Button] = []
 var compact_layout: bool = true
-var details_expanded: bool = true
+var details_expanded: bool = false
 var preparation: PreparationPlan
 var preparation_panel: PreparationPanel
 var last_preparation: Dictionary = {}
@@ -81,7 +81,7 @@ var modal_open_allowed: Callable
 @onready var safe_area: MarginContainer = $SafeArea
 @onready var safe_area_source: SafeAreaSource = $SafeAreaSource
 @onready var lifecycle: AppLifecycle = $Lifecycle
-@onready var summary_label: Label = $SafeArea/Layout/Kitchen/Body/KitchenView/Summary
+@onready var summary_label: Label = $SafeArea/Layout/Kitchen/Body/Side/OrdersScroll/Orders/Summary
 @onready var board: KitchenBoard = $SafeArea/Layout/Kitchen/Body/KitchenView/Board
 @onready var employee_controls: HBoxContainer = $SafeArea/Layout/Kitchen/Body/KitchenView/Employees
 @onready var order_list: VBoxContainer = $SafeArea/Layout/Kitchen/Body/Side/OrdersScroll/Orders
@@ -316,6 +316,7 @@ func _new_service() -> void:
 			column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			employee_controls.add_child(column)
 			var label := Label.new()
+			label.custom_minimum_size = Vector2(0, 64)
 			label.add_theme_font_size_override("font_size", 20)
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			column.add_child(label)
@@ -398,8 +399,8 @@ func _update_layout() -> void:
 func set_compact_layout(value: bool) -> void:
 	compact_layout = value
 	details_toggle.visible = value
-	if not value:
-		detail_panel.visible = true
+	detail_panel.visible = details_expanded or not value
+	_update_board_layout()
 	_update_details_toggle()
 
 
@@ -413,11 +414,22 @@ func _update_details_toggle() -> void:
 	details_toggle.text = tr("주문 상세 접기") if detail_panel.visible else tr("주문 상세 펼치기")
 
 
+func _update_board_layout() -> void:
+	board.size_flags_vertical = Control.SIZE_EXPAND_FILL if state == State.CLOSED or not compact_layout else Control.SIZE_SHRINK_BEGIN
+	for label: Label in duty_labels:
+		label.custom_minimum_size.y = 64 if compact_layout else 96
+
+
 func _refresh_service() -> void:
+	_update_board_layout()
 	latest_view = simulation.snapshot()
 	if preparation_panel != null:
 		var preparing := state == State.READY
 		var analyzing := state == State.CLOSED
+		var summary_parent: Node = preparation_panel.pages[0].get_child(0) if preparing else order_list
+		if summary_label.get_parent() != summary_parent:
+			summary_label.reparent(summary_parent)
+			summary_parent.move_child(summary_label, 0)
 		preparation_panel.visible = preparing
 		analysis_scroll.visible = analyzing
 		employee_controls.visible = not preparing and not analyzing
@@ -453,6 +465,7 @@ func _refresh_service() -> void:
 			var button := Button.new()
 			button.custom_minimum_size = Vector2(64, 64)
 			button.add_theme_font_size_override("font_size", 20)
+			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			button.icon = definitions.recipe_for(order.recipe_id).icon
 			button.expand_icon = true
 			button.add_theme_constant_override("icon_max_width", 32)
@@ -732,7 +745,7 @@ func _raw_stock(separator: String) -> String:
 func _show_analysis() -> void:
 	var totals: Dictionary = latest_view.metrics.orders
 	var longest: String = "missing_ingredients"
-	var lines: PackedStringArray = [tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""]
+	var lines: PackedStringArray = [summary_label.text, "", tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""]
 	for reason: String in ["missing_ingredients", "no_responsible_employee", "station_in_use", "no_route"]:
 		lines.append(tr("%s · %.1f초") % [tr(WAIT_TEXT[reason]), totals[reason] / 10.0])
 		if totals[reason] > totals[longest]:
