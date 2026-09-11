@@ -93,7 +93,7 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 
 현재 검증 범위와 남은 배포·기기 검사는 [M5 검증 기록](docs/notes/m5-verification.md)에 정리합니다.
 주방 화면 안정화와 두 시나리오 공간 실험의 비교 결과·실행 명령은 [주방 실험 검증 기록](docs/notes/kitchen-space-verification.md)에 있습니다.
-새 규칙은 실험 복제본에만 적용하며, 시험한 정책은 기존 목표에 미달했습니다.
+검증을 마친 공간 규칙은 후반 여섯 영업에 적용하며, 자동 정책 비교 결과는 [캠페인 운영 압력 검증 기록](docs/notes/kitchen-pressure-verification.md)에 있습니다.
 이전 설치·검사 근거는 각 마일스톤 검증 기록에서 확인할 수 있습니다.
 
 ## 로컬 실행과 검사
@@ -122,5 +122,9 @@ bash scripts/check.sh m4-core
 bash scripts/check.sh m4
 python3 tests/test_m4_restart.py
 python3 tests/test_export_check.py
+python3 tests/test_ios_export.py
 bash scripts/check-export.sh
+GODOT_BIN="$GODOT_BIN" bash scripts/export-ios.sh
 ```
+
+`export-ios.sh`는 Godot이 만든 Xcode 프로젝트에서 사용하지 않는 카메라·마이크·사진 보관함 설명 키를 제거합니다.

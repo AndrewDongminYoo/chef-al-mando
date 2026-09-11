@@ -170,3 +170,18 @@ Oracle은 `wiki/entities/release-cut.md`와 `wiki/concepts/build-number-conventi
 출시 준비와 실제 배포를 구분하고 버전·빌드 번호를 기존 규칙 없이 추측하지 않는 방향을 확인했습니다.
 조회 revision은 `7049be0f6c7cefadb3d3d24a51ac74aa66e48824`이며 현재 wiki와의 일치 여부는 미검증입니다.
 저장 스키마 전환에 직접 적용할 선례는 제한된 검색에서 찾지 못했으므로 현재 명세와 실행 근거로 판단했습니다.
+
+## 8. iOS 불필요 권한 선언 회귀
+
+2026-09-11 현재 표준 iOS 내보내기 명령은 다음 wrapper를 사용합니다.
+
+```bash
+GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot \
+  bash scripts/export-ios.sh "$PWD/build/ios/chef_al_mando.xcodeproj"
+```
+
+고정된 Godot `4.7.2.stable.official.ed1daf0bf`의 실제 export가 종료 코드 0으로 완료됐습니다.
+Wrapper가 처리한 `build/ios/chef_al_mando/chef_al_mando-Info.plist`와 `build/ios/chef_al_mando/en.lproj/InfoPlist.strings`에는 `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription`가 남지 않았습니다.
+`python3 tests/test_ios_export.py`는 가짜 엔진을 통한 wrapper 연결과 산출물 누락 실패 경로를 별도로 검사합니다.
+앞 절의 직접 Godot export 명령과 해시는 당시 산출물의 이력이며 현재 표준 명령을 뜻하지 않습니다.
+이 검증은 Xcode가 빌드한 최종 앱의 선언이나 실기기 설치를 아직 증명하지 않습니다.
