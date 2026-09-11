@@ -57,7 +57,7 @@ func run() -> void:
 	screen.advance(float(screen.definitions.closing_tick - screen.simulation.tick) / 10.0)
 	await process_frame
 	checks.expect(screen.simulation.closed and screen.analysis_scroll.visible
-		and screen.analysis_label.text.contains(tr("다음 영업에서 바꿀 것")),
+		and screen.analysis_label.get_parsed_text().contains(tr("다음 영업에서 바꿀 것")),
 		"rendered closing shows actionable service feedback")
 	screen.chatter_event.clear()
 	screen.chatter_seconds_left = 0.0

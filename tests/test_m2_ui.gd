@@ -61,7 +61,13 @@ func run(tree: SceneTree) -> void:
 	screen.get("speed_buttons")[2].pressed.emit()
 	screen.call("advance", 75.0)
 	expect(sim.get("closed") and screen.get("analysis_scroll").visible, "closing displays the M2 time analysis panel")
-	expect(screen.get("analysis_label").text.contains("다음 영업에서 바꿀 것") and screen.get("analysis_label").text.contains("주문별 누적 시간") and screen.get("analysis_label").text.contains("예약·사용"), "closing shows actionable recommendations before the existing detailed metrics")
+	expect(screen.get("analysis_label").get_parsed_text().contains("다음 영업에서 바꿀 것") and screen.get("analysis_label").get_parsed_text().contains("주문별 누적 시간") and screen.get("analysis_label").get_parsed_text().contains("예약·사용"), "closing shows actionable recommendations before the existing detailed metrics")
+	var analysis: Control = screen.get("analysis_label")
+	expect(analysis is RichTextLabel, "closing analysis supports distinct text hierarchy")
+	expect(int(analysis.get_meta("action_heading_font_size", 0)) > int(analysis.get_meta("action_font_size", 0)),
+		"closing analysis makes the action heading larger than each proposed change")
+	expect(analysis.get_meta("action_color", Color.TRANSPARENT) != analysis.get_meta("action_heading_color", Color.TRANSPARENT),
+		"closing analysis gives proposed changes a distinct supporting color")
 	screen.get("restart_button").pressed.emit()
 	plan = screen.get("preparation")
 	expect(panel.visible and plan.call("snapshot").inventory.prepped_grill == 2 and plan.call("snapshot").purchased_cost == 6600, "retry reconstructs the previous choices with fresh purchases")

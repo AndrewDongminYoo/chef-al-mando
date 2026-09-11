@@ -102,7 +102,7 @@ func _capture(tablet: bool, locale: String, text_size: String) -> void:
 	screen.result_dialog.hide()
 	await _settle(service, tablet)
 	await _frame("analysis")
-	checks.expect(service.analysis_label.text.begins_with(service.summary_label.text),
+	checks.expect(service.analysis_label.get_parsed_text().begins_with(service.summary_label.text),
 		"analysis keeps the accounting summary visible when the order panel is hidden")
 	if text_size == "large":
 		await _capture_completed_campaign(screen, tablet)

@@ -79,7 +79,7 @@ func run() -> void:
 	await _settle(screen)
 	checks.expect(screen.state == screen.State.CLOSED and screen.board.size.y > service_board_height,
 		"analysis expands the board after the service staff controls are hidden: state=%s tick=%s height=%s -> %s paused=%s" % [screen.state, screen.simulation.tick, service_board_height, screen.board.size.y, screen.driver.paused])
-	checks.expect(screen.analysis_label.text.contains("손익"),
+	checks.expect(screen.analysis_label.get_parsed_text().contains("손익"),
 		"analysis keeps its accounting summary visible")
 	screen.queue_free()
 	await process_frame

@@ -29,6 +29,10 @@ const STATE_TEXT := {"waiting": "대기", "moving": "이동", "working": "작업
 const PHASE_TEXT := {"pickup": "재료 수거", "prep": "손질", "cook": "조리", "serve": "제공", "": "완료"}
 const WAIT_TEXT := {"missing_ingredients": "재료 부족", "no_responsible_employee": "담당 없음", "responsible_employee_busy": "담당 직원 작업 중", "station_in_use": "작업대 사용 중", "no_route": "경로 없음", "": ""}
 const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
+const ANALYSIS_HEADING_COLOR := Color("eab06c")
+const ANALYSIS_BODY_COLOR := Color("f5edda")
+const ANALYSIS_ACTION_COLOR := Color("a6b5a8")
+const ANALYSIS_DETAIL_COLOR := Color("c6c9b8")
 
 @export_file("*.tres") var scenario_path: String = "res://content/m1_first_service.tres"
 var scenario_definition: Definitions
@@ -55,7 +59,7 @@ var preparation: PreparationPlan
 var preparation_panel: PreparationPanel
 var last_preparation: Dictionary = {}
 var analysis_scroll: ScrollContainer
-var analysis_label: Label
+var analysis_label: RichTextLabel
 var last_saved_tick: int = -100
 var settings_path: String = "user://settings.json"
 var app_preferences: AppPreferences
@@ -299,10 +303,11 @@ func _new_service() -> void:
 			analysis_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			analysis_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 			$SafeArea/Layout/Kitchen/Body/Side.add_child(analysis_scroll)
-			analysis_label = Label.new()
+			analysis_label = RichTextLabel.new()
 			analysis_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			analysis_label.add_theme_font_size_override("font_size", 20)
-			analysis_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			analysis_label.fit_content = true
+			analysis_label.scroll_active = false
+			analysis_label.add_theme_constant_override("line_separation", 3)
 			analysis_scroll.add_child(analysis_label)
 		if preparation_panel != null:
 			board.selected_station_id = preparation_panel.selected_station_id
@@ -761,24 +766,59 @@ func _show_analysis() -> void:
 	var report := ServiceAnalysis.build(definitions, latest_view, last_preparation)
 	var totals: Dictionary = latest_view.metrics.orders
 	var longest: String = "missing_ingredients"
-	var lines: PackedStringArray = [summary_label.text, "", tr("다음 영업에서 바꿀 것")]
+	var recommendations: PackedStringArray = []
 	if report.recommendations.is_empty():
-		lines.append(tr("이번 영업에서는 준비 선택을 바꿀 근거가 충분하지 않습니다."))
+		recommendations.append(tr("이번 영업에서는 준비 선택을 바꿀 근거가 충분하지 않습니다."))
 	else:
 		for recommendation: Dictionary in report.recommendations:
-			lines.append(_recommendation_text(report, recommendation))
-	lines.append_array(["", tr("상세 지표"), tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""])
+			recommendations.append(_recommendation_text(report, recommendation))
+	var details: PackedStringArray = [tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""]
 	for reason: String in ["missing_ingredients", "no_responsible_employee", "station_in_use", "no_route"]:
-		lines.append(tr("%s · %.1f초") % [tr(WAIT_TEXT[reason]), totals[reason] / 10.0])
+		details.append(tr("%s · %.1f초") % [tr(WAIT_TEXT[reason]), totals[reason] / 10.0])
 		if totals[reason] > totals[longest]:
 			longest = reason
-	lines.append(tr("  담당 부재 %.1f초 / 작업 중 %.1f초") % [(totals.no_responsible_employee - totals.responsible_employee_busy) / 10.0, totals.responsible_employee_busy / 10.0])
-	lines.append(tr("이동 · %.1f초\n작업 · %.1f초") % [totals.moving / 10.0, totals.working / 10.0])
-	lines.append(tr("\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다.") % (tr(WAIT_TEXT[longest]) if totals[longest] > 0 else tr("대기 없음")))
-	lines.append(tr("\n설비별 예약·사용 시간\n재료를 가져오는 이동 중 예약도 포함합니다."))
+	details.append(tr("  담당 부재 %.1f초 / 작업 중 %.1f초") % [(totals.no_responsible_employee - totals.responsible_employee_busy) / 10.0, totals.responsible_employee_busy / 10.0])
+	details.append(tr("이동 · %.1f초\n작업 · %.1f초") % [totals.moving / 10.0, totals.working / 10.0])
+	details.append(tr("\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다.") % (tr(WAIT_TEXT[longest]) if totals[longest] > 0 else tr("대기 없음")))
+	details.append(tr("\n설비별 예약·사용 시간\n재료를 가져오는 이동 중 예약도 포함합니다."))
 	for station: Definitions.StationDef in definitions.stations:
-		lines.append(tr("%s · %.1f초") % [tr(station.display_name), latest_view.metrics.station_reserved_ticks[station.id] / 10.0])
-	analysis_label.text = "\n".join(lines)
+		details.append(tr("%s · %.1f초") % [tr(station.display_name), latest_view.metrics.station_reserved_ticks[station.id] / 10.0])
+	_render_analysis(summary_label.text, recommendations, "\n".join(details))
+
+
+func _render_analysis(summary: String, recommendations: PackedStringArray, details: String) -> void:
+	var heading_size := app_preferences.font_size(22)
+	var body_size := app_preferences.font_size(18)
+	var action_size := app_preferences.font_size(16)
+	var detail_heading_size := app_preferences.font_size(19)
+	var detail_size := app_preferences.font_size(16)
+	analysis_label.set_meta("action_heading_font_size", heading_size)
+	analysis_label.set_meta("action_font_size", action_size)
+	analysis_label.set_meta("action_heading_color", ANALYSIS_HEADING_COLOR)
+	analysis_label.set_meta("action_color", ANALYSIS_ACTION_COLOR)
+	analysis_label.clear()
+	_analysis_text(summary, body_size, ANALYSIS_BODY_COLOR)
+	analysis_label.add_text("\n\n")
+	_analysis_text(tr("다음 영업에서 바꿀 것"), heading_size, ANALYSIS_HEADING_COLOR)
+	analysis_label.add_text("\n")
+	for recommendation: String in recommendations:
+		var parts := recommendation.split("\n", true, 1)
+		_analysis_text(parts[0], body_size, ANALYSIS_BODY_COLOR)
+		if parts.size() > 1:
+			analysis_label.add_text("\n")
+			_analysis_text(parts[1], action_size, ANALYSIS_ACTION_COLOR)
+		analysis_label.add_text("\n\n")
+	_analysis_text(tr("상세 지표"), detail_heading_size, ANALYSIS_HEADING_COLOR)
+	analysis_label.add_text("\n")
+	_analysis_text(details, detail_size, ANALYSIS_DETAIL_COLOR)
+
+
+func _analysis_text(value: String, font_size: int, color: Color) -> void:
+	analysis_label.push_font_size(font_size)
+	analysis_label.push_color(color)
+	analysis_label.add_text(value)
+	analysis_label.pop()
+	analysis_label.pop()
 
 
 func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> String:
