@@ -44,11 +44,10 @@ func _test_hot_queue_limits() -> void:
 		"analysis explains that grill preparation already consumes the available labor")
 	expect(_has_action(report.recommendations, "purchase_consumed", "protein"),
 		"analysis explains when costly purchases were consumed without ingredient shortages")
-	var priority_limit := _find_action(report.recommendations, "priority_at_max", "grill")
-	expect(not priority_limit.is_empty(),
-		"analysis redirects a maximum-priority miss toward its observed bottleneck")
-	expect(priority_limit.get("bottleneck") == "employee_busy" and priority_limit.has("bottleneck_ticks"),
-		"maximum-priority feedback identifies the largest observed bottleneck and its duration")
+	expect(_has_action(report.recommendations, "raise_priority", "soup"),
+		"analysis keeps an actionable priority change ahead of a maximum-priority notice")
+	expect(not _has_action(report.recommendations, "priority_at_max", "grill"),
+		"a maximum-priority notice does not displace an actionable recommendation")
 	expect(report.recommendations[0].action == "purchase_consumed",
 		"an operational experiment appears before preparation and priority cap notices")
 
@@ -76,6 +75,13 @@ func _test_no_priority_advice_without_evidence() -> void:
 		"pressure_ticks": 0, "employee_busy_ticks": 0, "station_ticks": 0, "moving_ticks": 0}}
 	expect(ServiceAnalysis._priority_recommendation(priorities).is_empty(),
 		"maximum priority without observed contention or movement produces no route advice")
+	priorities.salad = {"default_priority": 2, "expired": 1, "revenue": 500,
+		"pressure_ticks": 10, "employee_busy_ticks": 10, "station_ticks": 0, "moving_ticks": 5}
+	var priority_limit := ServiceAnalysis._priority_recommendation(priorities)
+	expect(priority_limit.action == "priority_at_max" and priority_limit.target_id == "salad",
+		"maximum-priority feedback redirects a missed order toward its observed bottleneck")
+	expect(priority_limit.bottleneck == "employee_busy" and priority_limit.has("bottleneck_ticks"),
+		"maximum-priority feedback identifies the largest observed bottleneck and its duration")
 
 
 func _test_recommendation_branches() -> void:
@@ -102,6 +108,14 @@ func _test_recommendation_branches() -> void:
 		"station_ticks": 0, "moving_ticks": 5}})
 	expect(priority_raise.action == "raise_priority" and priority_raise.amount == 1,
 		"missed orders with observed contention produce a one-level priority experiment")
+	var competing_priority := ServiceAnalysis._priority_recommendation({
+		"grill": {"default_priority": 2, "expired": 10, "revenue": 1000, "pressure_ticks": 100,
+			"employee_busy_ticks": 100, "station_ticks": 0, "moving_ticks": 0},
+		"salad": {"default_priority": 1, "expired": 1, "revenue": 500, "pressure_ticks": 10,
+			"employee_busy_ticks": 10, "station_ticks": 0, "moving_ticks": 0},
+	})
+	expect(competing_priority.action == "raise_priority" and competing_priority.target_id == "salad",
+		"an actionable priority increase wins over a higher-scoring maximum-priority notice")
 	_test_purchase_advice_requires_valid_preparation()
 
 

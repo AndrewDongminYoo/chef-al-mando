@@ -170,6 +170,7 @@ static func _valid_purchase_change(data: Definitions, selection: Dictionary, ing
 
 static func _priority_recommendation(priorities: Dictionary) -> Dictionary:
 	var best: Dictionary = {}
+	var best_rank := -1
 	var best_score := -1
 	for recipe_id: String in priorities:
 		var row: Dictionary = priorities[recipe_id]
@@ -181,7 +182,9 @@ static func _priority_recommendation(priorities: Dictionary) -> Dictionary:
 		elif row.default_priority == 2 and (row.pressure_ticks > 0 or row.moving_ticks > 0):
 			action = "priority_at_max"
 		var score: int = row.expired * row.revenue
-		if not action.is_empty() and score > best_score:
+		var rank := 1 if action == "raise_priority" else 0
+		if not action.is_empty() and (rank > best_rank or (rank == best_rank and score > best_score)):
+			best_rank = rank
 			best_score = score
 			best = {"category": "priority", "action": action, "target_id": recipe_id, "amount": 1}
 			if action == "priority_at_max":
