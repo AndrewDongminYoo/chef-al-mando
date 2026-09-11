@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Definitions := preload("res://content/definitions.gd")
+const PreparationPlan := preload("res://sim/preparation_plan.gd")
 
 
 static func build(data: Definitions, view: Dictionary, selection: Dictionary) -> Dictionary:
@@ -60,7 +61,7 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 	var prep_recommendation := _prep_recommendation(data, prep, labor_used)
 	if not prep_recommendation.is_empty():
 		recommendations.append(prep_recommendation)
-	var ingredient_recommendation := _ingredient_recommendation(ingredients)
+	var ingredient_recommendation := _ingredient_recommendation(ingredients, data, selection)
 	if not ingredient_recommendation.is_empty():
 		recommendations.append(ingredient_recommendation)
 	var priority_recommendation := _priority_recommendation(priorities)
@@ -95,7 +96,7 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 	return best
 
 
-static func _ingredient_recommendation(ingredients: Dictionary) -> Dictionary:
+static func _ingredient_recommendation(ingredients: Dictionary, data: Definitions = null, selection: Dictionary = {}) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score := -1
 	for ingredient_id: String in ingredients:
@@ -114,10 +115,28 @@ static func _ingredient_recommendation(ingredients: Dictionary) -> Dictionary:
 		elif row.purchased > 0:
 			action = "purchase_consumed"
 			score = row.purchased * row.unit_cost
+		if action in ["increase_purchase", "reduce_purchase"]:
+			var quantity: int = row.purchased + (1 if action == "increase_purchase" else -1)
+			if not _valid_purchase_change(data, selection, ingredient_id, quantity):
+				continue
 		if not action.is_empty() and score > best_score:
 			best_score = score
 			best = {"category": "ingredient", "action": action, "target_id": ingredient_id, "amount": amount}
 	return best
+
+
+static func _valid_purchase_change(data: Definitions, selection: Dictionary, ingredient_id: String, quantity: int) -> bool:
+	if data == null or selection.is_empty():
+		return true
+	var purchases: Dictionary = selection.get("purchases", data.purchases).duplicate()
+	purchases[ingredient_id] = quantity
+	var candidate := data.duplicate() as Definitions
+	candidate.purchases = {}
+	candidate.purchases.assign(purchases)
+	var options := {"prep_quantities": selection.get("prep_quantities", {}).duplicate(),
+		"duties": selection.get("duties", {}).duplicate(),
+		"menu_priorities": selection.get("menu_priorities", {}).duplicate()}
+	return PreparationPlan.initial_state(candidate, options, true).errors.is_empty()
 
 
 static func _priority_recommendation(priorities: Dictionary) -> Dictionary:

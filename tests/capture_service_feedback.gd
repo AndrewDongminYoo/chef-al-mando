@@ -47,6 +47,9 @@ func run() -> void:
 	var chatter: Dictionary = screen.board.chatter
 	checks.expect(chatter.get("kind", "") in ["order_wait_started", "prepared_stock_depleted", "order_ended"]
 		and not chatter.get("text", "").is_empty(), "rendered service shows an evidence-based chef bubble")
+	await RenderingServer.frame_post_draw
+	checks.expect(not screen.board.chatter_obscures_content(),
+		"rendered chef bubble does not cover an employee or station")
 	checks.expect(screen.safe_area.get_global_rect().encloses(screen.board.get_global_rect())
 		and screen.duty_labels[0].is_visible_in_tree(),
 		"rendered activity and board remain inside the safe area")

@@ -335,8 +335,9 @@ func _new_service() -> void:
 			employee_controls.add_child(column)
 			var label := Label.new()
 			label.custom_minimum_size = Vector2(0, 64)
-			label.add_theme_font_size_override("font_size", 20)
+			label.add_theme_font_size_override("font_size", 13)
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			label.max_lines_visible = 3
 			column.add_child(label)
 			duty_labels.append(label)
 			var button := OptionButton.new()
@@ -506,7 +507,7 @@ func _refresh_service() -> void:
 		duty_buttons[index].disabled = state == State.CLOSED
 		var activity := _employee_activity(employee) if not employee.order_id.is_empty() else _employee_wait(employee)
 		if not employee.pending_duty.is_empty():
-			activity = tr("현재 공정 후 담당 변경")
+			activity += "\n↳ " + tr("현재 공정 후 담당 변경")
 		duty_labels[index].text = tr("직원 %d · %s") % [index + 1, activity]
 	if not latest_view.commands.is_empty():
 		feedback_kind = "commands_pending"
@@ -789,7 +790,7 @@ func _show_analysis() -> void:
 func _render_analysis(summary: String, recommendations: PackedStringArray, details: String) -> void:
 	var heading_size := app_preferences.font_size(22)
 	var body_size := app_preferences.font_size(18)
-	var action_size := app_preferences.font_size(16)
+	var action_size := app_preferences.font_size(15)
 	var detail_heading_size := app_preferences.font_size(19)
 	var detail_size := app_preferences.font_size(16)
 	analysis_label.set_meta("action_heading_font_size", heading_size)

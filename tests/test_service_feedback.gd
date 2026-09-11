@@ -99,6 +99,40 @@ func _test_recommendation_branches() -> void:
 		"station_ticks": 0, "moving_ticks": 5}})
 	expect(priority_raise.action == "raise_priority" and priority_raise.amount == 1,
 		"missed orders with observed contention produce a one-level priority experiment")
+	_test_purchase_advice_requires_valid_preparation()
+
+
+func _test_purchase_advice_requires_valid_preparation() -> void:
+	var hot_queue: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
+	var hot_plan := PreparationPlan.new(hot_queue)
+	expect(_prepare(hot_plan, "set_purchase", "protein", 12).accepted,
+		"budget fixture accepts the last affordable protein quantity")
+	var over_budget: Dictionary = _prepare(hot_plan, "set_purchase", "protein", 13)
+	expect(not over_budget.accepted and over_budget.reason == "insufficient_budget",
+		"budget fixture rejects the one-unit increase reported by the review")
+	var hot_selection: Dictionary = hot_plan.snapshot().selection
+	var shortage_view := {"inventory": {"protein": 0}, "orders": [{"recipe_id": "grill",
+		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 10,
+		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
+	var shortage_report: Dictionary = ServiceAnalysis.build(hot_queue, shortage_view, hot_selection)
+	expect(not _has_action(shortage_report.recommendations, "increase_purchase", "protein"),
+		"purchase feedback never exceeds the scenario budget")
+
+	var first_shift: Resource = load("res://content/campaign/scenarios/first_shift.tres")
+	var minimum_plan := PreparationPlan.new(first_shift)
+	expect(_prepare(minimum_plan, "set_purchase", "vegetable", 1).accepted,
+		"minimum-stock fixture keeps one sellable salad")
+	var minimum_selection: Dictionary = minimum_plan.snapshot().selection
+	var invalid_selection := minimum_selection.duplicate(true)
+	invalid_selection.purchases.vegetable = 0
+	var invalid_plan := PreparationPlan.new(first_shift, invalid_selection)
+	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
+	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
+		"minimum-stock fixture rejects the one-unit reduction reported by the review")
+	var idle_view := {"inventory": {"vegetable": 1}, "orders": []}
+	var idle_report: Dictionary = ServiceAnalysis.build(first_shift, idle_view, minimum_selection)
+	expect(not _has_action(idle_report.recommendations, "reduce_purchase", "vegetable"),
+		"purchase feedback preserves enough stock to sell every configured menu")
 
 
 func _test_service_events() -> void:
@@ -176,6 +210,13 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		screen.call("advance", 0.1)
 	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중"),
 		"live feedback names the active cooking station")
+	var active_employee: Dictionary = screen.get("simulation").snapshot().employees[0]
+	expect(screen.call("submit_command", "set_duty", active_employee.id, active_employee.duty).accepted,
+		"live feedback fixture queues a duty change during active cooking")
+	screen.call("advance", 0.1)
+	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중")
+		and screen.get("duty_labels")[0].text.contains("현재 공정 후 담당 변경"),
+		"pending duty feedback preserves the current menu and cooking activity")
 	while screen.get("simulation").snapshot().orders[0].phase_id != "serve" or screen.get("simulation").snapshot().orders[0].state != "moving":
 		screen.call("advance", 0.1)
 	expect(screen.get("duty_labels")[0].text.contains("제공대로 운반 중"),

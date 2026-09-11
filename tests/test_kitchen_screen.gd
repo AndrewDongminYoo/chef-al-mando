@@ -60,8 +60,12 @@ func run() -> void:
 		screen.advance(0.1)
 		await _settle(screen)
 		var refreshed := _employee_by_id(screen.latest_view.employees, working.id)
-		checks.expect(refreshed.pending_duty == "off" and screen.duty_labels[_employee_index(screen.latest_view.employees, working.id)].text.contains("현재 공정 후 담당 변경"),
+		var activity: String = screen.call("_employee_activity", refreshed)
+		var employee_text: String = screen.duty_labels[_employee_index(screen.latest_view.employees, working.id)].text
+		checks.expect(refreshed.pending_duty == "off" and employee_text.contains("현재 공정 후 담당 변경"),
 			"the rendered staff label shows the pending responsibility change")
+		checks.expect(employee_text.contains(activity),
+			"the pending responsibility change keeps the current menu and process activity visible")
 	var refreshed_board_rect: Rect2 = screen.board.get_global_rect()
 	checks.expect(board_rect == refreshed_board_rect,
 		"wrapped stock, selected details, and pending duty text do not resize the kitchen board: %s -> %s" % [board_rect, refreshed_board_rect])
@@ -157,7 +161,7 @@ func _assert_directional_work_pixels() -> void:
 		var board := KitchenBoard.new()
 		board.size = Vector2(720, 480)
 		root.add_child(board)
-		var snapshot := {"employees": [{"id": "employee_01", "tile": [work_tile.x, work_tile.y], "next_tile": [work_tile.x, work_tile.y], "progress": 0, "duty": "all", "order_id": "order_01"}], "orders": [{"id": "order_01", "state": "working"}], "tasks": [{"employee_id": "employee_01", "station_id": station.id, "work_position": [work_tile.x, work_tile.y]}]}
+		var snapshot := {"employees": [{"id": "employee_01", "tile": [work_tile.x, work_tile.y], "next_tile": [work_tile.x, work_tile.y], "progress": 0, "duty": "all", "order_id": "order_01"}], "orders": [{"id": "order_01", "recipe_id": "salad", "phase_id": "cook", "state": "working"}], "tasks": [{"employee_id": "employee_01", "station_id": station.id, "work_position": [work_tile.x, work_tile.y]}]}
 		board.show_state(definitions, snapshot)
 		await process_frame
 		await process_frame
