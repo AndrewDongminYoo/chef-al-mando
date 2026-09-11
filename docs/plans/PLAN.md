@@ -396,7 +396,8 @@ M3의 검증 명령과 fixture 계약은 [M3 명세](../specs/m3-campaign.md)에
 캠페인 완주·저장·실제 렌더·export의 로컬 결과와 남은 수용 기준은 [M3 실행 기록](../notes/m3-verification.md)에 구분하여 기록합니다.
 아직 실행하지 않은 신규 검사는 통과로 표시하지 않습니다.
 M4 저장 핵심의 정확한 검증 명령은 `bash scripts/check.sh m4-core`이며 [저장 핵심 명세](../specs/m4-storage-core.md)의 상태·세션·파일·명령 관계를 검사합니다.
-`python3 tests/test_export_check.py`는 필수 완료 표시 누락과 export 실패 처리를 검사하며, `bash scripts/check-export.sh`는 새 PCK에서 실제 복원·변조 거부를 검사합니다.
+`python3 tests/test_export_check.py`는 필수 완료 표시 누락과 export 실패 처리를 검사하며, `python3 tests/test_ios_export.py`는 iOS export에서 사용하지 않는 개인정보 권한 키를 제거하는 경로를 검사합니다.
+`bash scripts/check-export.sh`는 새 PCK에서 실제 복원·변조 거부를 검사합니다.
 실행 결과는 [저장 핵심 검증 기록](../notes/m4-storage-core-verification.md)에 있습니다.
 M4의 저장·새 프로세스·현지화·화면·export 검증 명령은 [M4 명세](../specs/m4-mobile.md)에 정의했습니다.
 실제 실행 결과와 실기기 수용 한계는 [M4 검증 기록](../notes/m4-verification.md)에 구분하여 기록합니다.

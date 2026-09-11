@@ -47,5 +47,7 @@ jobs:
         run: bash scripts/check.sh m5
       - name: Check export failure handling
         run: python3 tests/test_export_check.py
+      - name: Check iOS export privacy cleanup
+        run: python3 tests/test_ios_export.py
       - name: Check exported M1 through M5 and storage core
         run: bash scripts/check-export.sh
