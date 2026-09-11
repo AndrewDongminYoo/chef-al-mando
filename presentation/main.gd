@@ -252,8 +252,11 @@ func _resume() -> void:
 
 
 func _set_state(next: State) -> void:
+	var entering_analysis := state != State.CLOSED and next == State.CLOSED
 	state = next
 	driver.set_paused(state != State.RUNNING)
+	if entering_analysis and analysis_scroll != null:
+		analysis_scroll.scroll_vertical = 0
 	_refresh()
 
 

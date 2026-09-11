@@ -74,6 +74,13 @@ func run(tree: SceneTree) -> void:
 		"closing analysis makes the action heading larger than each proposed change")
 	expect(analysis.get_meta("action_color", Color.TRANSPARENT) != analysis.get_meta("action_heading_color", Color.TRANSPARENT),
 		"closing analysis gives proposed changes a distinct supporting color")
+	var analysis_scroll: ScrollContainer = screen.get("analysis_scroll")
+	analysis.set("fit_content", false)
+	analysis.custom_minimum_size.y = 3000.0
+	await tree.process_frame
+	analysis_scroll.scroll_vertical = 1000
+	await tree.process_frame
+	expect(analysis_scroll.scroll_vertical > 0, "analysis restart fixture scrolls away from the recommendations")
 	screen.get("restart_button").pressed.emit()
 	plan = screen.get("preparation")
 	expect(panel.visible and plan.call("snapshot").inventory.prepped_grill == 2 and plan.call("snapshot").purchased_cost == 6600, "retry reconstructs the previous choices with fresh purchases")
@@ -81,6 +88,11 @@ func run(tree: SceneTree) -> void:
 	expect(screen.get("summary_label").is_visible_in_tree(), "retry restores the visible preparation budget")
 	panel.get("reset_button").pressed.emit()
 	expect(plan.call("snapshot").inventory.prepped_grill == 0 and screen.get("definitions").stations[3].tile == Vector2i(9, 5), "reset restores default preparation and layout")
+	screen.get("start_button").pressed.emit()
+	screen.call("advance", 300.0)
+	await tree.process_frame
+	expect(screen.get("simulation").closed and analysis_scroll.scroll_vertical == 0,
+		"each closing opens at the next-service recommendations")
 	screen.queue_free()
 	await tree.process_frame
 	await _extra_menu(tree)
