@@ -47,12 +47,21 @@ func run(tree: SceneTree) -> void:
 	screen.get("start_button").pressed.emit()
 	expect(sim.call("state_hash") == original, "repeated start cannot prepare inventory twice")
 	expect(not screen.call("submit_preparation", "move_station", "pass_01", "left").accepted, "service refuses placement commands")
+	screen.call("advance", 1.0)
+	expect(screen.get("duty_labels")[0].text.contains("채소 샐러드") and screen.get("duty_labels")[0].text.contains("재료 보관대로 이동 중"),
+		"the employee status names the menu and pickup destination")
+	screen.call("advance", 1.0)
+	expect(screen.get("duty_labels")[0].text.contains("원재료 챙기는 중"),
+		"the employee status distinguishes active raw ingredient pickup")
+	screen.call("advance", 1.0)
+	expect(screen.get("duty_labels")[0].text.contains("손질하러 이동 중"),
+		"the employee status distinguishes movement toward preparation")
 	screen.call("advance", 30.0)
 	expect(screen.get("summary_label").text.contains("프렙"), "service distinguishes prepared stock from raw ingredients")
 	screen.get("speed_buttons")[2].pressed.emit()
 	screen.call("advance", 75.0)
 	expect(sim.get("closed") and screen.get("analysis_scroll").visible, "closing displays the M2 time analysis panel")
-	expect(screen.get("analysis_label").text.contains("주문별 누적 시간") and screen.get("analysis_label").text.contains("예약·사용"), "closing names cumulative order time and reservation-inclusive station time accurately")
+	expect(screen.get("analysis_label").text.contains("다음 영업에서 바꿀 것") and screen.get("analysis_label").text.contains("주문별 누적 시간") and screen.get("analysis_label").text.contains("예약·사용"), "closing shows actionable recommendations before the existing detailed metrics")
 	screen.get("restart_button").pressed.emit()
 	plan = screen.get("preparation")
 	expect(panel.visible and plan.call("snapshot").inventory.prepped_grill == 2 and plan.call("snapshot").purchased_cost == 6600, "retry reconstructs the previous choices with fresh purchases")

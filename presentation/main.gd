@@ -12,6 +12,7 @@ const SafeAreaSource := preload("res://platform/safe_area.gd")
 const Definitions := preload("res://content/definitions.gd")
 const ScenarioDef := preload("res://content/scenario_def.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
+const ServiceAnalysis := preload("res://sim/service_analysis.gd")
 const TickDriver := preload("res://presentation/tick_driver.gd")
 const KitchenBoard := preload("res://presentation/kitchen_board.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
@@ -72,6 +73,9 @@ var feedback_reason: String = ""
 var settings_message_kind: String = ""
 var settings_message_reason: String = ""
 var modal_open_allowed: Callable
+var chatter_event: Dictionary = {}
+var chatter_seconds_left: float = 0.0
+var chatter_last_tick: Dictionary[String, int] = {}
 
 @onready var start_button: Button = $SafeArea/Layout/Controls/Start
 @onready var pause_button: Button = $SafeArea/Layout/Controls/Pause
@@ -142,6 +146,11 @@ func _record_input(action: String) -> void:
 
 
 func _process(delta: float) -> void:
+	if chatter_seconds_left > 0.0:
+		chatter_seconds_left = maxf(0.0, chatter_seconds_left - delta)
+		if chatter_seconds_left == 0.0:
+			chatter_event.clear()
+			board.show_chatter({})
 	advance(delta)
 
 
@@ -304,6 +313,10 @@ func _new_service() -> void:
 	elapsed_seconds = 0.0
 	shown_tenths = -1
 	_set_feedback("")
+	chatter_event.clear()
+	chatter_seconds_left = 0.0
+	chatter_last_tick.clear()
+	board.show_chatter({})
 	for button: Button in order_buttons.values():
 		order_list.remove_child(button)
 		button.queue_free()
@@ -486,7 +499,7 @@ func _refresh_service() -> void:
 				chosen = command.value
 		duty_buttons[index].select(ServiceSim.DUTIES.find(chosen))
 		duty_buttons[index].disabled = state == State.CLOSED
-		var activity := tr("작업 중") if not employee.order_id.is_empty() else _employee_wait(employee)
+		var activity := _employee_activity(employee) if not employee.order_id.is_empty() else _employee_wait(employee)
 		if not employee.pending_duty.is_empty():
 			activity = tr("현재 공정 후 담당 변경")
 		duty_labels[index].text = tr("직원 %d · %s") % [index + 1, activity]
@@ -504,6 +517,8 @@ func _refresh_service() -> void:
 				audio_feedback.play_cue("warning")
 		if event.kind == "command_rejected":
 			feedback_kind = "command_rejected"
+		_consider_chatter(event)
+	board.show_chatter(_visible_chatter())
 	_refresh_feedback()
 
 
@@ -743,9 +758,16 @@ func _raw_stock(separator: String) -> String:
 
 
 func _show_analysis() -> void:
+	var report := ServiceAnalysis.build(definitions, latest_view, last_preparation)
 	var totals: Dictionary = latest_view.metrics.orders
 	var longest: String = "missing_ingredients"
-	var lines: PackedStringArray = [summary_label.text, "", tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""]
+	var lines: PackedStringArray = [summary_label.text, "", tr("다음 영업에서 바꿀 것")]
+	if report.recommendations.is_empty():
+		lines.append(tr("이번 영업에서는 준비 선택을 바꿀 근거가 충분하지 않습니다."))
+	else:
+		for recommendation: Dictionary in report.recommendations:
+			lines.append(_recommendation_text(report, recommendation))
+	lines.append_array(["", tr("상세 지표"), tr("주문별 누적 시간"), tr("여러 주문을 합한 값입니다.\n영업 시간보다 클 수 있습니다."), ""])
 	for reason: String in ["missing_ingredients", "no_responsible_employee", "station_in_use", "no_route"]:
 		lines.append(tr("%s · %.1f초") % [tr(WAIT_TEXT[reason]), totals[reason] / 10.0])
 		if totals[reason] > totals[longest]:
@@ -757,6 +779,143 @@ func _show_analysis() -> void:
 	for station: Definitions.StationDef in definitions.stations:
 		lines.append(tr("%s · %.1f초") % [tr(station.display_name), latest_view.metrics.station_reserved_ticks[station.id] / 10.0])
 	analysis_label.text = "\n".join(lines)
+
+
+func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> String:
+	var target_id: String = recommendation.target_id
+	match recommendation.action:
+		"increase_prep":
+			var row: Dictionary = report.prep[target_id]
+			return tr("프렙 · %s %d개 준비 · %d개 사용 · 생재료 손질 %d건\n→ 준비 노동량 안에서 %d개 늘려 보세요.") % [tr(definitions.recipe_for(target_id).display_name), row.planned, row.used, row.raw_orders, recommendation.amount]
+		"reduce_prep":
+			var row: Dictionary = report.prep[target_id]
+			return tr("프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.recipe_for(target_id).display_name), row.planned, row.used, row.remaining, recommendation.amount]
+		"prep_at_capacity":
+			var row: Dictionary = report.prep[target_id]
+			return tr("프렙 · %s %d개를 모두 사용 · 생재료 손질 %d건\n→ 준비 노동량 %d / %d로 가득 찼습니다. 다른 프렙 잔량이나 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, report.labor_used, report.labor_capacity]
+		"increase_purchase":
+			var row: Dictionary = report.ingredients[target_id]
+			return tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.related_shortage_ticks / 10.0]
+		"reduce_purchase":
+			var row: Dictionary = report.ingredients[target_id]
+			return tr("발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.used, row.remaining, recommendation.amount]
+		"purchase_consumed":
+			var row: Dictionary = report.ingredients[target_id]
+			return tr("발주 · %s %d개 발주 · %d개 사용 · 종료 재고 0개\n→ 관련 메뉴 재료 부족이 없었습니다. 이번 발주량은 유지하고 운영 선택 하나만 바꿔 비교해 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.used]
+		"raise_priority":
+			var row: Dictionary = report.priorities[target_id]
+			return tr("우선순위 · %s 기본 %d · 미제공 %d건 · 경합 %.1f초\n→ 다음 영업은 기본 우선순위를 1 올려 보세요.") % [tr(definitions.recipe_for(target_id).display_name), row.default_priority, row.expired, row.pressure_ticks / 10.0]
+		"priority_at_max":
+			var row: Dictionary = report.priorities[target_id]
+			var header := tr("우선순위 · %s 기본 2 · 미제공 %d건 · 경합 %.1f초") % [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]
+			match recommendation.bottleneck:
+				"movement":
+					return header + "\n" + tr("→ 이미 최대입니다. 이동 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 이동 시간을 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+				"employee_busy":
+					return header + "\n" + tr("→ 이미 최대입니다. 담당 직원 대기 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 담당 직원 대기와 이동 시간을 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+				"station":
+					return header + "\n" + tr("→ 이미 최대입니다. 작업대 대기 %.1f초가 가장 큽니다. 다음 영업은 냉식대·화구 중 한 곳만 바꾸고 작업대 대기를 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+	return ""
+
+
+func _employee_activity(employee: Dictionary) -> String:
+	var order := _order_for_id(employee.order_id)
+	if order.is_empty():
+		return tr("작업 중")
+	var recipe_name: String = tr(order.name)
+	var task := _task_for_order(order.id)
+	var collecting: bool = not task.is_empty() and task.collection_index >= 0 and task.path_index < task.collection_index
+	var action := ""
+	if order.state == "moving":
+		match order.phase_id:
+			"pickup":
+				action = tr("프렙 재료 받으러 재료 보관대로 이동 중") if order.uses_prepared else tr("원재료 받으러 재료 보관대로 이동 중")
+			"prep":
+				action = tr("새 재료 손질하러 이동 중")
+			"cook":
+				action = tr("손질한 재료 가지러 이동 중") if collecting else tr("%s로 이동 중") % tr(_station_name(task.get("station_id", "")))
+			"serve":
+				action = tr("완성 요리 가지러 이동 중") if collecting else tr("제공대로 운반 중")
+	elif order.state == "working":
+		match order.phase_id:
+			"pickup":
+				action = tr("프렙 재료 챙기는 중") if order.uses_prepared else tr("원재료 챙기는 중")
+			"prep":
+				action = tr("새 재료 손질하는 중")
+			"cook":
+				action = tr("%s에서 조리 중") % tr(_station_name(task.get("station_id", "")))
+			"serve":
+				action = tr("요리 내놓는 중")
+	return tr("%s · %s") % [recipe_name, action]
+
+
+func _order_for_id(order_id: String) -> Dictionary:
+	for order: Dictionary in latest_view.orders:
+		if order.id == order_id:
+			return order
+	return {}
+
+
+func _task_for_order(order_id: String) -> Dictionary:
+	for task: Dictionary in latest_view.tasks:
+		if task.order_id == order_id:
+			return task
+	return {}
+
+
+func _station_name(station_id: String) -> String:
+	for station: Definitions.StationDef in definitions.stations:
+		if station.id == station_id:
+			return station.display_name
+	return "작업대"
+
+
+func _consider_chatter(event: Dictionary) -> void:
+	var priority := 0
+	if event.kind == "order_wait_started" and event.reason == "missing_ingredients":
+		priority = 1
+	elif event.kind == "prepared_stock_depleted":
+		priority = 2
+	elif event.kind == "order_ended" and event.reason == "deadline" and event.phase_id == "serve":
+		priority = 3
+	if priority == 0:
+		return
+	var repeat_key := "%s:%s" % [event.kind, event.get("recipe_id", "")]
+	if simulation.tick - chatter_last_tick.get(repeat_key, -1000) < 50:
+		return
+	if not chatter_event.is_empty() and priority < chatter_event.get("priority", 0):
+		return
+	chatter_last_tick[repeat_key] = simulation.tick
+	chatter_event = event.duplicate(true)
+	chatter_event.priority = priority
+	chatter_seconds_left = 2.2
+
+
+func _visible_chatter() -> Dictionary:
+	if chatter_event.is_empty() or chatter_seconds_left <= 0.0:
+		return {}
+	var result := chatter_event.duplicate(true)
+	var recipe := definitions.recipe_for(result.get("recipe_id", ""))
+	match result.kind:
+		"order_wait_started":
+			result.text = tr("으악, %s 재료가 없어!") % tr(recipe.display_name)
+		"prepared_stock_depleted":
+			result.text = tr("%s 프렙 다 썼다!") % tr(recipe.display_name)
+		"order_ended":
+			result.text = tr("으악, 다 만들었는데 가버리셨어!")
+	if result.get("employee_id", "").is_empty():
+		result.employee_id = _speaker_for_recipe(result.get("recipe_id", ""))
+	return result
+
+
+func _speaker_for_recipe(recipe_id: String) -> String:
+	var recipe := definitions.recipe_for(recipe_id)
+	if recipe == null:
+		return ""
+	for employee: Dictionary in latest_view.employees:
+		if employee.duty == "all" or employee.duty == recipe.cook_role:
+			return employee.id
+	return ""
 
 
 func _order_status(order: Dictionary) -> String:

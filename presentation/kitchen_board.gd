@@ -11,11 +11,24 @@ var definitions: Definitions
 var view: Dictionary = {}
 var selected_station_id: String = ""
 var text_scale: float = 1.0
+var employee_badges: Dictionary = {}
+var chatter: Dictionary = {}
 
 
 func show_state(data: Definitions, snapshot: Dictionary) -> void:
 	definitions = data
 	view = snapshot
+	employee_badges.clear()
+	for employee: Dictionary in view.get("employees", []):
+		for order: Dictionary in view.get("orders", []):
+			if order.id == employee.order_id:
+				employee_badges[employee.id] = {"phase": order.phase_id, "recipe_id": order.recipe_id}
+				break
+	queue_redraw()
+
+
+func show_chatter(value: Dictionary) -> void:
+	chatter = value.duplicate(true)
 	queue_redraw()
 
 
@@ -72,7 +85,51 @@ func _draw() -> void:
 		for order: Dictionary in view.get("orders", []):
 			if order.id == employee.order_id and order.state == "working":
 				draw_arc(center, cell * 0.44, -PI * 0.9, -PI * 0.1, 10, Color("f1c56f"), 3)
+		if employee_badges.has(employee.id):
+			_draw_employee_badge(center, cell, employee_badges[employee.id], font, font_size)
 		draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, roundi(maxi(12, int(cell * 0.3)) * text_scale), Color("182728"))
+	if not chatter.is_empty():
+		_draw_chatter(kitchen_rect, origin, cell, font, font_size)
+
+
+func _draw_employee_badge(center: Vector2, cell: float, badge: Dictionary, font: Font, font_size: int) -> void:
+	var recipe := definitions.recipe_for(badge.recipe_id)
+	var icon_size := cell * 0.32
+	if recipe != null and recipe.icon != null:
+		draw_texture_rect(recipe.icon, Rect2(center + Vector2(cell * 0.14, -cell * 0.47), Vector2.ONE * icon_size), false)
+	var phase_mark := _phase_mark(badge.phase)
+	var badge_center := center + Vector2(-cell * 0.28, -cell * 0.32)
+	draw_circle(badge_center, cell * 0.17, Color("182728"))
+	draw_string(font, badge_center + Vector2(-cell * 0.14, cell * 0.1), phase_mark,
+		HORIZONTAL_ALIGNMENT_CENTER, cell * 0.28, mini(font_size, roundi(cell * 0.24)), Color("fff0c6"))
+
+
+func _phase_mark(phase: String) -> String:
+	return tr({"pickup": "재", "prep": "손", "cook": "조", "serve": "출"}.get(phase, ""))
+
+
+func _draw_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, font: Font, font_size: int) -> void:
+	var anchor := kitchen_rect.get_center()
+	for employee: Dictionary in view.get("employees", []):
+		if employee.id == chatter.get("employee_id", ""):
+			var tile := Vector2(employee.tile[0], employee.tile[1])
+			var next := Vector2(employee.next_tile[0], employee.next_tile[1])
+			anchor = origin + (tile.lerp(next, employee.progress / 5.0) + Vector2.ONE * 0.5) * cell
+			break
+	var bubble_font_size := mini(roundi(18 * text_scale), font_size)
+	var text_value: String = chatter.get("text", "")
+	var text_size := font.get_string_size(text_value, HORIZONTAL_ALIGNMENT_LEFT, -1, bubble_font_size)
+	var bubble_size := Vector2(minf(text_size.x + 20.0, kitchen_rect.size.x - 12.0), text_size.y + 14.0)
+	var bubble_position := anchor + Vector2(-bubble_size.x * 0.5, -cell * 0.95 - bubble_size.y)
+	if bubble_position.y < kitchen_rect.position.y + 6.0:
+		bubble_position.y = anchor.y + cell * 0.55
+	bubble_position.x = clampf(bubble_position.x, kitchen_rect.position.x + 6.0, kitchen_rect.end.x - bubble_size.x - 6.0)
+	bubble_position.y = clampf(bubble_position.y, kitchen_rect.position.y + 6.0, kitchen_rect.end.y - bubble_size.y - 6.0)
+	var bubble_rect := Rect2(bubble_position, bubble_size)
+	draw_rect(bubble_rect, Color("fff5d6"))
+	draw_rect(bubble_rect, Color("5b3b2d"), false, 2.0)
+	draw_string(font, bubble_rect.position + Vector2(10.0, bubble_size.y - 8.0), text_value,
+		HORIZONTAL_ALIGNMENT_CENTER, bubble_size.x - 20.0, bubble_font_size, Color("35251f"))
 
 
 func _employee_direction(employee: Dictionary) -> String:

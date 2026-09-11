@@ -268,12 +268,11 @@ func _assign_work() -> void:
 
 
 func _try_assignment(order: OrderState) -> void:
-	order.wait_detail = ""
 	var inputs: Dictionary[String, int] = {}
 	if not order.input_consumed:
 		inputs = _available_inputs(order)
 		if inputs.is_empty():
-			order.wait_reason = "missing_ingredients"
+			_set_wait(order, "missing_ingredients")
 			return
 	var available: Array[EmployeeState] = []
 	var responsible: bool = false
@@ -283,15 +282,14 @@ func _try_assignment(order: OrderState) -> void:
 			if employee.order_id.is_empty():
 				available.append(employee)
 	if available.is_empty():
-		order.wait_reason = "no_responsible_employee"
-		order.wait_detail = "responsible_employee_busy" if responsible else ""
+		_set_wait(order, "no_responsible_employee", "responsible_employee_busy" if responsible else "")
 		return
 	var stations: Array[StationDef] = []
 	for station: StationDef in _stations:
 		if station.role == order.phases[order.phase_index].station_role and _station_available(station):
 			stations.append(station)
 	if stations.is_empty():
-		order.wait_reason = "station_in_use"
+		_set_wait(order, "station_in_use")
 		return
 	for employee: EmployeeState in available:
 		for station: StationDef in stations:
@@ -310,11 +308,20 @@ func _try_assignment(order: OrderState) -> void:
 			employee.next_tile = task.path[1] if task.path.size() > 1 else employee.tile
 			order.state = "moving"
 			order.wait_reason = ""
+			order.wait_detail = ""
 			order.carrying = task.collection_index == 0
 			if task.path.size() == 1:
 				_begin_work(order, task)
 			return
-	order.wait_reason = "no_route"
+	_set_wait(order, "no_route")
+
+
+func _set_wait(order: OrderState, reason: String, detail: String = "") -> void:
+	if reason == "missing_ingredients" and (order.wait_reason != reason or order.wait_detail != detail):
+		_events.append({"kind": "order_wait_started", "order_id": order.id,
+			"recipe_id": order.recipe.id, "reason": reason, "detail": detail})
+	order.wait_reason = reason
+	order.wait_detail = detail
 
 
 func _available_inputs(order: OrderState) -> Dictionary[String, int]:
@@ -365,6 +372,9 @@ func _begin_work(order: OrderState, task: TaskState) -> void:
 		order.input_consumed = true
 		order.raw_consumed = not order.uses_prepared
 		order.intermediate_ready = order.uses_prepared
+		if order.uses_prepared and _inventory[order.recipe.prepared_ingredient_id] == 0:
+			_events.append({"kind": "prepared_stock_depleted", "order_id": order.id,
+				"recipe_id": order.recipe.id, "employee_id": task.employee_id})
 	if order.phases[order.phase_index].id == "cook" and order.intermediate_ready:
 		order.intermediate_ready = false
 		order.intermediate_consumed = true
@@ -430,6 +440,8 @@ func _release_ingredients(order: OrderState) -> void:
 
 
 func _terminate_order(order: OrderState, terminal: String, reason: String) -> void:
+	var employee_id := _tasks[order.id].employee_id as String if _tasks.has(order.id) else ""
+	var phase_id := order.phases[order.phase_index].id if order.phase_index < order.phases.size() else ""
 	_release_task(order)
 	_release_ingredients(order)
 	order.state = terminal
@@ -440,7 +452,8 @@ func _terminate_order(order: OrderState, terminal: String, reason: String) -> vo
 	order.has_result = false
 	order.intermediate_ready = false
 	order.ended_tick = tick
-	_events.append({"kind": "order_ended", "order_id": order.id, "reason": reason})
+	_events.append({"kind": "order_ended", "order_id": order.id, "recipe_id": order.recipe.id,
+		"employee_id": employee_id, "phase_id": phase_id, "reason": reason})
 
 
 func _accounting() -> Dictionary:
