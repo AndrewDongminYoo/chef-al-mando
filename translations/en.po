@@ -396,7 +396,7 @@ msgid "작업 중"
 msgstr "Working"
 
 msgid "현재 공정 후 담당 변경"
-msgstr "Duty changes after step"
+msgstr "Duty change queued"
 
 msgid "직원 %d · %s"
 msgstr "Employee %d · %s"
@@ -709,3 +709,105 @@ msgstr "Use the available direction buttons to place this station"
 
 msgid "\n고정 설비와 작업 위치를 확인하세요.\n배치와 담당의 효과는 마감 지표로 비교하세요."
 msgstr "\nCheck fixed stations and work positions.\nCompare layout and duty choices in the closing analysis."
+
+msgid "다음 영업에서 바꿀 것"
+msgstr "What to change next service"
+
+msgid "이번 영업에서는 준비 선택을 바꿀 근거가 충분하지 않습니다."
+msgstr "This service did not provide enough evidence to change preparation."
+
+msgid "상세 지표"
+msgstr "Detailed metrics"
+
+msgid "프렙 · %s %d개 준비 · %d개 사용 · 생재료 손질 %d건\n→ 준비 노동량 안에서 %d개 늘려 보세요."
+msgstr "Prep · %s: %d prepared, %d used, %d raw-prep orders\n→ Add %d within the available prep capacity."
+
+msgid "프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요."
+msgstr "Prep · %s: %d prepared, %d used, %d left\n→ Prepare %d fewer next service."
+
+msgid "프렙 · %s %d개를 모두 사용 · 생재료 손질 %d건\n→ 준비 노동량 %d / %d · 남은 노동량 %d는 1개에 필요한 %d보다 적습니다. 다른 프렙 잔량이나 작업 병목을 확인하세요."
+msgstr "Prep · %s: all %d portions used, plus %d raw-prep orders\n→ Prep capacity %d / %d · %d remains, below the %d needed for one portion. Check other prep leftovers or work bottlenecks."
+
+msgid "발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요."
+msgstr "Purchases · %s: %d purchased, 0 left, related menus short for %.1f sec\n→ Add 1 within the budget."
+
+msgid "발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요."
+msgstr "Purchases · %s: %d purchased, %d used, %d left\n→ Try purchasing %d fewer next service while checking the serve rate."
+
+msgid "발주 · %s %d개 발주 · %d개 사용 · 종료 재고 0개\n→ 관련 메뉴 재료 부족이 없었습니다. 이번 발주량은 유지하고 운영 선택 하나만 바꿔 비교해 보세요."
+msgstr "Purchases · %s: %d purchased, %d used, 0 left\n→ Related menus had no ingredient shortage. Keep this purchase quantity and compare one different operational choice."
+
+msgid "우선순위 · %s 기본 %d · 미제공 %d건 · 경합 %.1f초\n→ 다음 영업은 기본 우선순위를 1 올려 보세요."
+msgstr "Priority · %s: default %d, %d unserved, %.1f sec contention\n→ Raise its default priority by 1 next service."
+
+msgid "우선순위 · %s 기본 2 · 미제공 %d건 · 경합 %.1f초"
+msgstr "Priority · %s: default 2, %d unserved, %.1f sec contention"
+
+msgid "→ 이미 최대입니다. 이동 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 이동 시간을 비교해 보세요."
+msgstr "→ It is already at maximum. Movement is highest at %.1f sec. Next service, move one station and compare the movement time."
+
+msgid "→ 이미 최대입니다. 담당 직원 대기 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 담당 직원 대기와 이동 시간을 비교해 보세요."
+msgstr "→ It is already at maximum. The responsible-chef wait is highest at %.1f sec. Next service, move one station and compare the chef wait and movement time."
+
+msgid "→ 이미 최대입니다. 작업대 대기 %.1f초가 가장 큽니다. 다음 영업은 냉식대·화구 중 한 곳만 바꾸고 작업대 대기를 비교해 보세요."
+msgstr "→ It is already at maximum. The station wait is highest at %.1f sec. Next service, change one cold or hot station and compare the station wait."
+
+msgid "프렙 재료 받으러 재료 보관대로 이동 중"
+msgstr "moving to storage for prepped ingredients"
+
+msgid "원재료 받으러 재료 보관대로 이동 중"
+msgstr "moving to storage for raw ingredients"
+
+msgid "새 재료 손질하러 이동 중"
+msgstr "moving to prep raw ingredients"
+
+msgid "손질한 재료 가지러 이동 중"
+msgstr "moving to collect prepped ingredients"
+
+msgid "%s로 이동 중"
+msgstr "moving to %s"
+
+msgid "완성 요리 가지러 이동 중"
+msgstr "moving to collect the finished dish"
+
+msgid "제공대로 운반 중"
+msgstr "carrying the dish to the pass"
+
+msgid "프렙 재료 챙기는 중"
+msgstr "getting prepped ingredients"
+
+msgid "원재료 챙기는 중"
+msgstr "getting raw ingredients"
+
+msgid "새 재료 손질하는 중"
+msgstr "prepping raw ingredients"
+
+msgid "%s에서 조리 중"
+msgstr "cooking at %s"
+
+msgid "요리 내놓는 중"
+msgstr "placing the dish on the pass"
+
+msgid "작업대"
+msgstr "station"
+
+msgid "재"
+msgstr "I"
+
+msgid "손"
+msgstr "P"
+
+msgid "조"
+msgstr "C"
+
+msgid "출"
+msgstr "S"
+
+msgid "으악, %s 재료가 없어!"
+msgstr "Oh no, %s ingredients are gone!"
+
+msgid "%s 프렙 다 썼다!"
+msgstr "%s prep is gone!"
+
+msgid "으악, 다 만들었는데 가버리셨어!"
+msgstr "Oh no, it was ready and they left!"
