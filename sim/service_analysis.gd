@@ -86,6 +86,7 @@ static func _cap_notices_last(values: Array[Dictionary]) -> Array[Dictionary]:
 
 static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used: int, selection: Dictionary = {}) -> Dictionary:
 	var best: Dictionary = {}
+	var best_rank := -1
 	var best_score := -1
 	for recipe_id: String in data.menu_ids:
 		var row: Dictionary = prep[recipe_id]
@@ -104,7 +105,9 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 			else:
 				action = "prep_at_capacity"
 		var score: int = (10000 if row.planned > 0 else 0) + row.raw_orders * 100 + row.remaining * 10
-		if not action.is_empty() and score > best_score:
+		var rank := 0 if action == "prep_at_capacity" else 1
+		if not action.is_empty() and (rank > best_rank or (rank == best_rank and score > best_score)):
+			best_rank = rank
 			best_score = score
 			best = {"category": "prep", "action": action, "target_id": recipe_id, "amount": amount}
 	return best

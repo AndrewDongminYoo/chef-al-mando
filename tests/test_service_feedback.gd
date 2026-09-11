@@ -95,6 +95,15 @@ func _test_recommendation_branches() -> void:
 	var prep_recommendation := ServiceAnalysis._prep_recommendation(scenario, prep, 3)
 	expect(prep_recommendation.action == "reduce_prep" and prep_recommendation.amount == 1,
 		"remaining prepared stock produces a one-portion reduction experiment")
+	var competing_prep := prep.duplicate(true)
+	competing_prep.salad = {"planned": 1, "remaining": 1, "raw_orders": 0,
+		"prep_labor_units": scenario.recipe_for("salad").prep_labor_units}
+	competing_prep.grill = {"planned": 4, "remaining": 0, "raw_orders": 50,
+		"prep_labor_units": scenario.recipe_for("grill").prep_labor_units}
+	var prep_change := ServiceAnalysis._prep_recommendation(
+		scenario, competing_prep, scenario.prep_labor_capacity)
+	expect(prep_change.action == "reduce_prep" and prep_change.target_id == "salad",
+		"reducible preparation wins over a higher-scoring capacity notice")
 	var purchase_increase := ServiceAnalysis._ingredient_recommendation({"protein": {
 		"purchased": 2, "remaining": 0, "related_shortage_ticks": 10, "unit_cost": 400}})
 	expect(purchase_increase.action == "increase_purchase" and purchase_increase.amount == 1,
