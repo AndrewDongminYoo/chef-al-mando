@@ -67,6 +67,8 @@ M3 schema 1은 읽을 때 `active_session: null`로 해석하며, 읽기만으�
 2026-09-10 캠페인 운영 압력 변경은 새 쓰기의 `content_version`을 2로 올립니다.
 콘텐츠 버전 1은 읽기만으로 원본을 바꾸지 않고 완료·최고 기록을 유지하며 `active_session`을 새 규칙에서 다시 시작하도록 `null`로 해석합니다.
 이전 목표로 완료한 기록에는 `legacy_completed` 표식을 붙이며, 새 목표를 달성하면 표식을 제거합니다.
+2026-09-11 자동 정책 검증과 난이도 조정은 새 쓰기의 `content_version`을 3으로 올립니다.
+콘텐츠 버전 2는 완료·최고 기록을 그대로 유지하고 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 3으로 갱신합니다.
 `load_records()`와 `save_records(records)`의 기존 호출은 유지합니다.
 records만 저장하는 호출은 기존 active session을 보존해야 합니다.
 `save_active_session(session, records)`는 둘을 한 번에 교체하고, `clear_active_session()`은 기록을 유지한 채 session만 `null`로 저장합니다.

@@ -37,14 +37,48 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "grain_grill", 2)
 			_add(policy, "set_prep", "salad", 1)
 		"rush_hour":
+			_add(policy, "set_prep", "protein_bowl", 2)
+			policy.priorities = {"grill": 2, "protein_bowl": 2}
+		"final_service":
 			_add(policy, "set_prep", "grill", 4)
 			_add(policy, "set_prep", "protein_bowl", 3)
-			policy.priorities = {"grill": 2, "protein_bowl": 2}
+			policy.priorities = {"grill": 2}
+	return policy
+
+
+static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
+	var alternatives: Array[Dictionary] = []
+	var policy: Dictionary = {"preparation": [], "priorities": {}}
+	match scenario_id:
+		"hot_queue":
+			_add(policy, "set_prep", "grill", 3)
+			_moves(policy, "cold_01", "left", 2)
+			_moves(policy, "hot_01", "left", 3)
+			policy.priorities = {"grill": 2}
+		"shared_stock":
+			_add(policy, "set_purchase", "vegetable", 29)
+			_add(policy, "set_prep", "soup", 4)
+		"long_route":
+			_add(policy, "set_prep", "grill", 4)
+			_moves(policy, "cold_01", "up", 1)
+			_moves(policy, "cold_01", "left", 3)
+			_moves(policy, "hot_01", "up", 1)
+			_moves(policy, "hot_01", "left", 4)
+			_add(policy, "rotate_station", "hot_02", null)
+			_moves(policy, "hot_02", "up", 2)
+		"split_duties":
+			_add(policy, "set_prep", "protein_bowl", 3)
+			_add(policy, "set_prep", "grain_grill", 4)
+			_add(policy, "set_prep", "salad", 1)
+		"rush_hour":
+			_add(policy, "set_prep", "grill", 1)
+			_add(policy, "set_prep", "protein_bowl", 2)
 		"final_service":
 			_add(policy, "set_prep", "grill", 6)
 			_moves(policy, "hot_02", "right", 1)
-			policy.priorities = {"grill": 2, "protein_bowl": 2}
-	return policy
+	if not policy.preparation.is_empty() or not policy.priorities.is_empty():
+		alternatives.append(policy)
+	return alternatives
 
 
 static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: int = 1) -> Dictionary:

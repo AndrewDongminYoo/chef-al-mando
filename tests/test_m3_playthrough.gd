@@ -42,6 +42,10 @@ func run(_tree: SceneTree) -> void:
 				var no_plan_view: Dictionary = no_plan.snapshot
 				var no_plan_passes: bool = no_plan_view.accounting.served >= scenario.minimum_served and no_plan_view.accounting.profit >= scenario.minimum_profit
 				expect(not no_plan_passes, "a pressure service requires a scenario-specific plan: " + scenario.id)
+				var served_gap: int = maxi(scenario.minimum_served - no_plan_view.accounting.served, 0)
+				var profit_gap: int = maxi(scenario.minimum_profit - no_plan_view.accounting.profit, 0)
+				expect(served_gap >= 2 or profit_gap >= 1500,
+					"a no-plan service misses by at least two orders or 1500 profit: " + scenario.id)
 				expect(view.accounting.served - scenario.minimum_served <= 1
 					and view.accounting.profit - scenario.minimum_profit <= 2000,
 					"the reference policy passes with at most one extra order and 2000 extra profit: " + scenario.id)
@@ -50,6 +54,30 @@ func run(_tree: SceneTree) -> void:
 				print("M3_PRESSURE ", scenario.id, " ", JSON.stringify({
 					"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
 					"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
+					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
+			var alternatives: Array[Dictionary] = Policies.alternative_policies(scenario.id)
+			expect(not alternatives.is_empty(), "a pressure service defines an alternative plan: " + scenario.id)
+			for index: int in alternatives.size():
+				var alternative: Dictionary = alternatives[index]
+				var alternative_run := Policies.run_policy(scenario, alternative)
+				expect(alternative != policy and alternative_run.accepted,
+					"the alternative policy executes: %s %d" % [scenario.id, index])
+				if not alternative_run.accepted:
+					continue
+				var alternative_view: Dictionary = alternative_run.snapshot
+				expect(alternative_view.accounting.served >= scenario.minimum_served
+					and alternative_view.accounting.profit >= scenario.minimum_profit,
+					"the alternative policy passes both goals: %s %d" % [scenario.id, index])
+				expect(alternative_run.hash != run.hash,
+					"the alternative policy produces a distinct final state: %s %d" % [scenario.id, index])
+				var alternative_repeat := Policies.run_policy(scenario, alternative)
+				var alternative_fast := Policies.run_policy(scenario, alternative, 4)
+				expect(alternative_repeat.accepted and alternative_repeat.hash == alternative_run.hash,
+					"the alternative policy repeats its final state: %s %d" % [scenario.id, index])
+				expect(alternative_fast.accepted and alternative_fast.hash == alternative_run.hash,
+					"the alternative policy matches at one and four speed: %s %d" % [scenario.id, index])
+				print("M3_STRATEGY ", scenario.id, " ", JSON.stringify({
+					"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
 					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
 	for owned_file: String in DirAccess.get_files_at(directory):
