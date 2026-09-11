@@ -10,6 +10,7 @@ func run(tree: SceneTree) -> void:
 	_test_hot_queue_limits()
 	_test_incremental_prep_advice()
 	_test_recommendation_branches()
+	_test_prep_advice_requires_valid_preparation()
 	_test_no_priority_advice_without_evidence()
 	_test_service_events()
 	await _test_live_prepared_feedback(tree)
@@ -135,6 +136,36 @@ func _test_purchase_advice_requires_valid_preparation() -> void:
 	var idle_report: Dictionary = ServiceAnalysis.build(first_shift, idle_view, minimum_selection)
 	expect(not _has_action(idle_report.recommendations, "reduce_purchase", "vegetable"),
 		"purchase feedback preserves enough stock to sell every configured menu")
+
+
+func _test_prep_advice_requires_valid_preparation() -> void:
+	var scenario: Resource = load("res://content/campaign/scenarios/shared_stock.tres")
+	var plan := PreparationPlan.new(scenario)
+	for purchase: Dictionary in [
+		{"id": "vegetable", "quantity": 5},
+		{"id": "grain", "quantity": 2},
+		{"id": "mushroom", "quantity": 1},
+	]:
+		expect(_prepare(plan, "set_purchase", purchase.id, purchase.quantity).accepted,
+			"shared-stock fixture accepts its minimum purchase quantity for " + purchase.id)
+	expect(_prepare(plan, "set_prep", "salad", 1).accepted,
+		"shared-stock fixture accepts one prepared salad")
+	var started: Dictionary = _prepare(plan, "start", "", null)
+	expect(started.accepted, "shared-stock fixture starts with all configured menus sellable")
+	if not started.accepted:
+		return
+	var invalid_selection: Dictionary = started.selection.duplicate(true)
+	invalid_selection.prep_quantities.salad = 2
+	var invalid_plan := PreparationPlan.new(scenario, invalid_selection)
+	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
+	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
+		"a second prepared salad would consume stock needed by another configured menu")
+	var raw_salad_view := {"inventory": {"prepped_salad": 0}, "orders": [{"recipe_id": "salad",
+		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 0,
+		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
+	var report: Dictionary = ServiceAnalysis.build(scenario, raw_salad_view, started.selection)
+	expect(not _has_action(report.recommendations, "increase_prep", "salad"),
+		"prep feedback does not consume shared stock required to keep every menu sellable")
 
 
 func _test_service_events() -> void:

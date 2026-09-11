@@ -58,7 +58,7 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 			"remaining": remaining, "related_shortage_ticks": related_shortage_ticks,
 			"unit_cost": ingredient.unit_cost}
 	var recommendations: Array[Dictionary] = []
-	var prep_recommendation := _prep_recommendation(data, prep, labor_used)
+	var prep_recommendation := _prep_recommendation(data, prep, labor_used, selection)
 	if not prep_recommendation.is_empty():
 		recommendations.append(prep_recommendation)
 	var ingredient_recommendation := _ingredient_recommendation(ingredients, data, selection)
@@ -84,7 +84,7 @@ static func _cap_notices_last(values: Array[Dictionary]) -> Array[Dictionary]:
 	return ordered
 
 
-static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used: int) -> Dictionary:
+static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used: int, selection: Dictionary = {}) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score := -1
 	for recipe_id: String in data.menu_ids:
@@ -97,6 +97,8 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 		elif row.raw_orders > 0:
 			var available_labor: int = data.prep_labor_capacity - labor_used
 			if available_labor >= row.prep_labor_units:
+				if not _valid_prep_change(data, selection, recipe_id, row.planned + 1):
+					continue
 				action = "increase_prep"
 				amount = 1
 			else:
@@ -106,6 +108,21 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 			best_score = score
 			best = {"category": "prep", "action": action, "target_id": recipe_id, "amount": amount}
 	return best
+
+
+static func _valid_prep_change(data: Definitions, selection: Dictionary, recipe_id: String, quantity: int) -> bool:
+	if selection.is_empty():
+		return true
+	var purchases: Dictionary = selection.get("purchases", data.purchases).duplicate()
+	var prep_quantities: Dictionary = selection.get("prep_quantities", {}).duplicate()
+	prep_quantities[recipe_id] = quantity
+	var candidate := data.duplicate() as Definitions
+	candidate.purchases = {}
+	candidate.purchases.assign(purchases)
+	var options := {"prep_quantities": prep_quantities,
+		"duties": selection.get("duties", {}).duplicate(),
+		"menu_priorities": selection.get("menu_priorities", {}).duplicate()}
+	return PreparationPlan.initial_state(candidate, options, true).errors.is_empty()
 
 
 static func _ingredient_recommendation(ingredients: Dictionary, data: Definitions = null, selection: Dictionary = {}) -> Dictionary:
