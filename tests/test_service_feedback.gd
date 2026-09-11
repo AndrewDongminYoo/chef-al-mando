@@ -48,6 +48,8 @@ func _test_hot_queue_limits() -> void:
 		"analysis redirects a maximum-priority miss toward its observed bottleneck")
 	expect(priority_limit.get("bottleneck") == "employee_busy" and priority_limit.has("bottleneck_ticks"),
 		"maximum-priority feedback identifies the largest observed bottleneck and its duration")
+	expect(report.recommendations[0].action == "purchase_consumed",
+		"an operational experiment appears before preparation and priority cap notices")
 
 
 func _test_incremental_prep_advice() -> void:

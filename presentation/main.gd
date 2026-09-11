@@ -798,8 +798,6 @@ func _render_analysis(summary: String, recommendations: PackedStringArray, detai
 	analysis_label.set_meta("action_heading_color", ANALYSIS_HEADING_COLOR)
 	analysis_label.set_meta("action_color", ANALYSIS_ACTION_COLOR)
 	analysis_label.clear()
-	_analysis_text(summary, body_size, ANALYSIS_BODY_COLOR)
-	analysis_label.add_text("\n\n")
 	_analysis_text(tr("다음 영업에서 바꿀 것"), heading_size, ANALYSIS_HEADING_COLOR)
 	analysis_label.add_text("\n")
 	for recommendation: String in recommendations:
@@ -811,6 +809,8 @@ func _render_analysis(summary: String, recommendations: PackedStringArray, detai
 		analysis_label.add_text("\n\n")
 	_analysis_text(tr("상세 지표"), detail_heading_size, ANALYSIS_HEADING_COLOR)
 	analysis_label.add_text("\n")
+	_analysis_text(summary, body_size, ANALYSIS_BODY_COLOR)
+	analysis_label.add_text("\n\n")
 	_analysis_text(details, detail_size, ANALYSIS_DETAIL_COLOR)
 
 

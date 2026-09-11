@@ -62,6 +62,12 @@ func run(tree: SceneTree) -> void:
 	screen.call("advance", 75.0)
 	expect(sim.get("closed") and screen.get("analysis_scroll").visible, "closing displays the M2 time analysis panel")
 	expect(screen.get("analysis_label").get_parsed_text().contains("다음 영업에서 바꿀 것") and screen.get("analysis_label").get_parsed_text().contains("주문별 누적 시간") and screen.get("analysis_label").get_parsed_text().contains("예약·사용"), "closing shows actionable recommendations before the existing detailed metrics")
+	var analysis_text: String = screen.get("analysis_label").get_parsed_text()
+	var action_index := analysis_text.find("다음 영업에서 바꿀 것")
+	var accounting_index := analysis_text.find("손익")
+	var cumulative_index := analysis_text.find("주문별 누적 시간")
+	expect(action_index >= 0 and accounting_index > action_index and cumulative_index > action_index,
+		"closing places next-service changes before accounting and cumulative metrics")
 	var analysis: Control = screen.get("analysis_label")
 	expect(analysis is RichTextLabel, "closing analysis supports distinct text hierarchy")
 	expect(int(analysis.get_meta("action_heading_font_size", 0)) > int(analysis.get_meta("action_font_size", 0)),

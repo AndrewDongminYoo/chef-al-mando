@@ -67,9 +67,21 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 	var priority_recommendation := _priority_recommendation(priorities)
 	if not priority_recommendation.is_empty():
 		recommendations.append(priority_recommendation)
+	recommendations = _cap_notices_last(recommendations)
 	return {"prep": prep, "ingredients": ingredients, "priorities": priorities,
 		"labor_used": labor_used, "labor_capacity": data.prep_labor_capacity,
 		"recommendations": recommendations.slice(0, 3)}
+
+
+static func _cap_notices_last(values: Array[Dictionary]) -> Array[Dictionary]:
+	var ordered: Array[Dictionary] = []
+	for value: Dictionary in values:
+		if value.action not in ["prep_at_capacity", "priority_at_max"]:
+			ordered.append(value)
+	for value: Dictionary in values:
+		if value.action in ["prep_at_capacity", "priority_at_max"]:
+			ordered.append(value)
+	return ordered
 
 
 static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used: int) -> Dictionary:
