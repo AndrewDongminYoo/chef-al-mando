@@ -836,7 +836,8 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 			return tr("프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.recipe_for(target_id).display_name), row.planned, row.used, row.remaining, recommendation.amount]
 		"prep_at_capacity":
 			var row: Dictionary = report.prep[target_id]
-			return tr("프렙 · %s %d개를 모두 사용 · 생재료 손질 %d건\n→ 준비 노동량 %d / %d로 가득 찼습니다. 다른 프렙 잔량이나 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, report.labor_used, report.labor_capacity]
+			var remaining_labor: int = report.labor_capacity - report.labor_used
+			return tr("프렙 · %s %d개를 모두 사용 · 생재료 손질 %d건\n→ 준비 노동량 %d / %d · 남은 노동량 %d는 1개에 필요한 %d보다 적습니다. 다른 프렙 잔량이나 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, report.labor_used, report.labor_capacity, remaining_labor, row.prep_labor_units]
 		"increase_purchase":
 			var row: Dictionary = report.ingredients[target_id]
 			return tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.related_shortage_ticks / 10.0]

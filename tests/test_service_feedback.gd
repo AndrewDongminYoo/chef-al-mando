@@ -277,6 +277,13 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		screen.call("advance", 0.1)
 	expect(screen.get("duty_labels")[0].text.contains("제공대로 운반 중"),
 		"live feedback distinguishes carrying a completed dish to the pass")
+	var partial_capacity_report := {"prep": {"soup": {"used": 2, "raw_orders": 1,
+		"prep_labor_units": 2}}, "labor_used": 5, "labor_capacity": 6}
+	var partial_capacity := {"action": "prep_at_capacity", "target_id": "soup"}
+	var capacity_text: String = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
+	expect(capacity_text.contains("남은 노동량 1") and capacity_text.contains("필요한 2")
+		and not capacity_text.contains("가득"),
+		"partial prep capacity explains the remaining and required labor in Korean")
 	expect(screen.get("app_preferences").update_settings({"locale": "en"}).accepted,
 		"live feedback fixture switches to English")
 	chatter = board.get("chatter")
@@ -285,6 +292,10 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		"locale refresh retranslates the employee activity and visible chef bubble")
 	expect(board.call("_phase_mark", "pickup") == "I",
 		"the English board translates the compact phase badge")
+	capacity_text = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
+	expect(capacity_text.contains("1 remains") and capacity_text.contains("2 needed")
+		and not capacity_text.contains("full"),
+		"partial prep capacity explains the remaining and required labor in English")
 	screen.get("pause_button").pressed.emit()
 	screen.call("_process", 2.19)
 	expect(not board.get("chatter").is_empty(), "the chef bubble remains visible before 2.2 real seconds")
