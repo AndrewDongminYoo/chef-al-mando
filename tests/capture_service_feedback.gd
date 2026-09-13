@@ -34,7 +34,7 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	var prep_recipe_id := "grill" if hot_queue else "salad"
-	var prep_quantity := 4 if hot_queue else 1
+	var prep_quantity := 2 if hot_queue else 1
 	checks.expect(screen.submit_preparation("set_prep", prep_recipe_id, prep_quantity).accepted,
 		"service feedback capture prepares the target portions")
 	if hot_queue:

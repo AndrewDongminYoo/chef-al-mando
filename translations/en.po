@@ -791,18 +791,6 @@ msgstr "placing the dish on the pass"
 msgid "작업대"
 msgstr "station"
 
-msgid "재"
-msgstr "I"
-
-msgid "손"
-msgstr "P"
-
-msgid "조"
-msgstr "C"
-
-msgid "출"
-msgstr "S"
-
 msgid "으악, %s 재료가 없어!"
 msgstr "Oh no, %s ingredients are gone!"
 
