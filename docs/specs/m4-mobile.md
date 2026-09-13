@@ -69,6 +69,9 @@ M3 schema 1은 읽을 때 `active_session: null`로 해석하며, 읽기만으�
 이전 목표로 완료한 기록에는 `legacy_completed` 표식을 붙이며, 새 목표를 달성하면 표식을 제거합니다.
 2026-09-11 자동 정책 검증과 난이도 조정은 새 쓰기의 `content_version`을 3으로 올립니다.
 콘텐츠 버전 2는 완료·최고 기록을 그대로 유지하고 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 3으로 갱신합니다.
+2026-09-13 승인된 `hot_queue` 프렙 집중 보정은 새 쓰기의 `content_version`을 4로 올립니다.
+콘텐츠 버전 3은 완료·최고 기록을 그대로 유지하고 `hot_queue`의 진행 중 영업만 `null`로 해석합니다.
+다른 시나리오의 진행 중 영업은 현재 콘텐츠에서 전체 복원 검증을 통과할 때 보존하며, 다음 정상 쓰기에서 버전 4로 갱신합니다.
 `load_records()`와 `save_records(records)`의 기존 호출은 유지합니다.
 records만 저장하는 호출은 기존 active session을 보존해야 합니다.
 `save_active_session(session, records)`는 둘을 한 번에 교체하고, `clear_active_session()`은 기록을 유지한 채 session만 `null`로 저장합니다.

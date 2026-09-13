@@ -80,10 +80,41 @@ func run(_tree: SceneTree) -> void:
 					"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
 					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
+	_test_hot_queue_focus(campaign)
 	for owned_file: String in DirAccess.get_files_at(directory):
 		DirAccess.remove_absolute(directory + "/" + owned_file)
 	DirAccess.remove_absolute(directory)
 	_compare_choices(campaign)
+
+
+func _test_hot_queue_focus(campaign: Resource) -> void:
+	var scenario: Resource = campaign.scenario_for("hot_queue")
+	var overprepared := Policies.run_policy(scenario, {"preparation": [
+		{"kind": "set_prep", "target_id": "grill", "value": 4}], "priorities": {}})
+	expect(not overprepared.accepted and overprepared.reason.contains("insufficient_labor"),
+		"hot queue rejects spending all preparation on four grilled dishes")
+	var reference: Dictionary = Policies.reference_policy("hot_queue")
+	var preparation_only: Array = []
+	for choice: Dictionary in reference.preparation:
+		if choice.kind == "set_prep":
+			preparation_only.append(choice)
+	expect(preparation_only.size() == reference.preparation.size(),
+		"hot queue reference policy does not require station placement")
+	var two_lever_policy := {
+		"preparation": preparation_only,
+		"priorities": reference.priorities.duplicate(true),
+	}
+	var run := Policies.run_policy(scenario, two_lever_policy)
+	expect(run.accepted, "hot queue preparation and priority policy executes from the initial layout")
+	if not run.accepted:
+		return
+	var view: Dictionary = run.snapshot
+	expect(view.accounting.served >= scenario.minimum_served
+		and view.accounting.profit >= scenario.minimum_profit,
+		"hot queue preparation and priority policy passes both goals from the initial layout")
+	var fast := Policies.run_policy(scenario, two_lever_policy, 4)
+	expect(fast.accepted and fast.hash == run.hash,
+		"hot queue two-lever policy matches at one and four speed")
 
 
 func _compare_choices(campaign: Resource) -> void:

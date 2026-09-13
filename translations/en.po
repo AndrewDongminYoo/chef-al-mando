@@ -275,6 +275,9 @@ msgstr "New campaign · completion and best records save at closing"
 msgid "주방 운영 규칙을 갱신했습니다. 완료 기록은 보존하고 진행 중이던 영업은 다시 시작합니다."
 msgstr "Kitchen rules were updated. Completed records are preserved. Restart the service that was in progress."
 
+msgid "주방 운영 규칙을 갱신했습니다. 완료 기록을 보존했고 진행 중이던 영업을 이어갈 수 있습니다."
+msgstr "Kitchen rules were updated. Completion records are preserved, and the service in progress can continue."
+
 msgid "이 앱에서 지원하지 않는 버전의 기록입니다. 기존 파일을 보존합니다."
 msgstr "This record version is not supported. The existing file is preserved."
 
@@ -599,8 +602,8 @@ msgstr "Hot-station queue"
 msgid "온식 우선순위"
 msgstr "Hot-order priority"
 
-msgid "주문이 네 차례에 걸쳐 몰려옵니다. 재료 보관대와 출고대는 옮길 수 없습니다. 구이를 미리 손질하고 냉식대·화구 동선을 줄인 뒤 구이 우선순위를 높여 병목을 넘기세요."
-msgstr "Orders arrive in four rushes. Storage and the pass are fixed. Prep grilled dishes, shorten cold and hot routes, and raise grill priority to clear the bottleneck."
+msgid "주문이 네 차례에 걸쳐 몰려옵니다. 구이만 많이 손질하면 짧은 주문이 밀립니다. 구이와 샐러드 프렙을 나누고 구이 우선순위를 높여 온식 병목을 넘기세요."
+msgstr "Orders arrive in four rushes. Prepping only grilled dishes delays shorter orders. Split prep between grilled dishes and salads, then raise grill priority to clear the hot-dish bottleneck."
 
 msgid "메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능"
 msgstr "Default menu priorities · 0–2\nHigher values go first for new orders.\nChange individual orders during service."
@@ -790,18 +793,6 @@ msgstr "placing the dish on the pass"
 
 msgid "작업대"
 msgstr "station"
-
-msgid "재"
-msgstr "I"
-
-msgid "손"
-msgstr "P"
-
-msgid "조"
-msgstr "C"
-
-msgid "출"
-msgstr "S"
 
 msgid "으악, %s 재료가 없어!"
 msgstr "Oh no, %s ingredients are gone!"

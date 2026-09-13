@@ -108,7 +108,7 @@ func _test_restore(campaign: Resource) -> void:
 	DirAccess.make_dir_recursive_absolute(directory)
 	var target := directory + "/records.json"
 	var file := FileAccess.open(target, FileAccess.WRITE)
-	file.store_string(JSON.stringify({"schema_version": 2, "content_version": 3, "sim_version": 1,
+	file.store_string(JSON.stringify({"schema_version": 2, "content_version": 4, "sim_version": 1,
 		"records": {}, "active_session": old_session}))
 	file.close()
 	var bytes := FileAccess.get_file_as_bytes(target)

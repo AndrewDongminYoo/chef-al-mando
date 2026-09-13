@@ -20,7 +20,7 @@ func run(tree: SceneTree) -> void:
 func _test_hot_queue_limits() -> void:
 	var scenario: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "grill", 4).accepted, "hot queue accepts four grill preparations")
+	expect(_prepare(plan, "set_prep", "grill", 2).accepted, "hot queue accepts two grill preparations at capacity")
 	expect(_prepare(plan, "set_menu_priority", "grill", 2).accepted, "hot queue accepts maximum grill priority")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "hot queue feedback fixture starts from real preparation")
@@ -32,7 +32,7 @@ func _test_hot_queue_limits() -> void:
 	var fast_report: Dictionary = ServiceAnalysis.build(started.definitions, fast_simulation.snapshot(), started.selection)
 	expect(fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
 		"hot queue final state and service analysis are identical at 1x and 4x")
-	expect(report.prep.grill.planned == 4 and report.prep.grill.used == 4 and report.prep.grill.remaining == 0,
+	expect(report.prep.grill.planned == 2 and report.prep.grill.used == 2 and report.prep.grill.remaining == 0,
 		"analysis reports selected, used, and remaining grill preparation")
 	expect(report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
 		"analysis reports the maximum grill priority and its missed orders")
@@ -260,8 +260,9 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 	expect(chatter is Dictionary and chatter.get("kind") == "prepared_stock_depleted" and chatter.get("text", "").contains("프렙 다 썼다"),
 		"the board shows a localized chef bubble when prepared stock runs out")
 	var badges: Variant = board.get("employee_badges")
-	expect(badges is Dictionary and badges.get("employee_01", {}).get("phase") == "pickup",
-		"the board exposes the active phase badge for the assigned employee")
+	expect(badges is Dictionary and badges.get("employee_01", {}).get("recipe_id") == "salad"
+		and not badges.get("employee_01", {}).has("phase"),
+		"the board keeps the active recipe icon without a redundant phase badge")
 	while screen.get("simulation").snapshot().orders[0].phase_id != "cook" or screen.get("simulation").snapshot().orders[0].state != "working":
 		screen.call("advance", 0.1)
 	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중"),
@@ -290,8 +291,6 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 	expect(screen.get("duty_labels")[0].text.contains("carrying the dish to the pass")
 		and chatter is Dictionary and chatter.get("text", "").contains("prep is gone"),
 		"locale refresh retranslates the employee activity and visible chef bubble")
-	expect(board.call("_phase_mark", "pickup") == "I",
-		"the English board translates the compact phase badge")
 	capacity_text = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
 	expect(capacity_text.contains("1 remains") and capacity_text.contains("2 needed")
 		and not capacity_text.contains("full"),

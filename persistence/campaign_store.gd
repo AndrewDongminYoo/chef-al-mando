@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 3, "content_version": 3, "sim_version": 1}
+const VERSIONS := {"schema_version": 3, "content_version": 4, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 
@@ -152,7 +152,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and (version == LEGACY_SCHEMA_VERSION or version == 2):
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3]:
 			content_updated = true
 			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue
@@ -176,18 +176,26 @@ func _read(target: String) -> Dictionary:
 			records[key].legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("corrupt_records")
-	if content_updated:
-		return {"accepted": true, "reason": "content_updated", "records": records,
-			"active_session": null, "can_recover": false}
 	var active_session: Variant = null
 	if schema_version >= 2:
 		active_session = document.get("active_session", "missing")
 		if active_session != null:
-			if not active_session is Dictionary or not ServiceSession.restore(_campaign, active_session, records).accepted:
+			if not active_session is Dictionary:
 				return _failure("corrupt_records")
-			active_session = active_session.duplicate(true)
-	return {"accepted": true, "reason": "loaded", "records": records,
+			if content_updated and _content_update_restarts_session(int(document.content_version), active_session):
+				active_session = null
+			elif not ServiceSession.restore(_campaign, active_session, records).accepted:
+				return _failure("corrupt_records")
+			else:
+				active_session = active_session.duplicate(true)
+	return {"accepted": true, "reason": "content_updated" if content_updated else "loaded", "records": records,
 		"active_session": active_session, "can_recover": false}
+
+
+func _content_update_restarts_session(source_content_version: int, active_session: Dictionary) -> bool:
+	if source_content_version < 3:
+		return true
+	return source_content_version == 3 and active_session.get("scenario_id") == "hot_queue"
 
 
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:

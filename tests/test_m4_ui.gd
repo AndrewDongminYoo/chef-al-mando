@@ -15,6 +15,19 @@ func run(tree: SceneTree) -> void:
 	var save_path := directory + "/campaign.json"
 	var screen := _boot(tree, entry, save_path, directory + "/settings.json")
 	await tree.process_frame
+	screen.set("active_session", {"scenario_id": "lunch_prep"})
+	screen.call("_set_save_message", "storage", "content_updated")
+	screen.call("_refresh_catalog")
+	expect(screen.get("continue_button").visible
+		and screen.get("save_label").text == "주방 운영 규칙을 갱신했습니다. 완료 기록을 보존했고 진행 중이던 영업을 이어갈 수 있습니다.",
+		"a content update explains that a preserved active service can continue")
+	screen.set("active_session", null)
+	screen.call("_set_save_message", "storage", "content_updated")
+	screen.call("_refresh_catalog")
+	expect(not screen.get("continue_button").visible
+		and screen.get("save_label").text == "주방 운영 규칙을 갱신했습니다. 완료 기록은 보존하고 진행 중이던 영업은 다시 시작합니다.",
+		"a content update explains when its active service was restarted")
+	screen.call("_set_save_message", "storage", "new_campaign")
 	expect(_find_button(screen, "설정") != null,
 		"the campaign catalog provides a settings action")
 	screen.get("settings_button").pressed.emit()
@@ -35,6 +48,12 @@ func run(tree: SceneTree) -> void:
 		and screen.get("settings_button").text == "Settings"
 		and screen.get("begin_button").text == "Start preparation",
 		"locale input immediately refreshes static and dynamic campaign text")
+	screen.set("active_session", {"scenario_id": "lunch_prep"})
+	screen.call("_set_save_message", "storage", "content_updated")
+	expect(screen.get("save_label").text == "Kitchen rules were updated. Completion records are preserved, and the service in progress can continue.",
+		"an English content update explains that a preserved active service can continue")
+	screen.set("active_session", null)
+	screen.call("_set_save_message", "storage", "new_campaign")
 	expect(fresh_settings.accepted
 		and fresh_preferences.snapshot() == {"locale": "en", "sound_enabled": false, "text_size": "large"},
 		"a fresh preferences object reads all three settings from the isolated file")

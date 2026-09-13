@@ -23,7 +23,7 @@ func show_state(data: Definitions, snapshot: Dictionary) -> void:
 	for employee: Dictionary in view.get("employees", []):
 		for order: Dictionary in view.get("orders", []):
 			if order.id == employee.order_id:
-				employee_badges[employee.id] = {"phase": order.phase_id, "recipe_id": order.recipe_id}
+				employee_badges[employee.id] = {"recipe_id": order.recipe_id}
 				break
 	queue_redraw()
 
@@ -89,26 +89,17 @@ func _draw() -> void:
 			if order.id == employee.order_id and order.state == "working":
 				draw_arc(center, cell * 0.44, -PI * 0.9, -PI * 0.1, 10, Color("f1c56f"), 3)
 		if employee_badges.has(employee.id):
-			_draw_employee_badge(center, cell, employee_badges[employee.id], font, font_size)
+			_draw_employee_badge(center, cell, employee_badges[employee.id])
 		draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, roundi(maxi(12, int(cell * 0.3)) * text_scale), Color("182728"))
 	if not chatter.is_empty():
 		_draw_chatter(kitchen_rect, origin, cell, font, font_size)
 
 
-func _draw_employee_badge(center: Vector2, cell: float, badge: Dictionary, font: Font, font_size: int) -> void:
+func _draw_employee_badge(center: Vector2, cell: float, badge: Dictionary) -> void:
 	var recipe := definitions.recipe_for(badge.recipe_id)
 	var icon_size := cell * 0.32
 	if recipe != null and recipe.icon != null:
 		draw_texture_rect(recipe.icon, Rect2(center + Vector2(cell * 0.14, -cell * 0.47), Vector2.ONE * icon_size), false)
-	var phase_mark := _phase_mark(badge.phase)
-	var badge_center := center + Vector2(-cell * 0.28, -cell * 0.32)
-	draw_circle(badge_center, cell * 0.17, Color("182728"))
-	draw_string(font, badge_center + Vector2(-cell * 0.14, cell * 0.1), phase_mark,
-		HORIZONTAL_ALIGNMENT_CENTER, cell * 0.28, mini(font_size, roundi(cell * 0.24)), Color("fff0c6"))
-
-
-func _phase_mark(phase: String) -> String:
-	return tr({"pickup": "재", "prep": "손", "cook": "조", "serve": "출"}.get(phase, ""))
 
 
 func _draw_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, font: Font, font_size: int) -> void:
