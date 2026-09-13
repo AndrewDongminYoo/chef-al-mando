@@ -50,7 +50,7 @@
 
 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2`는 486개 검사를 실패 없이 통과했습니다.
 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,049개 검사를 실패 없이 통과했습니다.
-`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4`는 1,187개 검사를 실패 없이 통과했습니다.
+`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4`는 1,190개 검사를 실패 없이 통과했습니다.
 
 ## 검증 범위
 
@@ -64,7 +64,7 @@
 | `scripts/check.sh m2`        | 준비·배치·공간 규칙·분석                                      | 486개 검사, 실패 0   |
 | `scripts/check.sh m3`        | 캠페인 파동·복수 전략·무계획 격차·결정론·실제 장면            | 1,049개 검사, 실패 0 |
 | `scripts/check.sh m4-core`   | 영업 상태·세션·파일·명령 관계                                 | 879개 검사, 실패 0   |
-| `scripts/check.sh m4`        | 콘텐츠 마이그레이션·저장·복구·설정·화면 연결                  | 1,187개 검사, 실패 0 |
+| `scripts/check.sh m4`        | 콘텐츠 마이그레이션·저장·복구·설정·화면 연결                  | 1,190개 검사, 실패 0 |
 | `scripts/check.sh m5`        | 출시 준비 자산·저장·완주                                      | 583개 검사, 실패 0   |
 | `tests/test_m4_restart.py`   | 별도 프로세스의 M4 재시작 경로                                | 10개 검사 통과       |
 | `tests/test_export_check.py` | export preset과 정적 계약                                     | 10개 검사 통과       |

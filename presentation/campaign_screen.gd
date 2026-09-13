@@ -776,6 +776,8 @@ func _storage_message(reason: String) -> String:
 		"new_campaign":
 			return tr("새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다")
 		"content_updated":
+			if active_session is Dictionary:
+				return tr("주방 운영 규칙을 갱신했습니다. 완료 기록을 보존했고 진행 중이던 영업을 이어갈 수 있습니다.")
 			return tr("주방 운영 규칙을 갱신했습니다. 완료 기록은 보존하고 진행 중이던 영업은 다시 시작합니다.")
 		"future_version", "unsupported_version":
 			return tr("이 앱에서 지원하지 않는 버전의 기록입니다. 기존 파일을 보존합니다.")
