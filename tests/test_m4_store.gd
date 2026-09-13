@@ -175,8 +175,9 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	var version_three_bytes := FileAccess.get_file_as_bytes(version_three_target)
 	loaded = CampaignStore.new(campaign, version_three_target).load_records()
 	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"the hot queue preparation update preserves version 3 records and restarts the active service")
+		and _same_restore(_restore_loaded(campaign, loaded),
+			ServiceSession.restore(campaign, active_session, current_records)),
+		"the hot queue preparation update preserves a restorable version 3 session for another service")
 	expect(FileAccess.get_file_as_bytes(version_three_target) == version_three_bytes,
 		"a content update leaves the version 3 file unchanged until the next write")
 	expect(CampaignStore.new(campaign, version_three_target).save_records(current_records).accepted,
@@ -184,6 +185,25 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	var version_three_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_three_target))
 	expect(version_three_migrated is Dictionary and version_three_migrated.content_version == 4,
 		"a migrated version 3 record writes the current content version")
+	var version_three_hot_queue_target := directory + "/content_version_three_hot_queue.json"
+	var hot_queue_session := _scenario_session(campaign, "hot_queue")
+	_write(version_three_hot_queue_target, JSON.stringify({"schema_version": 3, "content_version": 3,
+		"sim_version": 1, "records": current_records, "active_session": hot_queue_session}))
+	var version_three_hot_queue_bytes := FileAccess.get_file_as_bytes(version_three_hot_queue_target)
+	loaded = CampaignStore.new(campaign, version_three_hot_queue_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
+		and loaded.active_session == null,
+		"the hot queue preparation update restarts a version 3 hot queue session")
+	expect(FileAccess.get_file_as_bytes(version_three_hot_queue_target) == version_three_hot_queue_bytes,
+		"restarting a version 3 hot queue session leaves the old file unchanged until the next write")
+	var version_three_corrupt_target := directory + "/content_version_three_corrupt_session.json"
+	var corrupt_session: Dictionary = active_session.duplicate(true)
+	corrupt_session.speed = 3
+	_write(version_three_corrupt_target, JSON.stringify({"schema_version": 3, "content_version": 3,
+		"sim_version": 1, "records": current_records, "active_session": corrupt_session}))
+	loaded = CampaignStore.new(campaign, version_three_corrupt_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"the hot queue preparation update rejects a corrupt version 3 session for another service")
 	var first: Resource = campaign.scenario_for("first_shift")
 	var corrupt_legacy_cases := {
 		"served": {"completed": true, "best_served": 9, "best_profit": 1000},
@@ -248,14 +268,18 @@ func _write(target: String, text: String) -> void:
 
 
 func _later_session(campaign: Resource, tick_count: int = 1) -> Dictionary:
-	var plan := PreparationPlan.new(campaign.scenario_for("lunch_prep"))
+	return _scenario_session(campaign, "lunch_prep", tick_count)
+
+
+func _scenario_session(campaign: Resource, scenario_id: String, tick_count: int = 1) -> Dictionary:
+	var plan := PreparationPlan.new(campaign.scenario_for(scenario_id))
 	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
 		"apply_tick": 0, "sequence": 1})
-	expect(started.accepted, "the later-service store fixture starts")
+	expect(started.accepted, "the scenario store fixture starts: %s" % scenario_id)
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
 	for _step: int in range(tick_count):
 		simulation.step()
-	return ServiceSession.capture("lunch_prep", started.selection, simulation, 2, 12345)
+	return ServiceSession.capture(scenario_id, started.selection, simulation, 2, 12345)
 
 
 func _closed_session(campaign: Resource) -> Dictionary:
