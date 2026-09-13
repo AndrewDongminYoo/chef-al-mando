@@ -13,9 +13,8 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "soup", 4)
 			_add(policy, "set_prep", "grain_salad", 1)
 		"hot_queue":
-			_add(policy, "set_prep", "grill", 4)
-			_moves(policy, "cold_01", "left", 2)
-			_moves(policy, "hot_01", "left", 3)
+			_add(policy, "set_prep", "grill", 1)
+			_add(policy, "set_prep", "salad", 3)
 			policy.priorities = {"grill": 2}
 		"shared_stock":
 			_add(policy, "set_prep", "soup", 4)
@@ -51,10 +50,10 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 	var policy: Dictionary = {"preparation": [], "priorities": {}}
 	match scenario_id:
 		"hot_queue":
-			_add(policy, "set_prep", "grill", 3)
-			_moves(policy, "cold_01", "left", 2)
-			_moves(policy, "hot_01", "left", 3)
-			policy.priorities = {"grill": 2}
+			_add(policy, "set_prep", "grill", 1)
+			_add(policy, "set_prep", "soup", 1)
+			_add(policy, "set_prep", "salad", 1)
+			policy.priorities = {"grill": 2, "soup": 0}
 		"shared_stock":
 			_add(policy, "set_purchase", "vegetable", 29)
 			_add(policy, "set_prep", "soup", 4)

@@ -35,7 +35,10 @@ func run(_tree: SceneTree) -> void:
 					continue
 				results[layout + "/" + duties] = result
 				expect(result.snapshot.tick == scenario.closing_tick, "policy comparison runs to closing")
-				expect(result.selection.purchases == baseline.purchases and result.selection.prep_quantities.grill == 4, "layout and duty comparisons use the same ingredient and prep choices")
+				var expected_prep: bool = result.selection.prep_quantities.grill == (1 if scenario_id == "hot_queue" else 4) \
+					and (scenario_id != "hot_queue" or result.selection.prep_quantities.salad == 3)
+				expect(result.selection.purchases == baseline.purchases and expected_prep,
+					"layout and duty comparisons use the same ingredient and prep choices")
 				if layout == "clustered" and duties == "all":
 					var repeat := Policies.run_policy(scenario, policy)
 					var fast := Policies.run_policy(scenario, policy, 4)

@@ -32,7 +32,7 @@ func run(_tree: SceneTree) -> void:
 	var records := {"first_shift": {"completed": true, "best_served": first.minimum_served,
 		"best_profit": first.minimum_profit}}
 	_test_content_update(campaign, directory)
-	var schema_one := {"schema_version": 1, "content_version": 3, "sim_version": 1, "records": records}
+	var schema_one := {"schema_version": 1, "content_version": 4, "sim_version": 1, "records": records}
 	_write(file_path, JSON.stringify(schema_one))
 	var original_bytes := FileAccess.get_file_as_bytes(file_path)
 	var loaded: Dictionary = CampaignStore.new(campaign, file_path).load_records()
@@ -43,13 +43,13 @@ func run(_tree: SceneTree) -> void:
 		"the next successful records write upgrades schema 1")
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
 	expect(migrated is Dictionary and migrated.size() == 5 and migrated.schema_version == 3
-		and migrated.content_version == 3 and migrated.sim_version == 1
+		and migrated.content_version == 4 and migrated.sim_version == 1
 		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null,
 		"schema 1 upgrades to the exact schema 3 envelope")
 	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
 		"schema 1 record metrics remain exact after migration")
 	var session := _later_session(campaign, 1)
-	var schema_two := {"schema_version": 2, "content_version": 3, "sim_version": 1,
+	var schema_two := {"schema_version": 2, "content_version": 4, "sim_version": 1,
 		"records": records, "active_session": session}
 	_write(file_path, JSON.stringify(schema_two))
 	loaded = CampaignStore.new(campaign, file_path).load_records()
@@ -167,8 +167,23 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	expect(CampaignStore.new(campaign, version_two_target).save_records(current_records).accepted,
 		"the next write upgrades a version 2 record to the current content version")
 	var version_two_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_two_target))
-	expect(version_two_migrated is Dictionary and version_two_migrated.content_version == 3,
+	expect(version_two_migrated is Dictionary and version_two_migrated.content_version == 4,
 		"a migrated version 2 record writes the current content version")
+	var version_three_target := directory + "/content_version_three.json"
+	_write(version_three_target, JSON.stringify({"schema_version": 3, "content_version": 3,
+		"sim_version": 1, "records": current_records, "active_session": active_session}))
+	var version_three_bytes := FileAccess.get_file_as_bytes(version_three_target)
+	loaded = CampaignStore.new(campaign, version_three_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
+		and loaded.active_session == null,
+		"the hot queue preparation update preserves version 3 records and restarts the active service")
+	expect(FileAccess.get_file_as_bytes(version_three_target) == version_three_bytes,
+		"a content update leaves the version 3 file unchanged until the next write")
+	expect(CampaignStore.new(campaign, version_three_target).save_records(current_records).accepted,
+		"the next write upgrades a version 3 record to the current content version")
+	var version_three_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_three_target))
+	expect(version_three_migrated is Dictionary and version_three_migrated.content_version == 4,
+		"a migrated version 3 record writes the current content version")
 	var first: Resource = campaign.scenario_for("first_shift")
 	var corrupt_legacy_cases := {
 		"served": {"completed": true, "best_served": 9, "best_profit": 1000},
@@ -180,7 +195,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 		_write(corrupt_legacy_target, JSON.stringify({"schema_version": 3, "content_version": 1,
 			"sim_version": 1, "records": corrupt_legacy_records, "active_session": null}))
 		_write(corrupt_legacy_target + ".backup", JSON.stringify({"schema_version": 3,
-			"content_version": 3, "sim_version": 1, "records": {}, "active_session": null}))
+			"content_version": 4, "sim_version": 1, "records": {}, "active_session": null}))
 		var corrupt_legacy_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target)
 		var valid_backup_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup")
 		var corrupt_legacy_store := CampaignStore.new(campaign, corrupt_legacy_target)
@@ -195,10 +210,10 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 		var forged_target := directory + "/forged_legacy_marker_" + label + ".json"
 		var forged_records := corrupt_legacy_records.duplicate(true)
 		forged_records.first_shift.legacy_completed = true
-		_write(forged_target, JSON.stringify({"schema_version": 3, "content_version": 3,
+		_write(forged_target, JSON.stringify({"schema_version": 3, "content_version": 4,
 			"sim_version": 1, "records": forged_records, "active_session": null}))
 		_write(forged_target + ".backup", JSON.stringify({"schema_version": 3,
-			"content_version": 3, "sim_version": 1, "records": {}, "active_session": null}))
+			"content_version": 4, "sim_version": 1, "records": {}, "active_session": null}))
 		var forged_bytes := FileAccess.get_file_as_bytes(forged_target)
 		var forged_backup_bytes := FileAccess.get_file_as_bytes(forged_target + ".backup")
 		var forged_store := CampaignStore.new(campaign, forged_target)
@@ -213,7 +228,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	var invalid_target := directory + "/invalid_current_completion.json"
 	var invalid_records := {"first_shift": {"completed": true,
 		"best_served": first.minimum_served - 1, "best_profit": -first.starting_budget}}
-	_write(invalid_target, JSON.stringify({"schema_version": 3, "content_version": 3, "sim_version": 1,
+	_write(invalid_target, JSON.stringify({"schema_version": 3, "content_version": 4, "sim_version": 1,
 		"records": invalid_records, "active_session": null}))
 	var invalid_bytes := FileAccess.get_file_as_bytes(invalid_target)
 	var invalid_store := CampaignStore.new(campaign, invalid_target)
@@ -392,7 +407,7 @@ func _test_recovery(campaign: Resource, directory: String, records: Dictionary, 
 func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
 	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 3, "sim_version": 1, "records": {}, "active_session": valid_session}))
+		"content_version": 4, "sim_version": 1, "records": {}, "active_session": valid_session}))
 	expect(valid_document is Dictionary
 		and valid_document.active_session.simulation.orders[0].reserved_inputs.vegetable is float,
 		"the store recovery fixture round-trips the reservation through actual JSON")
@@ -429,7 +444,7 @@ func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -
 func _test_task_path_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
 	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 3, "sim_version": 1, "records": {}, "active_session": valid_session}))
+		"content_version": 4, "sim_version": 1, "records": {}, "active_session": valid_session}))
 	var valid_task: Dictionary = valid_document.active_session.simulation.tasks[0]
 	expect(valid_task.path_index == 0.0 and valid_task.collection_index == -1.0
 		and valid_task.path.size() >= 2,
@@ -477,7 +492,7 @@ func _test_task_path_json_recovery(campaign: Resource, directory: String) -> voi
 func _test_movement_and_result_json_recovery(campaign: Resource, directory: String) -> void:
 	for corruption: String in ["progress", "result_position"]:
 		var valid_session := _moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
-		var document := {"schema_version": 2, "content_version": 3, "sim_version": 1,
+		var document := {"schema_version": 2, "content_version": 4, "sim_version": 1,
 			"records": {}, "active_session": valid_session}
 		var valid_text := JSON.stringify(document)
 		var corrupted: Variant = JSON.parse_string(valid_text)
@@ -536,7 +551,7 @@ func _waiting_result_session(campaign: Resource) -> Dictionary:
 
 func _test_future_versions(campaign: Resource, directory: String, records: Dictionary,
 	active_session: Dictionary) -> void:
-	var valid_document := {"schema_version": 2, "content_version": 3, "sim_version": 1,
+	var valid_document := {"schema_version": 2, "content_version": 4, "sim_version": 1,
 		"records": records, "active_session": active_session}
 	var future_document := valid_document.duplicate(true)
 	future_document.schema_version = 99

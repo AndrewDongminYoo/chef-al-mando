@@ -20,9 +20,12 @@ static func scenario(scenario_id: String, constrained: bool = true) -> ScenarioD
 static func policy(scenario_id: String, layout: String = "original", duties: String = "all") -> Dictionary:
 	assert(scenario_id in SCENARIOS and layout in LAYOUTS and duties in DUTIES)
 	var result: Dictionary = {"preparation": [], "priorities": {}}
-	_add(result, "set_prep", "grill", 4)
 	if scenario_id == "hot_queue":
+		_add(result, "set_prep", "grill", 1)
+		_add(result, "set_prep", "salad", 3)
 		_add(result, "set_menu_priority", "grill", 2)
+	else:
+		_add(result, "set_prep", "grill", 4)
 	if layout == "legacy":
 		for choice: Dictionary in Policies.reference_policy(scenario_id).preparation:
 			if choice.kind in ["move_station", "rotate_station"]:

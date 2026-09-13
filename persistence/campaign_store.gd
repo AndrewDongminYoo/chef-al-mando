@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 3, "content_version": 3, "sim_version": 1}
+const VERSIONS := {"schema_version": 3, "content_version": 4, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 
@@ -152,7 +152,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and (version == LEGACY_SCHEMA_VERSION or version == 2):
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3]:
 			content_updated = true
 			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue

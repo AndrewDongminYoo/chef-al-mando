@@ -20,7 +20,7 @@ func run(tree: SceneTree) -> void:
 func _test_hot_queue_limits() -> void:
 	var scenario: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "grill", 4).accepted, "hot queue accepts four grill preparations")
+	expect(_prepare(plan, "set_prep", "grill", 2).accepted, "hot queue accepts two grill preparations at capacity")
 	expect(_prepare(plan, "set_menu_priority", "grill", 2).accepted, "hot queue accepts maximum grill priority")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "hot queue feedback fixture starts from real preparation")
@@ -32,7 +32,7 @@ func _test_hot_queue_limits() -> void:
 	var fast_report: Dictionary = ServiceAnalysis.build(started.definitions, fast_simulation.snapshot(), started.selection)
 	expect(fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
 		"hot queue final state and service analysis are identical at 1x and 4x")
-	expect(report.prep.grill.planned == 4 and report.prep.grill.used == 4 and report.prep.grill.remaining == 0,
+	expect(report.prep.grill.planned == 2 and report.prep.grill.used == 2 and report.prep.grill.remaining == 0,
 		"analysis reports selected, used, and remaining grill preparation")
 	expect(report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
 		"analysis reports the maximum grill priority and its missed orders")
