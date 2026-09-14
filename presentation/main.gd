@@ -31,7 +31,6 @@ const WAIT_TEXT := {"missing_ingredients": "재료 부족", "no_responsible_empl
 const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
 const ANALYSIS_HEADING_COLOR := Color("eab06c")
 const ANALYSIS_BODY_COLOR := Color("f5edda")
-const ANALYSIS_ACTION_COLOR := Color("a6b5a8")
 const ANALYSIS_DETAIL_COLOR := Color("c6c9b8")
 
 @export_file("*.tres") var scenario_path: String = "res://content/m1_first_service.tres"
@@ -279,7 +278,7 @@ func _show_counter() -> void:
 	if tenths == shown_tenths:
 		return
 	shown_tenths = tenths
-	counter.text = tr("%05.1f초") % elapsed_seconds
+	counter.text = tr("경과 %05.1f초") % elapsed_seconds
 	remaining_label.text = tr("남은 시간 %05.1f초  ·  ") % ((definitions.closing_tick - simulation.tick) / 10.0)
 
 
@@ -338,9 +337,9 @@ func _new_service() -> void:
 			employee_controls.add_child(column)
 			var label := Label.new()
 			label.custom_minimum_size = Vector2(0, 64)
-			label.add_theme_font_size_override("font_size", 13)
+			label.add_theme_font_size_override("font_size", 18)
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			label.max_lines_visible = 3
+			label.max_lines_visible = 4
 			column.add_child(label)
 			duty_labels.append(label)
 			var button := OptionButton.new()
@@ -793,13 +792,13 @@ func _show_analysis() -> void:
 func _render_analysis(summary: String, recommendations: PackedStringArray, details: String) -> void:
 	var heading_size := app_preferences.font_size(22)
 	var body_size := app_preferences.font_size(18)
-	var action_size := app_preferences.font_size(15)
+	var action_size := body_size
 	var detail_heading_size := app_preferences.font_size(19)
 	var detail_size := app_preferences.font_size(16)
 	analysis_label.set_meta("action_heading_font_size", heading_size)
 	analysis_label.set_meta("action_font_size", action_size)
 	analysis_label.set_meta("action_heading_color", ANALYSIS_HEADING_COLOR)
-	analysis_label.set_meta("action_color", ANALYSIS_ACTION_COLOR)
+	analysis_label.set_meta("action_color", ANALYSIS_HEADING_COLOR)
 	analysis_label.clear()
 	_analysis_text(tr("다음 영업에서 바꿀 것"), heading_size, ANALYSIS_HEADING_COLOR)
 	analysis_label.add_text("\n")
@@ -808,7 +807,7 @@ func _render_analysis(summary: String, recommendations: PackedStringArray, detai
 		_analysis_text(parts[0], body_size, ANALYSIS_BODY_COLOR)
 		if parts.size() > 1:
 			analysis_label.add_text("\n")
-			_analysis_text(parts[1], action_size, ANALYSIS_ACTION_COLOR)
+			_analysis_text(parts[1], action_size, ANALYSIS_HEADING_COLOR)
 		analysis_label.add_text("\n\n")
 	_analysis_text(tr("상세 지표"), detail_heading_size, ANALYSIS_HEADING_COLOR)
 	analysis_label.add_text("\n")

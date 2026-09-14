@@ -368,6 +368,9 @@ msgstr "%05.1f s"
 msgid "남은 시간 %05.1f초  ·  "
 msgstr "Time remaining %05.1f s  ·  "
 
+msgid "경과 %05.1f초"
+msgstr "Elapsed %05.1f s"
+
 msgid "준비 다시 하기"
 msgstr "Prepare again"
 
@@ -756,10 +759,10 @@ msgid "→ 이미 최대입니다. 작업대 대기 %.1f초가 가장 큽니다.
 msgstr "→ It is already at maximum. The station wait is highest at %.1f sec. Next service, change one cold or hot station and compare the station wait."
 
 msgid "프렙 재료 받으러 재료 보관대로 이동 중"
-msgstr "moving to storage for prepped ingredients"
+msgstr "fetching prep"
 
 msgid "원재료 받으러 재료 보관대로 이동 중"
-msgstr "moving to storage for raw ingredients"
+msgstr "fetching raw"
 
 msgid "새 재료 손질하러 이동 중"
 msgstr "moving to prep raw ingredients"

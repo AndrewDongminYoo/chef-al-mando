@@ -150,6 +150,27 @@ func _capture_completed_campaign(screen: CampaignScreen, tablet: bool) -> void:
 	for button: OptionButton in service.duty_buttons:
 		_check_target(button, service.safe_area.get_global_rect())
 	await _frame("four-employees")
+	if TranslationServer.get_locale() == "en":
+		await _verify_dense_english_status(service, tablet)
+
+
+func _verify_dense_english_status(service: Control, tablet: bool) -> void:
+	var expected := {"fetching prep": false, "fetching raw": false}
+	while service.simulation.tick < service.definitions.closing_tick:
+		for label: Label in service.duty_labels:
+			for phrase: String in expected:
+				if not expected[phrase] and label.text.contains(phrase):
+					if "--negative-employee-status" in OS.get_cmdline_user_args():
+						label.max_lines_visible = 1
+					await _settle(service, tablet)
+					_check_text(label)
+					expected[phrase] = true
+					await _frame("four-employees-" + phrase.replace(" ", "-"))
+		if expected.values().all(func(found: bool) -> bool: return found):
+			break
+		service.advance(0.1)
+	for phrase: String in expected:
+		checks.expect(expected[phrase], "dense English service renders status: " + phrase)
 
 
 func _settle(screen: Control, tablet: bool) -> void:
