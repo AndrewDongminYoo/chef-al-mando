@@ -35,6 +35,34 @@ func run(_tree: SceneTree) -> void:
 		expect(repeat.accepted and repeat.hash == run.hash, "fixed campaign policy repeats the final state hash: " + scenario.id)
 		expect(fast.accepted and fast.hash == run.hash, "one and four speed match at the same campaign ticks: " + scenario.id)
 		print("M3_PLAYTHROUGH ", scenario.id, " ", JSON.stringify({"accounting": view.accounting, "metrics": view.metrics, "hash": run.hash}, "", true))
+		var alternatives: Array[Dictionary] = Policies.alternative_policies(scenario.id)
+		expect(alternatives.size() >= 2, "each campaign stage defines at least three clear strategies: " + scenario.id)
+		var policy_hashes: Array[String] = [run.hash]
+		var policies: Array[Dictionary] = [policy]
+		for index: int in alternatives.size():
+			var alternative: Dictionary = alternatives[index]
+			var alternative_run := Policies.run_policy(scenario, alternative)
+			expect(not policies.has(alternative) and alternative_run.accepted,
+				"the alternative policy executes with distinct player choices: %s %d" % [scenario.id, index])
+			if not alternative_run.accepted:
+				continue
+			var alternative_view: Dictionary = alternative_run.snapshot
+			expect(alternative_view.accounting.served >= scenario.minimum_served
+				and alternative_view.accounting.profit >= scenario.minimum_profit,
+				"the alternative policy passes both goals: %s %d" % [scenario.id, index])
+			expect(not policy_hashes.has(alternative_run.hash),
+				"the alternative policy produces a pairwise-distinct final state: %s %d" % [scenario.id, index])
+			var alternative_repeat := Policies.run_policy(scenario, alternative)
+			var alternative_fast := Policies.run_policy(scenario, alternative, 4)
+			expect(alternative_repeat.accepted and alternative_repeat.hash == alternative_run.hash,
+				"the alternative policy repeats its final state: %s %d" % [scenario.id, index])
+			expect(alternative_fast.accepted and alternative_fast.hash == alternative_run.hash,
+				"the alternative policy matches at one and four speed: %s %d" % [scenario.id, index])
+			policy_hashes.append(alternative_run.hash)
+			policies.append(alternative)
+			print("M3_STRATEGY ", scenario.id, " ", JSON.stringify({
+				"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
+				"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 		if campaign.scenarios.find(scenario) >= 2:
 			var no_plan := Policies.run_policy(scenario)
 			expect(no_plan.accepted, "the no-plan comparison runs: " + scenario.id)
@@ -54,30 +82,6 @@ func run(_tree: SceneTree) -> void:
 				print("M3_PRESSURE ", scenario.id, " ", JSON.stringify({
 					"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
 					"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
-					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
-			var alternatives: Array[Dictionary] = Policies.alternative_policies(scenario.id)
-			expect(not alternatives.is_empty(), "a pressure service defines an alternative plan: " + scenario.id)
-			for index: int in alternatives.size():
-				var alternative: Dictionary = alternatives[index]
-				var alternative_run := Policies.run_policy(scenario, alternative)
-				expect(alternative != policy and alternative_run.accepted,
-					"the alternative policy executes: %s %d" % [scenario.id, index])
-				if not alternative_run.accepted:
-					continue
-				var alternative_view: Dictionary = alternative_run.snapshot
-				expect(alternative_view.accounting.served >= scenario.minimum_served
-					and alternative_view.accounting.profit >= scenario.minimum_profit,
-					"the alternative policy passes both goals: %s %d" % [scenario.id, index])
-				expect(alternative_run.hash != run.hash,
-					"the alternative policy produces a distinct final state: %s %d" % [scenario.id, index])
-				var alternative_repeat := Policies.run_policy(scenario, alternative)
-				var alternative_fast := Policies.run_policy(scenario, alternative, 4)
-				expect(alternative_repeat.accepted and alternative_repeat.hash == alternative_run.hash,
-					"the alternative policy repeats its final state: %s %d" % [scenario.id, index])
-				expect(alternative_fast.accepted and alternative_fast.hash == alternative_run.hash,
-					"the alternative policy matches at one and four speed: %s %d" % [scenario.id, index])
-				print("M3_STRATEGY ", scenario.id, " ", JSON.stringify({
-					"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
 					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
 	_test_hot_queue_focus(campaign)

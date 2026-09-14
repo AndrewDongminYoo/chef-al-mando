@@ -322,6 +322,15 @@ Godot import 중 `cannot connect to daemon at tcp:5037: Connection refused` 진�
 남은 실기기 검사는 저장 후 앱 종료·이어하기, 통화·알림·권한창 중단 후 수동 재개, 두 언어·글자 크기·안전 영역입니다.
 사용자 5명 검증은 운영자의 명시적 재개 지시까지 보류합니다.
 
+### 2026-09-14 iPhone 통합 관찰
+
+소스 `1c7d4a232438ad65be9bc575e44fdff5f9779d12`의 개발 앱을 iPhone 16 Pro에 설치한 뒤 운영자가 통합 체크리스트를 수행했습니다.
+운영자는 한국어·영어와 큰 글자에서 캠페인 목록·준비 화면의 주요 버튼이 잘리지 않았고, 양 가로 방향의 안전 영역과 실제 터치가 정상이었다고 확인했습니다.
+진행 중 10초 배경 전환 뒤 타이머가 멈춘 상태로 유지됐으며 직접 재개한 뒤에만 다시 진행됐습니다.
+앱 전환기에서 진행 중 앱을 종료하고 아이콘으로 다시 열었을 때 이어하기가 표시됐고 시간·준비·재고·주문 상태가 보존됐으며 자동 재개되지 않았습니다.
+기기에서 다시 읽은 저장은 `content_version: 4`, `scenario_id: hot_queue`, `speed: 4`, `tick: 3000`, `closed: true`였고 체크리스트의 프렙·기본 우선순위 선택을 유지했습니다.
+이 관찰은 iPhone 한 대의 지정 경로를 확인하며, 통화·알림·권한창 중단과 Android·실제 태블릿 검증은 아직 남아 있습니다.
+
 ## 선례와 구현 결정
 
 Oracle의 관련 전역 선례는 `raw/sources/.claude/rules/evidence-basis-discipline.md`이며 대응 페이지는 `wiki/sources/claude--rules--evidence-basis-discipline.md`입니다.

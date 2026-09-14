@@ -185,3 +185,43 @@ Wrapper가 처리한 `build/ios/chef_al_mando/chef_al_mando-Info.plist`와 `buil
 `python3 tests/test_ios_export.py`는 가짜 엔진을 통한 wrapper 연결과 산출물 누락 실패 경로를 별도로 검사합니다.
 앞 절의 직접 Godot export 명령과 해시는 당시 산출물의 이력이며 현재 표준 명령을 뜻하지 않습니다.
 이 검증은 Xcode가 빌드한 최종 앱의 선언이나 실기기 설치를 아직 증명하지 않습니다.
+
+## 9. `1c7d4a2` iPhone 통합 수용 후보
+
+2026-09-14에 로컬과 원격 `main`이 모두 `1c7d4a232438ad65be9bc575e44fdff5f9779d12`이고 작업 트리가 깨끗한 상태에서 새 iOS 개발 빌드를 만들었습니다.
+Godot `4.7.2.stable.official.ed1daf0bf`로 표준 wrapper를 실행하고 Xcode 26.6의 iPhoneOS Debug 빌드를 수행했습니다.
+실제 Godot export와 Xcode build가 성공했으며 `codesign --verify --deep --strict`가 앱 번들을 승인했습니다.
+최종 앱의 `Info.plist`에는 `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, `NSPhotoLibraryUsageDescription`가 없었습니다.
+
+| 항목              | 값                                                                 |
+| ----------------- | ------------------------------------------------------------------ |
+| 소스              | `1c7d4a232438ad65be9bc575e44fdff5f9779d12`                         |
+| 앱 ID             | `kr.donminzzi.chefalmandodev`                                      |
+| 버전·빌드         | `0.0.1 (1)`                                                        |
+| 최소 iOS          | `15.0`                                                             |
+| 실행 파일 SHA-256 | `702710aa1737f2696c396ec9d744b073130cd1d8e116c216fd107cfdf5aa2f40` |
+| PCK SHA-256       | `5af0a51a51d5120ad56e4b57510656e48d95def7d9de8bff81a429cbd28a77dc` |
+| 앱 ZIP SHA-256    | `9b9d5c1521c3e0923c4efa69bd1e6bb8fb160fa05766e23f4beeca8e467d0aea` |
+| 기기              | iPhone 16 Pro, iOS 26.6.1 (`23G83`)                                |
+
+앱 PCK는 export PCK와 바이트가 같았고, `scripts/check-export.sh`는 이 앱 PCK에서 M1~M5 완료 표시 일곱 개를 확인했습니다.
+10:09 KST에 기존 개발 앱 위로 설치했으며 `devicectl` 결과는 `success`였습니다.
+설치 전에 `campaign_records.json`과 `campaign_records.json.backup`을 각각 복사했습니다.
+백업 파일의 첫 복사는 네트워크 터널 시간 초과로 실패했지만 설치 전에 새 결과 파일로 다시 복사해 성공했습니다.
+설치 후 두 파일을 다시 복사했으며 각각 설치 전 파일과 `cmp`가 일치했습니다.
+주 파일 SHA-256은 `70ca017689712abfefdc8cb81284b2caa8395f814d1e97fc096a4d36f5fb3ec9`이고 백업 SHA-256은 `27c7bac56ca73150f81b1df1b44b9a9130a79f62ffb0e6922aceaac013eefcc2`입니다.
+
+첫 실행 요청은 기기가 잠겨 있어 SpringBoard가 `Locked`로 거부했습니다.
+앱 프로세스는 시작되지 않았으며 이 결과는 앱 결함이나 실행 성공으로 판정하지 않습니다.
+기기 잠금을 해제한 뒤 10:37 KST에 기존 프로세스 종료 옵션 없이 다시 요청했고, `devicectl` 결과는 `success`이며 프로세스 식별자는 `4735`였습니다.
+이 성공은 앱 시작만 증명합니다.
+운영자는 이후 안내한 통합 체크리스트 1~7을 모두 통과했다고 보고했습니다.
+홈 화면 아이콘, 양 가로 방향의 안전 영역과 실제 터치, 한국어·영어와 큰 글자, 10초 배경 전환 후 정지 유지와 명시적 재개, 앱 전환기 종료 후 이어하기와 상태 보존을 확인했습니다.
+기기에서 다시 복사한 저장은 `content_version: 4`였으며 `hot_queue`의 구이 프렙 1개·샐러드 프렙 3개·구이 기본 우선순위 2, 기본 배치, 4배속, 3000 tick 마감을 보존했습니다.
+이번 판은 제공 12건·미제공 8건·손익 4,750원으로 목표를 정확히 통과했습니다.
+운영자는 일부 캠페인의 정답 조합이 좁아 다른 선택으로 목표에 도달하기 어렵지만 문제 될 정도는 아니라고 평가했으며, 이를 비차단 전략 다양성 제약으로 남겼습니다.
+실제 탭과 `M0_INPUT` 횟수 대조, 통화·알림·권한창 중단, Android·실제 태블릿·사용자 5명·스토어 다운로드 검증은 아직 남아 있습니다.
+
+개인 `chef-al-mando`에서 `device acceptance evidence`와 `release candidate identity`를 조회한 Oracle 결과는 모두 `[no precedent found]`였습니다.
+조회 `sourceCommit`은 `c1681868ac634e4b2414874716bb75a7864113c4`이며 현재 wiki와의 일치 여부는 미검증입니다.
+따라서 새로운 선례로 방향을 바꾸지 않고 현재 명세와 이번 산출물 증거를 사용했습니다.

@@ -49,6 +49,10 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 	var alternatives: Array[Dictionary] = []
 	var policy: Dictionary = {"preparation": [], "priorities": {}}
 	match scenario_id:
+		"first_shift":
+			_add(policy, "set_prep", "salad", 2)
+		"lunch_prep":
+			_add(policy, "set_prep", "salad", 6)
 		"hot_queue":
 			_add(policy, "set_prep", "grill", 1)
 			_add(policy, "set_prep", "soup", 1)
@@ -75,6 +79,29 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 		"final_service":
 			_add(policy, "set_prep", "grill", 6)
 			_moves(policy, "hot_02", "right", 1)
+	if not policy.preparation.is_empty() or not policy.priorities.is_empty():
+		alternatives.append(policy)
+	policy = {"preparation": [], "priorities": {}}
+	match scenario_id:
+		"first_shift":
+			_add(policy, "set_purchase", "vegetable", 11)
+		"lunch_prep":
+			_add(policy, "set_purchase", "vegetable", 19)
+		"hot_queue":
+			policy = reference_policy(scenario_id)
+			_add(policy, "set_purchase", "protein", 5)
+		"shared_stock":
+			policy.priorities = {"soup": 2}
+		"long_route":
+			policy = reference_policy(scenario_id)
+			_add(policy, "set_duty", "employee_03", "hot")
+		"split_duties":
+			_add(policy, "set_prep", "mushroom_salad", 1)
+		"rush_hour":
+			policy.priorities = {"mushroom_soup": 0}
+		"final_service":
+			policy = reference_policy(scenario_id)
+			_add(policy, "set_purchase", "protein", 7)
 	if not policy.preparation.is_empty() or not policy.priorities.is_empty():
 		alternatives.append(policy)
 	return alternatives
