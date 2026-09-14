@@ -195,7 +195,7 @@ func _capture_cancel_states(service: Control) -> void:
 	root.push_input(motion, true)
 	checks.expect(root.gui_get_hovered_control() == button, "cancel hover reaches the actual control")
 	await _frame("cancel-hover")
-	_check_cancel_color(button)
+	var hover_color := _check_cancel_color(button)
 	var press := InputEventMouseButton.new()
 	press.position = center
 	press.button_index = MOUSE_BUTTON_LEFT
@@ -203,7 +203,9 @@ func _capture_cancel_states(service: Control) -> void:
 	root.push_input(press, true)
 	checks.expect(button.get_draw_mode() == BaseButton.DRAW_PRESSED, "cancel fixture renders the pressed state")
 	await _frame("cancel-pressed")
-	_check_cancel_color(button)
+	var pressed_color := _check_cancel_color(button)
+	checks.expect(not hover_color.is_equal_approx(pressed_color),
+		"rendered cancel press is visibly different from hover")
 	motion.position = Vector2(-100, -100)
 	root.push_input(motion, true)
 	var release := InputEventMouseButton.new()
@@ -213,12 +215,13 @@ func _capture_cancel_states(service: Control) -> void:
 	checks.expect(service.get("simulation").state_hash() == before, "cancel state capture does not submit an order command")
 
 
-func _check_cancel_color(button: Button) -> void:
+func _check_cancel_color(button: Button) -> Color:
 	var frame := root.get_texture().get_image()
 	var point := (button.get_global_rect().position + Vector2(20, 10)) * Vector2(frame.get_size()) / root.get_visible_rect().size
 	var pixel := frame.get_pixelv(Vector2i(point))
 	checks.expect(pixel.r > pixel.g + 0.06 and pixel.r > pixel.b + 0.06,
 		"rendered cancel interaction retains its warm warning color")
+	return pixel
 
 
 func _check_target(button: Button, allowed: Rect2) -> void:
