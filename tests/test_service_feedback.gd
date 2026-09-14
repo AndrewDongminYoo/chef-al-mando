@@ -282,9 +282,23 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		"prep_labor_units": 2}}, "labor_used": 5, "labor_capacity": 6}
 	var partial_capacity := {"action": "prep_at_capacity", "target_id": "soup"}
 	var capacity_text: String = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
-	expect(capacity_text.contains("남은 노동량 1") and capacity_text.contains("필요한 2")
-		and not capacity_text.contains("가득"),
-		"partial prep capacity explains the remaining and required labor in Korean")
+	expect(capacity_text.contains("프렙 1개를 더 만들 수 없습니다") and capacity_text.contains("필요한 노동량은 2")
+		and capacity_text.contains("남은 노동량은 1")
+		and not capacity_text.contains("1는"),
+		"partial prep capacity explains the remaining and required labor in natural Korean")
+	var purchase_report := {"ingredients": {"vegetable": {"purchased": 3, "used": 3}}}
+	var purchase_text: String = screen.call("_recommendation_text", purchase_report,
+		{"action": "purchase_consumed", "target_id": "vegetable"})
+	expect(purchase_text.contains("채소 3개를 모두 사용") and purchase_text.contains("채소 발주량은 유지하세요")
+		and purchase_text.contains("프렙, 우선순위, 배치") and not purchase_text.contains("운영 선택 하나"),
+		"consumed-purchase feedback names the preserved quantity and concrete experiment choices")
+	var priority_report := {"priorities": {"soup": {"default_priority": 1,
+		"expired": 3, "pressure_ticks": 1350}}}
+	var priority_text: String = screen.call("_recommendation_text", priority_report,
+		{"action": "raise_priority", "target_id": "soup", "amount": 1})
+	expect(priority_text.contains("작업 대기 135.0초") and priority_text.contains("곡물 수프의 기본 우선순위를 2로")
+		and not priority_text.contains("경합"),
+		"priority feedback names the observed wait and the next absolute setting")
 	expect(screen.get("app_preferences").update_settings({"locale": "en"}).accepted,
 		"live feedback fixture switches to English")
 	chatter = board.get("chatter")
@@ -292,7 +306,8 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		and chatter is Dictionary and chatter.get("text", "").contains("prep is gone"),
 		"locale refresh retranslates the employee activity and visible chef bubble")
 	capacity_text = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
-	expect(capacity_text.contains("1 remains") and capacity_text.contains("2 needed")
+	expect(capacity_text.contains("needs 2 prep capacity") and capacity_text.contains("with 1 left")
+		and capacity_text.contains("if available")
 		and not capacity_text.contains("full"),
 		"partial prep capacity explains the remaining and required labor in English")
 	screen.get("pause_button").pressed.emit()

@@ -132,7 +132,7 @@
 **Interfaces:**
 
 - Consumes: `ServiceAnalysis.build` 결과.
-- Produces: `다음 영업에서 바꿀 것`과 기존 상세 지표를 함께 표시하는 마감 화면.
+- Produces: 다음 영업 추천과 기존 상세 지표를 함께 표시하는 마감 화면.
 
 - [x] **Step 1: 실패 테스트 작성**
 
@@ -157,3 +157,44 @@
 - [x] **Step 5: 렌더 검증**
 
   전용 서비스 피드백 캡처로 한국어·영어, 기본·큰 글자, 휴대폰·태블릿 조합과 `hot_queue` 상한 선택을 생성하고 이미지에서 말풍선, 직원 상태, 마감 분석의 잘림·겹침을 확인합니다.
+
+### 작업 5: 마감 분석 문구 정리
+
+**Files:**
+
+- Modify: `presentation/main.gd`
+- Modify: `translations/en.po`
+- Modify: `tests/test_service_feedback.gd`
+- Modify: `tests/test_m2_ui.gd`
+- Modify: `tests/capture_service_feedback.gd`
+- Modify: `tests/capture_product_polish.gd`
+- Modify: `docs/specs/service-feedback.md`
+- Modify: `docs/specs/ui-ux-information-hierarchy.md`
+- Create: `docs/notes/analysis-copy-verification.md`
+
+**Interfaces:**
+
+- Consumes: 기존 `ServiceAnalysis.build`의 구조화된 추천과 측정값.
+- Produces: 같은 추천을 자연스럽고 구체적인 한국어와 영어로 표시하는 마감 분석.
+
+- [x] **Step 1: 실패 테스트 작성**
+
+  실제 화면에서 제목, 준비 노동량 부족, 발주 유지와 우선순위 증가 문구를 확인합니다.
+  테스트는 `0는`, `경합`, `운영 선택 하나`와 상대적인 `1 올리기`가 다시 나타나면 실패해야 합니다.
+
+- [x] **Step 2: RED 확인**
+
+  Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2`
+  Expected: 현재 마감 분석 문구가 새 계약과 일치하지 않아 실패합니다.
+
+- [x] **Step 3: 최소 구현**
+
+  `_recommendation_text`와 제목의 현지화 문자열만 바꿉니다.
+  추천 선정, 측정 수치, 정렬, 시뮬레이션과 저장 상태는 변경하지 않습니다.
+
+- [x] **Step 4: GREEN과 렌더 검증**
+
+  Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2`
+  Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4`
+  Run: `/Applications/Godot.app/Contents/MacOS/Godot --path . --max-fps 60 --script tests/capture_service_feedback.gd -- --hot-queue --large-text`
+  Expected: 자동 검사가 실패 0으로 끝나고 한국어 휴대폰 분석 문구가 잘리지 않습니다.
