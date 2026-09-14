@@ -17,6 +17,7 @@ func run(tree: SceneTree) -> void:
 	await tree.process_frame
 	expect(screen.get("scenario_buttons").size() == 8, "the real scene displays all eight services")
 	expect(screen.get("scenario_buttons").lunch_prep.disabled, "a locked service button is disabled")
+	await _expect_row_drag_scrolls(tree, screen.get("list_scroll"), screen.get("scenario_buttons").first_shift, "campaign service")
 	expect(not screen.call("select_scenario", "lunch_prep"), "the scene rejects direct selection of a locked service")
 	expect(screen.call("select_scenario", "first_shift"), "the first service can be selected")
 	expect(screen.get("briefing_label").text.contains("채소 샐러드"), "briefing shows the actual first menu")
@@ -88,6 +89,7 @@ func run(tree: SceneTree) -> void:
 		if scenario.id == "hot_queue":
 			var view: Dictionary = service.get("simulation").snapshot()
 			expect(view.orders.size() == 20 and view.accounting.expired > 0 and not view.closed, "the hot-queue fixture includes all arrivals and real expired orders before closing")
+			await _expect_row_drag_scrolls(tree, service.get("order_buttons").order_10.get_parent().get_parent(), service.get("order_buttons").order_10, "service order")
 			var counts: Array = [view.orders.size(), scenario.order_count, view.accounting.served, view.accounting.expired, view.accounting.cancelled]
 			expect(service.get("summary_label").text.contains("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d" % counts), "the Korean running summary separates arrivals, served orders, expirations, and cancellations")
 			var before_locale: String = service.get("simulation").state_hash()
@@ -147,6 +149,59 @@ func run(tree: SceneTree) -> void:
 	for owned_file: String in DirAccess.get_files_at(directory):
 		DirAccess.remove_absolute(directory + "/" + owned_file)
 	DirAccess.remove_absolute(directory)
+
+
+func _expect_row_drag_scrolls(tree: SceneTree, scroll: ScrollContainer, row: Button, context: String) -> void:
+	await tree.process_frame
+	await tree.process_frame
+	scroll.scroll_vertical = 0
+	scroll.ensure_control_visible(row)
+	await tree.process_frame
+	await tree.process_frame
+	expect(scroll.get_global_rect().encloses(row.get_global_rect()), context + " row is visible inside its scroll viewport")
+	var activations := {"count": 0}
+	var drag_events := {"count": 0}
+	row.pressed.connect(func() -> void: activations.count += 1)
+	scroll.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventScreenDrag:
+			drag_events.count += 1
+	)
+	var start := tree.root.get_screen_transform() * row.get_global_rect().get_center()
+	var current := start
+	var press := InputEventScreenTouch.new()
+	press.index = 0
+	press.position = current
+	press.pressed = true
+	Input.parse_input_event(press)
+	await tree.process_frame
+	for offset: Vector2 in [Vector2(0, -32), Vector2(0, -32), Vector2(0, -32), Vector2(0, -32)]:
+		current += offset
+		var drag := InputEventScreenDrag.new()
+		drag.index = 0
+		drag.position = current
+		drag.relative = offset
+		Input.parse_input_event(drag)
+		await tree.process_frame
+	var release := InputEventScreenTouch.new()
+	release.index = 0
+	release.position = current
+	release.pressed = false
+	Input.parse_input_event(release)
+	await tree.process_frame
+	expect(drag_events.count > 0, context + " row drag reaches its parent scroll container")
+	expect(activations.count == 0, context + " row drag does not activate the row")
+	scroll.scroll_vertical = 0
+	scroll.ensure_control_visible(row)
+	await tree.process_frame
+	start = tree.root.get_screen_transform() * row.get_global_rect().get_center()
+	for pressed: bool in [true, false]:
+		var touch := InputEventScreenTouch.new()
+		touch.index = 0
+		touch.position = start
+		touch.pressed = pressed
+		Input.parse_input_event(touch)
+		await tree.process_frame
+	expect(activations.count == 1, context + " row tap activates exactly once after drag support")
 
 
 func _tap_hot_queue_priority(tree: SceneTree, service: Control, order_id: String) -> void:

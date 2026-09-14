@@ -485,6 +485,7 @@ func _refresh_service() -> void:
 		if not order_buttons.has(order.id):
 			var button := Button.new()
 			button.custom_minimum_size = Vector2(64, 64)
+			button.mouse_filter = Control.MOUSE_FILTER_PASS
 			button.add_theme_font_size_override("font_size", 20)
 			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			button.icon = definitions.recipe_for(order.recipe_id).icon
