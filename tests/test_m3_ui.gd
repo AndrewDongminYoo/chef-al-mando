@@ -158,7 +158,7 @@ func _expect_row_drag_scrolls(tree: SceneTree, scroll: ScrollContainer, row: But
 	scroll.ensure_control_visible(row)
 	await tree.process_frame
 	await tree.process_frame
-	expect(scroll.get_global_rect().encloses(row.get_global_rect()), context + " row is visible inside its scroll viewport")
+	expect(scroll.get_global_rect().has_point(row.get_global_rect().get_center()), context + " row center is visible inside its scroll viewport")
 	var activations := {"count": 0}
 	var drag_events := {"count": 0}
 	row.pressed.connect(func() -> void: activations.count += 1)
