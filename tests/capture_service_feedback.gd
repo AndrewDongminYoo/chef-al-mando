@@ -53,6 +53,7 @@ func run() -> void:
 	checks.expect(screen.safe_area.get_global_rect().encloses(screen.board.get_global_rect())
 		and screen.duty_labels[0].is_visible_in_tree(),
 		"rendered activity and board remain inside the safe area")
+	_expect_header_fits(screen, "activity")
 	DirAccess.make_dir_recursive_absolute("res://build/check")
 	var prefix := "service-feedback-hot-queue" if hot_queue else "service-feedback"
 	var variant := "%s-%s-%s" % [locale, "large" if large_text else "normal", layout_name]
@@ -66,6 +67,8 @@ func run() -> void:
 	screen.chatter_seconds_left = 0.0
 	screen.board.show_chatter({})
 	await process_frame
+	_expect_header_fits(screen, "analysis")
+	_expect_analysis_action_style(screen)
 	await save_frame("res://build/check/%s-%s-analysis.png" % [prefix, variant])
 	screen.queue_free()
 	await process_frame
@@ -73,3 +76,59 @@ func run() -> void:
 	TranslationServer.set_locale("ko")
 	print("Service feedback rendered checks=%d failures=%d" % [checks.checked, checks.failures])
 	quit(1 if checks.failures > 0 else 0)
+
+
+func _expect_header_fits(screen: KitchenScreen, phase: String) -> void:
+	var title_rect := screen.title_label.get_global_rect()
+	var remaining_rect := screen.remaining_label.get_global_rect()
+	var counter_rect := screen.counter.get_global_rect()
+	var settings_rect := screen.settings_button.get_global_rect()
+	checks.expect(title_rect.size.x >= screen.title_label.get_combined_minimum_size().x,
+		"rendered %s header keeps the full scenario title" % phase)
+	checks.expect(title_rect.end.x <= remaining_rect.position.x
+		and remaining_rect.end.x <= counter_rect.position.x
+		and counter_rect.end.x <= settings_rect.position.x,
+		"rendered %s header keeps title and time labels separate" % phase)
+	checks.expect(screen.safe_area.get_global_rect().encloses(settings_rect),
+		"rendered %s header keeps settings inside the safe area" % phase)
+
+
+func _expect_analysis_action_style(screen: KitchenScreen) -> void:
+	var label := screen.analysis_label
+	var action_index := label.get_parsed_text().find("→")
+	checks.expect(action_index >= 0, "rendered analysis contains an action line")
+	if action_index < 0:
+		return
+	var action_line := label.get_character_line(action_index)
+	var action_range := label.get_line_range(action_line)
+	var action_text := label.get_parsed_text().substr(action_range.x,
+		action_range.y - action_range.x).trim_suffix("\n")
+	var expected_font_size := 22 if "--large-text" in OS.get_cmdline_user_args() else 18
+	var expected_color := Color("eab06c")
+	if "--negative-analysis-style" in OS.get_cmdline_user_args():
+		expected_font_size += 1
+		expected_color = Color.MAGENTA
+	var expected_width := label.get_theme_font("normal_font").get_string_size(action_text,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, expected_font_size).x
+	checks.expect(absf(label.get_line_width(action_line) - expected_width) < 2.0,
+		"rendered analysis action uses the observation font size")
+	RenderingServer.force_draw(false)
+	var frame := root.get_texture().get_image()
+	var line_rect := Rect2(label.get_global_rect().position
+		+ Vector2(0, label.get_line_offset(action_line)),
+		Vector2(label.size.x, label.get_line_height(action_line)))
+	checks.expect(_region_contains_color(frame, line_rect, expected_color),
+		"rendered analysis action uses the copper action color")
+
+
+func _region_contains_color(frame: Image, region: Rect2, target: Color) -> bool:
+	var scale := Vector2(frame.get_size()) / root.get_visible_rect().size
+	var start := Vector2i(region.position * scale).clamp(Vector2i.ZERO, frame.get_size() - Vector2i.ONE)
+	var finish := Vector2i(region.end * scale).clamp(Vector2i.ZERO, frame.get_size())
+	for pixel_y: int in range(start.y, finish.y):
+		for pixel_x: int in range(start.x, finish.x):
+			var pixel := frame.get_pixel(pixel_x, pixel_y)
+			if absf(pixel.r - target.r) < 0.08 and absf(pixel.g - target.g) < 0.08 \
+				and absf(pixel.b - target.b) < 0.08:
+				return true
+	return false

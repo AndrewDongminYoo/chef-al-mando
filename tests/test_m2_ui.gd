@@ -20,6 +20,17 @@ func run(tree: SceneTree) -> void:
 	await tree.process_frame
 	var plan: RefCounted = screen.get("preparation")
 	var panel: Control = screen.get("preparation_panel")
+	var employee_status := screen.get("duty_labels")[0] as Label
+	expect(employee_status.get_theme_font_size("font_size") == 18,
+		"employee status uses the readable normal text size")
+	expect(employee_status.max_lines_visible == 4,
+		"employee status preserves translated destinations in dense layouts")
+	expect(screen.get("app_preferences").update_settings({"text_size": "large"}).accepted,
+		"employee status fixture enables large text")
+	expect(employee_status.get_theme_font_size("font_size") == 22,
+		"employee status follows the readable large text size")
+	expect(screen.get("app_preferences").update_settings({"text_size": "normal"}).accepted,
+		"employee status fixture restores normal text")
 	expect(panel.visible and screen.get("simulation").tick == 0, "M2 starts in preparation with no running game time")
 	expect(screen.get("summary_label").is_visible_in_tree(), "preparation budget is visible on the initial stock tab")
 	var initial_summary: String = screen.get("summary_label").text
@@ -72,8 +83,10 @@ func run(tree: SceneTree) -> void:
 	expect(analysis is RichTextLabel, "closing analysis supports distinct text hierarchy")
 	expect(int(analysis.get_meta("action_heading_font_size", 0)) > int(analysis.get_meta("action_font_size", 0)),
 		"closing analysis makes the action heading larger than each proposed change")
-	expect(analysis.get_meta("action_color", Color.TRANSPARENT) != analysis.get_meta("action_heading_color", Color.TRANSPARENT),
-		"closing analysis gives proposed changes a distinct supporting color")
+	expect(int(analysis.get_meta("action_font_size", 0)) == 18,
+		"closing analysis keeps each proposed change at the readable body size")
+	expect(analysis.get_meta("action_color", Color.TRANSPARENT) == Color("eab06c"),
+		"closing analysis emphasizes each proposed change with the action color")
 	var analysis_scroll: ScrollContainer = screen.get("analysis_scroll")
 	analysis.set("fit_content", false)
 	analysis.custom_minimum_size.y = 3000.0

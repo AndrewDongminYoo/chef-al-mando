@@ -45,7 +45,7 @@ func run(tree: SceneTree) -> void:
 	expect(not screen.is_running(), "focus loss alone pauses the counter")
 	screen.lifecycle.notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_IN)
 	expect(screen.status_label.text == KitchenScreen.STATUS_TEXT[KitchenScreen.State.PAUSED], "status text follows the state")
-	expect(screen.counter.text == "003.0초", "counter text shows tenths of a second")
+	expect(screen.counter.text == "경과 003.0초", "counter text labels elapsed tenths of a second")
 	expect(screen.get("input_actions") == 4, "lifecycle pauses must not count as button input")
 	screen.start_button.pressed.emit()
 	screen.start_button.pressed.emit()

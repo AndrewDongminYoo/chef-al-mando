@@ -572,9 +572,12 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var ready_hash: String = service.get("simulation").state_hash()
 	var ready_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
 	service.get("settings_locale").item_selected.emit(1)
-	expect(counter.text == "000.0 s", "a ready locale change refreshes the exact English elapsed time")
+	expect(counter.text == "Elapsed 000.0 s", "a ready locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 300.0 s  ·  ",
 		"a ready locale change refreshes the exact English remaining time")
+	expect(tr("프렙 재료 받으러 재료 보관대로 이동 중") == "fetching prep"
+		and tr("원재료 받으러 재료 보관대로 이동 중") == "fetching raw",
+		"English pickup movement stays concise in dense employee status columns")
 	expect(employee_one_label.text == "Employee 1",
 		"a ready locale change refreshes the exact first employee name")
 	expect(employee_two_label.text == "Employee 2",
@@ -587,7 +590,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and service.get("simulation").state_hash() == ready_hash,
 		"a ready locale change preserves the service state, tick, and commands")
 	service.get("settings_locale").item_selected.emit(0)
-	expect(counter.text == "000.0초", "a ready locale change refreshes the exact Korean elapsed time")
+	expect(counter.text == "경과 000.0초", "a ready locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 300.0초  ·  ",
 		"a ready locale change refreshes the exact Korean remaining time")
 	expect(employee_one_label.text == "직원 1",
@@ -616,7 +619,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var paused_hash: String = service.get("simulation").state_hash()
 	var paused_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
 	service.get("settings_locale").item_selected.emit(1)
-	expect(counter.text == "001.0 s", "a paused locale change refreshes the exact English elapsed time")
+	expect(counter.text == "Elapsed 001.0 s", "a paused locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 299.0 s  ·  ",
 		"a paused locale change refreshes the exact English remaining time")
 	expect(details_toggle.text == "Show order details",
@@ -626,7 +629,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and service.get("simulation").state_hash() == paused_hash and not detail_panel.visible,
 		"the collapsed locale change preserves the paused state, tick, commands, and panel visibility")
 	service.get("settings_locale").item_selected.emit(0)
-	expect(counter.text == "001.0초", "a paused locale change refreshes the exact Korean elapsed time")
+	expect(counter.text == "경과 001.0초", "a paused locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 299.0초  ·  ",
 		"a paused locale change refreshes the exact Korean remaining time")
 	expect(details_toggle.text == "주문 상세 펼치기",
@@ -659,7 +662,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var closed_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
 	var closed_panel_visible: bool = detail_panel.visible
 	service.get("settings_locale").item_selected.emit(1)
-	expect(counter.text == "300.0 s", "a closed locale change refreshes the exact English elapsed time")
+	expect(counter.text == "Elapsed 300.0 s", "a closed locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 000.0 s  ·  ",
 		"a closed locale change refreshes the exact English remaining time")
 	expect(service.get("state") == 3 and service.get("simulation").tick == 3000
@@ -668,7 +671,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and detail_panel.visible == closed_panel_visible,
 		"a closed locale change preserves the service state, tick, commands, and panel visibility")
 	service.get("settings_locale").item_selected.emit(0)
-	expect(counter.text == "300.0초", "a closed locale change refreshes the exact Korean elapsed time")
+	expect(counter.text == "경과 300.0초", "a closed locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 000.0초  ·  ",
 		"a closed locale change refreshes the exact Korean remaining time")
 	expect(service.get("state") == 3 and service.get("simulation").tick == 3000
@@ -703,7 +706,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	expect(TranslationServer.get_locale() == "en" and service.call("is_running")
 		and service.get("simulation").tick == 0,
 		"a fresh campaign loads the saved English locale before the service starts")
-	expect(counter.text == "000.0 s", "a saved-English boot renders the exact elapsed time after Start")
+	expect(counter.text == "Elapsed 000.0 s", "a saved-English boot labels the exact elapsed time after Start")
 	expect(remaining.text == "Time remaining 300.0 s  ·  ",
 		"a saved-English boot renders the exact remaining time after Start")
 	service.get("audio_feedback").set_enabled(false)
