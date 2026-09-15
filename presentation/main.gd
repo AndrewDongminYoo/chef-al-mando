@@ -32,6 +32,7 @@ const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담�
 const ANALYSIS_HEADING_COLOR := Color("eab06c")
 const ANALYSIS_BODY_COLOR := Color("f5edda")
 const ANALYSIS_DETAIL_COLOR := Color("c6c9b8")
+const WORD_JOINER := "\u2060"
 
 @export_file("*.tres") var scenario_path: String = "res://content/m1_first_service.tres"
 var scenario_definition: Definitions
@@ -308,7 +309,9 @@ func _new_service() -> void:
 			analysis_label = RichTextLabel.new()
 			analysis_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			analysis_label.fit_content = true
+			analysis_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			analysis_label.scroll_active = false
+			analysis_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 			analysis_label.add_theme_constant_override("line_separation", 3)
 			analysis_scroll.add_child(analysis_label)
 		if preparation_panel != null:
@@ -815,14 +818,31 @@ func _render_analysis(summary: String, recommendations: PackedStringArray, detai
 	_analysis_text(summary, body_size, ANALYSIS_BODY_COLOR)
 	analysis_label.add_text("\n\n")
 	_analysis_text(details, detail_size, ANALYSIS_DETAIL_COLOR)
+	var plain_text := analysis_label.get_parsed_text().replace(WORD_JOINER, "")
+	analysis_label.accessibility_name = plain_text
 
 
 func _analysis_text(value: String, font_size: int, color: Color) -> void:
 	analysis_label.push_font_size(font_size)
 	analysis_label.push_color(color)
-	analysis_label.add_text(value)
+	analysis_label.add_text(_preserve_korean_words(value))
 	analysis_label.pop()
 	analysis_label.pop()
+
+
+static func _preserve_korean_words(value: String) -> String:
+	if not TranslationServer.get_locale().begins_with("ko"):
+		return value
+	var result := ""
+	var previous_was_word := false
+	for index: int in value.length():
+		var character := value.substr(index, 1)
+		var is_word := character not in [" ", "\n", "\r", "\t"]
+		if previous_was_word and is_word:
+			result += WORD_JOINER
+		result += character
+		previous_was_word = is_word
+	return result
 
 
 func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> String:
