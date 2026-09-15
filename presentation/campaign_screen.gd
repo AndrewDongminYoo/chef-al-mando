@@ -454,6 +454,7 @@ func _refresh_catalog() -> void:
 			text += tr("\n최고 %d건 · 손익 %s") % [record.best_served, KitchenScreen._money(record.best_profit)]
 		var button := _button(text, select_scenario.bind(scenario.id))
 		button.custom_minimum_size.y = 104
+		button.mouse_filter = Control.MOUSE_FILTER_PASS
 		button.disabled = not unlocked
 		button.toggle_mode = true
 		button.button_pressed = scenario.id == selected_scenario_id

@@ -485,6 +485,7 @@ func _refresh_service() -> void:
 		if not order_buttons.has(order.id):
 			var button := Button.new()
 			button.custom_minimum_size = Vector2(64, 64)
+			button.mouse_filter = Control.MOUSE_FILTER_PASS
 			button.add_theme_font_size_override("font_size", 20)
 			button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			button.icon = definitions.recipe_for(order.recipe_id).icon
@@ -800,7 +801,7 @@ func _render_analysis(summary: String, recommendations: PackedStringArray, detai
 	analysis_label.set_meta("action_heading_color", ANALYSIS_HEADING_COLOR)
 	analysis_label.set_meta("action_color", ANALYSIS_HEADING_COLOR)
 	analysis_label.clear()
-	_analysis_text(tr("다음 영업에서 바꿀 것"), heading_size, ANALYSIS_HEADING_COLOR)
+	_analysis_text(tr("다음 영업 추천"), heading_size, ANALYSIS_HEADING_COLOR)
 	analysis_label.add_text("\n")
 	for recommendation: String in recommendations:
 		var parts := recommendation.split("\n", true, 1)
@@ -836,7 +837,7 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 		"prep_at_capacity":
 			var row: Dictionary = report.prep[target_id]
 			var remaining_labor: int = report.labor_capacity - report.labor_used
-			return tr("프렙 · %s %d개를 모두 사용 · 생재료 손질 %d건\n→ 준비 노동량 %d / %d · 남은 노동량 %d는 1개에 필요한 %d보다 적습니다. 다른 프렙 잔량이나 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, report.labor_used, report.labor_capacity, remaining_labor, row.prep_labor_units]
+			return tr("프렙 · %s %d개 준비 · 모두 사용 · 영업 중 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다. 필요한 노동량은 %d, 남은 노동량은 %d입니다. 다른 메뉴에 프렙이 남았다면 옮기고, 없다면 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, row.prep_labor_units, remaining_labor]
 		"increase_purchase":
 			var row: Dictionary = report.ingredients[target_id]
 			return tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.related_shortage_ticks / 10.0]
@@ -845,13 +846,16 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 			return tr("발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.used, row.remaining, recommendation.amount]
 		"purchase_consumed":
 			var row: Dictionary = report.ingredients[target_id]
-			return tr("발주 · %s %d개 발주 · %d개 사용 · 종료 재고 0개\n→ 관련 메뉴 재료 부족이 없었습니다. 이번 발주량은 유지하고 운영 선택 하나만 바꿔 비교해 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.used]
+			var ingredient_name: String = tr(definitions.ingredient_for(target_id).display_name)
+			return tr("발주 · %s %d개를 모두 사용 · 종료 재고 0개 · 재료 부족 없음\n→ %s 발주량은 유지하세요. 프렙, 우선순위, 배치 중 하나만 바꿔 결과를 비교해 보세요.") % [ingredient_name, row.purchased, ingredient_name]
 		"raise_priority":
 			var row: Dictionary = report.priorities[target_id]
-			return tr("우선순위 · %s 기본 %d · 미제공 %d건 · 경합 %.1f초\n→ 다음 영업은 기본 우선순위를 1 올려 보세요.") % [tr(definitions.recipe_for(target_id).display_name), row.default_priority, row.expired, row.pressure_ticks / 10.0]
+			var recipe_name: String = tr(definitions.recipe_for(target_id).display_name)
+			var next_priority: int = mini(2, row.default_priority + recommendation.amount)
+			return tr("우선순위 · %s 기본 %d · 미제공 %d건 · 작업 대기 %.1f초\n→ 다음 영업에서 %s의 기본 우선순위를 %d로 올려 보세요.") % [recipe_name, row.default_priority, row.expired, row.pressure_ticks / 10.0, recipe_name, next_priority]
 		"priority_at_max":
 			var row: Dictionary = report.priorities[target_id]
-			var header := tr("우선순위 · %s 기본 2 · 미제공 %d건 · 경합 %.1f초") % [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]
+			var header := tr("우선순위 · %s 기본 2 · 미제공 %d건 · 작업 대기 %.1f초") % [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]
 			match recommendation.bottleneck:
 				"movement":
 					return header + "\n" + tr("→ 이미 최대입니다. 이동 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 이동 시간을 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
