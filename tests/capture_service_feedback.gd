@@ -61,7 +61,7 @@ func run() -> void:
 	screen.advance(float(screen.definitions.closing_tick - screen.simulation.tick) / 10.0)
 	await process_frame
 	checks.expect(screen.simulation.closed and screen.analysis_scroll.visible
-		and screen.analysis_label.get_parsed_text().contains(tr("다음 영업 추천")),
+		and screen.analysis_label.accessibility_name.contains(tr("다음 영업 추천")),
 		"rendered closing shows actionable service feedback")
 	screen.chatter_event.clear()
 	screen.chatter_seconds_left = 0.0
@@ -126,11 +126,13 @@ func _expect_analysis_action_style(screen: KitchenScreen) -> void:
 func _expect_korean_analysis_line_groups(screen: KitchenScreen) -> void:
 	var label := screen.analysis_label
 	var parsed_text := label.get_parsed_text()
-	for phrase: String in ["재료 부족 없음", "중 하나만", "181.0초", "올려 보세요", "추가 손질"]:
+	for phrase: String in ["재\u2060료 부\u2060족 없\u2060음", "중 하\u2060나\u2060만",
+		"1\u20608\u20601\u2060.\u20600\u2060초", "올\u2060려 보\u2060세\u2060요", "추\u2060가 손\u2060질"]:
 		var start := parsed_text.find(phrase)
 		checks.expect(start >= 0 and label.get_character_line(start) \
 			== label.get_character_line(start + phrase.length() - 1),
-			"rendered Korean analysis keeps the semantic group on one line: " + phrase)
+			"rendered Korean analysis keeps the semantic group on one line: "
+			+ phrase.replace("\u2060", ""))
 
 
 func _region_contains_color(frame: Image, region: Rect2, target: Color) -> bool:

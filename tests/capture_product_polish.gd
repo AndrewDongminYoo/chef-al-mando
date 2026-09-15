@@ -102,7 +102,7 @@ func _capture(tablet: bool, locale: String, text_size: String) -> void:
 	screen.result_dialog.hide()
 	await _settle(service, tablet)
 	await _frame("analysis")
-	var analysis_text: String = service.analysis_label.get_parsed_text()
+	var analysis_text: String = service.analysis_label.accessibility_name
 	checks.expect(analysis_text.find(TranslationServer.translate("다음 영업 추천")) >= 0
 		and analysis_text.find(service.summary_label.text) > analysis_text.find(TranslationServer.translate("다음 영업 추천")),
 		"analysis keeps accounting visible after the next-service recommendations")

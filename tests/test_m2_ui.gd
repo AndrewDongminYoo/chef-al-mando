@@ -72,8 +72,10 @@ func run(tree: SceneTree) -> void:
 	screen.get("speed_buttons")[2].pressed.emit()
 	screen.call("advance", 75.0)
 	expect(sim.get("closed") and screen.get("analysis_scroll").visible, "closing displays the M2 time analysis panel")
-	expect(screen.get("analysis_label").get_parsed_text().contains("다음 영업 추천") and screen.get("analysis_label").get_parsed_text().contains("주문별 누적 시간") and screen.get("analysis_label").get_parsed_text().contains("예약·사용"), "closing shows actionable recommendations before the existing detailed metrics")
-	var analysis_text: String = screen.get("analysis_label").get_parsed_text()
+	var analysis_text: String = screen.get("analysis_label").accessibility_name
+	expect(analysis_text.contains("다음 영업 추천") and analysis_text.contains("주문별 누적 시간")
+		and analysis_text.contains("예약·사용"),
+		"closing shows actionable recommendations before the existing detailed metrics")
 	var action_index := analysis_text.find("다음 영업 추천")
 	var accounting_index := analysis_text.find("손익")
 	var cumulative_index := analysis_text.find("주문별 누적 시간")
@@ -91,6 +93,7 @@ func run(tree: SceneTree) -> void:
 	analysis.set("fit_content", false)
 	analysis.custom_minimum_size.y = 3000.0
 	await tree.process_frame
+	await _expect_analysis_drag_scrolls(tree, analysis_scroll, analysis)
 	analysis_scroll.scroll_vertical = 1000
 	await tree.process_frame
 	expect(analysis_scroll.scroll_vertical > 0, "analysis restart fixture scrolls away from the recommendations")
@@ -106,10 +109,58 @@ func run(tree: SceneTree) -> void:
 	await tree.process_frame
 	expect(screen.get("simulation").closed and analysis_scroll.scroll_vertical == 0,
 		"each closing opens at the next-service recommendations")
+	await _expect_korean_word_stays_whole(tree, screen, analysis)
 	screen.queue_free()
 	await tree.process_frame
 	await _extra_menu(tree)
 	await _custom_ingredients(tree)
+
+
+func _expect_analysis_drag_scrolls(tree: SceneTree, scroll: ScrollContainer, content: Control) -> void:
+	scroll.scroll_vertical = 0
+	var drag_events := {"count": 0}
+	scroll.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventScreenDrag:
+			drag_events.count += 1
+	)
+	var current := tree.root.get_screen_transform() * scroll.get_global_rect().get_center()
+	var press := InputEventScreenTouch.new()
+	press.index = 0
+	press.position = current
+	press.pressed = true
+	Input.parse_input_event(press)
+	await tree.process_frame
+	for offset: Vector2 in [Vector2(0, -32), Vector2(0, -32), Vector2(0, -32), Vector2(0, -32)]:
+		current += offset
+		var drag := InputEventScreenDrag.new()
+		drag.index = 0
+		drag.position = current
+		drag.relative = offset
+		Input.parse_input_event(drag)
+		await tree.process_frame
+	var release := InputEventScreenTouch.new()
+	release.index = 0
+	release.position = current
+	release.pressed = false
+	Input.parse_input_event(release)
+	await tree.process_frame
+	expect(content.get_global_rect().has_point(scroll.get_global_rect().get_center()),
+		"analysis drag fixture starts on the actual result content")
+	expect(drag_events.count > 0, "dragging the result content reaches its scroll container")
+
+
+func _expect_korean_word_stays_whole(tree: SceneTree, screen: Control, content: RichTextLabel) -> void:
+	content.reparent(tree.root)
+	content.clear()
+	screen.call("_analysis_text", "버섯", 18, Color.WHITE)
+	content.custom_minimum_size = Vector2.ZERO
+	content.size = Vector2(content.get_theme_font("normal_font").get_string_size("버").x + 1.0, 120.0)
+	await tree.process_frame
+	expect(content.get_parsed_text() == "버\u2060섯"
+		and content.get_character_line(0) == content.get_character_line(2),
+		"a Korean word stays on one line instead of splitting between syllables")
+	content.queue_free()
+	await tree.process_frame
 
 
 func _extra_menu(tree: SceneTree) -> void:
