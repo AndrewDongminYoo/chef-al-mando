@@ -9,7 +9,11 @@ func run(tree: SceneTree) -> void:
 		if not ResourceLoader.exists(script_path):
 			expect(false, "required UI regression suite is missing: " + script_path)
 			continue
-		var suite: ChildHarness = load(script_path).new()
+		var child_script := load(script_path) as GDScript
+		if child_script == null or not child_script.can_instantiate():
+			expect(false, "required UI regression suite cannot load: " + script_path)
+			continue
+		var suite: ChildHarness = child_script.new()
 		await suite.run(tree)
 		expect(suite.checked > 0, "UI regression child suite must run checks: " + script_path)
 		checked += suite.checked
