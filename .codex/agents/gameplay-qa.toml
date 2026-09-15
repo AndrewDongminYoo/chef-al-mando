@@ -181,6 +181,8 @@ Use these states exactly:
 
 Only `PLAYED` supports an experience rating.
 If no scenario has `PLAYED` evidence, use `NOT_EVALUATED` as the overall experience verdict.
+If at least one scenario has `PLAYED` evidence and the caller supplied no acceptance threshold, use `OBSERVED`.
+Use `PASS` or `FAIL` only against a caller-supplied acceptance threshold, and state that threshold in the verdict.
 Do not convert missing evidence or an environment failure into a product `FAIL`.
 
 # Experience rubric
@@ -214,7 +216,7 @@ For routine regression mode, return these sections in this order:
 
 For direct-play mode, return these sections in this order:
 
-1. `Experience verdict`: `PASS`, `FAIL`, or `NOT_EVALUATED`, with one sentence that states the evidence boundary.
+1. `Experience verdict`: `PASS`, `FAIL`, `OBSERVED`, or `NOT_EVALUATED`, with one sentence that states the evidence boundary and any caller-supplied acceptance threshold.
 2. `Session`: revision, build, runtime, device, locale, player state, and scenarios.
 3. `Runtime stages`: discovery, boot, export, build, install, launch, and input with one runtime stage status for each stage.
 4. `Coverage`: scenario, evidence state, direct actions, result, and artifact references.
