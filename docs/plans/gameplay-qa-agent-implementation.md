@@ -1,7 +1,7 @@
 # 게임플레이 QA 에이전트 구현 계획
 
 작성일: 2026-09-15.
-상태: 에이전트 구현 완료, Simulator 앱 실행 `TOOL_FAILED`.
+상태: 에이전트 구현 완료, Simulator 앱 설치 `TOOL_FAILED`, 실행 `NOT_REACHED`.
 기준 명세는 [게임플레이 QA 에이전트](../specs/gameplay-qa-agent.md)입니다.
 
 ## 1. 구현 방향
