@@ -98,6 +98,12 @@ Godot issue [#118161](https://github.com/godotengine/godot/issues/118161)도 이
 모든 응답이 Coverage에 `NOT_REACHED`, 전체 verdict에 `NOT_EVALUATED`를 사용했습니다.
 직접 플레이 없는 경험 PASS, 물리 기기 쓰기와 CoreSimulator 재시작을 수행한 응답은 없었습니다.
 
+## Hosted review 보강
+
+Codex Code Review는 물리 기기에 이미 설치된 앱을 직접 플레이해도 자동 checkpoint와 active session 저장이 발생할 수 있지만 초기 쓰기 목록에는 설치, 삭제, 강제 종료 실행과 데이터 초기화만 있었다고 지적했습니다.
+현재 `presentation/main.gd`는 100 tick마다 자동 checkpoint를 요청하고 `presentation/campaign_screen.gd`는 session-only 모드가 아니면 active session을 저장하므로 이 지적을 유효한 P1으로 확인했습니다.
+에이전트 계약과 명세는 플레이어 상태를 저장할 수 있는 물리 기기 앱 실행, 직접 플레이와 입력을 기기 쓰기로 분류하고 명시적 승인이 없으면 시작하지 않도록 보강했습니다.
+
 ## Codex 설정 진단
 
 `codex doctor --summary --ascii --no-color`는 종료 코드 1과 함께 `19 ok`, `1 idle`, `5 notes`, `2 warn`, `1 fail`을 보고했습니다.

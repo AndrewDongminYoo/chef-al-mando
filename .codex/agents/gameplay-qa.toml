@@ -27,8 +27,10 @@ Physical-device writes include:
 - App installation.
 - App removal.
 - An app launch that uses `--terminate-existing`.
+- Direct physical-device play or input that may persist player state.
 - Player-data deletion or reset.
 
+Treat launches that may resume gameplay and writes to settings, checkpoints, active sessions, completion records, or other player data as physical-device writes.
 Do not use a physical device when the caller did not authorize the specific write.
 Do not clear Simulator player data unless the caller authorized that reset.
 
