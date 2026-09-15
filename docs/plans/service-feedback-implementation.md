@@ -198,3 +198,38 @@
   Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4`
   Run: `/Applications/Godot.app/Contents/MacOS/Godot --path . --max-fps 60 --script tests/capture_service_feedback.gd -- --hot-queue --large-text`
   Expected: 자동 검사가 실패 0으로 끝나고 한국어 휴대폰 분석 문구가 잘리지 않습니다.
+
+### 작업 6: 한국어 의미 단위 줄바꿈
+
+**Files:**
+
+- Modify: `presentation/main.gd`
+- Modify: `translations/en.po`
+- Modify: `tests/capture_service_feedback.gd`
+- Modify: `docs/specs/service-feedback.md`
+- Modify: `docs/notes/analysis-copy-verification.md`
+
+**Interfaces:**
+
+- Consumes: 한국어 휴대폰 큰 글씨로 렌더한 마감 추천.
+- Produces: 의미 단위를 보존하면서 문장과 절의 경계에서 줄을 바꾸는 마감 추천.
+
+- [x] **Step 1: 실패하는 실제 렌더 검사 작성**
+
+  `재료 부족 없음`, `중 하나만`, `181.0초`, `올려 보세요`와 `추가 손질`이 각각 같은 렌더 줄에 있는지 확인합니다.
+
+- [x] **Step 2: RED 확인**
+
+  Run: `/Applications/Godot.app/Contents/MacOS/Godot --path . --max-fps 60 --script tests/capture_service_feedback.gd -- --hot-queue --large-text`
+  Expected: 현재 한국어 자동 줄바꿈이 다섯 의미 단위를 나누어 실패합니다.
+
+- [x] **Step 3: 최소 문구 수정**
+
+  세 추천의 관찰 문장은 중복 표현을 줄이고, 행동 문장에는 의미가 끝나는 위치에만 줄바꿈을 추가합니다.
+  추천 선정, 수치, 색상, 글자 크기와 레이아웃은 변경하지 않습니다.
+
+- [x] **Step 4: GREEN과 전체 회귀 확인**
+
+  Run: 한국어와 영어 큰 글씨 렌더 검사.
+  Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4`.
+  Expected: 모든 검사에서 실패가 없습니다.

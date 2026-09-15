@@ -837,7 +837,7 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 		"prep_at_capacity":
 			var row: Dictionary = report.prep[target_id]
 			var remaining_labor: int = report.labor_capacity - report.labor_used
-			return tr("프렙 · %s %d개 준비 · 모두 사용 · 영업 중 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다. 필요한 노동량은 %d, 남은 노동량은 %d입니다. 다른 메뉴에 프렙이 남았다면 옮기고, 없다면 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, row.prep_labor_units, remaining_labor]
+			return tr("프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 메뉴에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요.") % [tr(definitions.recipe_for(target_id).display_name), row.used, row.raw_orders, row.prep_labor_units, remaining_labor]
 		"increase_purchase":
 			var row: Dictionary = report.ingredients[target_id]
 			return tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.related_shortage_ticks / 10.0]
@@ -847,12 +847,12 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 		"purchase_consumed":
 			var row: Dictionary = report.ingredients[target_id]
 			var ingredient_name: String = tr(definitions.ingredient_for(target_id).display_name)
-			return tr("발주 · %s %d개를 모두 사용 · 종료 재고 0개 · 재료 부족 없음\n→ %s 발주량은 유지하세요. 프렙, 우선순위, 배치 중 하나만 바꿔 결과를 비교해 보세요.") % [ingredient_name, row.purchased, ingredient_name]
+			return tr("발주 · %s %d개를 모두 사용 · 재고 0 · 재료 부족 없음\n→ %s 발주량은 유지하세요.\n프렙, 우선순위, 배치 중 하나만 바꿔 비교하세요.") % [ingredient_name, row.purchased, ingredient_name]
 		"raise_priority":
 			var row: Dictionary = report.priorities[target_id]
 			var recipe_name: String = tr(definitions.recipe_for(target_id).display_name)
 			var next_priority: int = mini(2, row.default_priority + recommendation.amount)
-			return tr("우선순위 · %s 기본 %d · 미제공 %d건 · 작업 대기 %.1f초\n→ 다음 영업에서 %s의 기본 우선순위를 %d로 올려 보세요.") % [recipe_name, row.default_priority, row.expired, row.pressure_ticks / 10.0, recipe_name, next_priority]
+			return tr("우선순위 · %s %d · 미제공 %d · 작업 대기 %.1f초\n→ 다음 영업에서\n%s의 기본 우선순위를 %d로 올려 보세요.") % [recipe_name, row.default_priority, row.expired, row.pressure_ticks / 10.0, recipe_name, next_priority]
 		"priority_at_max":
 			var row: Dictionary = report.priorities[target_id]
 			var header := tr("우선순위 · %s 기본 2 · 미제공 %d건 · 작업 대기 %.1f초") % [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]

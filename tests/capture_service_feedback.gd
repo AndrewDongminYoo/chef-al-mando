@@ -69,6 +69,8 @@ func run() -> void:
 	await process_frame
 	_expect_header_fits(screen, "analysis")
 	_expect_analysis_action_style(screen)
+	if locale == "ko" and large_text and layout_name == "phone-wide" and hot_queue:
+		_expect_korean_analysis_line_groups(screen)
 	await save_frame("res://build/check/%s-%s-analysis.png" % [prefix, variant])
 	screen.queue_free()
 	await process_frame
@@ -119,6 +121,16 @@ func _expect_analysis_action_style(screen: KitchenScreen) -> void:
 		Vector2(label.size.x, label.get_line_height(action_line)))
 	checks.expect(_region_contains_color(frame, line_rect, expected_color),
 		"rendered analysis action uses the copper action color")
+
+
+func _expect_korean_analysis_line_groups(screen: KitchenScreen) -> void:
+	var label := screen.analysis_label
+	var parsed_text := label.get_parsed_text()
+	for phrase: String in ["재료 부족 없음", "중 하나만", "181.0초", "올려 보세요", "추가 손질"]:
+		var start := parsed_text.find(phrase)
+		checks.expect(start >= 0 and label.get_character_line(start) \
+			== label.get_character_line(start + phrase.length() - 1),
+			"rendered Korean analysis keeps the semantic group on one line: " + phrase)
 
 
 func _region_contains_color(frame: Image, region: Rect2, target: Color) -> bool:
