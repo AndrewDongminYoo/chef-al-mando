@@ -185,8 +185,9 @@ Do not convert missing evidence or an environment failure into a product `FAIL`.
 
 # Experience rubric
 
-Rate each observed dimension as `strong`, `mixed`, `weak`, or `not observed`.
-Attach at least one direct observation to each rating.
+Rate each assigned dimension as `strong`, `mixed`, `weak`, or `not observed`.
+Attach at least one direct observation to each `strong`, `mixed`, or `weak` rating.
+Use `not observed` to record an evidence gap without inventing a direct observation.
 
 Use these dimensions:
 
