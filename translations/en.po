@@ -731,8 +731,8 @@ msgstr "Prep · %s: %d prepared, %d used, %d raw-prep orders\n→ Add %d within 
 msgid "프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요."
 msgstr "Prep · %s: %d prepared, %d used, %d left\n→ Prepare %d fewer next service."
 
-msgid "프렙 · %s %d개 준비 · 모두 사용 · 영업 중 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다. 필요한 노동량은 %d, 남은 노동량은 %d입니다. 다른 메뉴에 프렙이 남았다면 옮기고, 없다면 작업 병목을 확인하세요."
-msgstr "Prep · %s: %d prepared, all used · %d extra raw-prep orders during service\n→ Cannot prepare one more portion. It needs %d prep capacity, with %d left. Move one portion from another menu if available; otherwise, check work bottlenecks."
+msgid "프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 메뉴에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요."
+msgstr "Prep · %s: all %d used · %d extra raw-prep orders\n→ Cannot prepare one more portion. It needs %d prep capacity, with %d left. Move one portion from another menu if available; otherwise, check work bottlenecks."
 
 msgid "발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요."
 msgstr "Purchases · %s: %d purchased, 0 left, related menus short for %.1f sec\n→ Add 1 within the budget."
@@ -740,11 +740,11 @@ msgstr "Purchases · %s: %d purchased, 0 left, related menus short for %.1f sec\
 msgid "발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요."
 msgstr "Purchases · %s: %d purchased, %d used, %d left\n→ Try purchasing %d fewer next service while checking the serve rate."
 
-msgid "발주 · %s %d개를 모두 사용 · 종료 재고 0개 · 재료 부족 없음\n→ %s 발주량은 유지하세요. 프렙, 우선순위, 배치 중 하나만 바꿔 결과를 비교해 보세요."
+msgid "발주 · %s %d개를 모두 사용 · 재고 0 · 재료 부족 없음\n→ %s 발주량은 유지하세요.\n프렙, 우선순위, 배치 중 하나만 바꿔 비교하세요."
 msgstr "Purchases · %s: all %d used · 0 left · no ingredient shortage\n→ Keep the %s purchase quantity. Change only one of prep, priority, or layout, then compare results."
 
-msgid "우선순위 · %s 기본 %d · 미제공 %d건 · 작업 대기 %.1f초\n→ 다음 영업에서 %s의 기본 우선순위를 %d로 올려 보세요."
-msgstr "Priority · %s: default %d · %d unserved · %.1f sec work wait\n→ Set %s's default priority to %d next service."
+msgid "우선순위 · %s %d · 미제공 %d · 작업 대기 %.1f초\n→ 다음 영업에서\n%s의 기본 우선순위를 %d로 올려 보세요."
+msgstr "Priority · %s: %d · %d unserved · %.1f sec work wait\n→ Set %s's default priority to %d next service."
 
 msgid "우선순위 · %s 기본 2 · 미제공 %d건 · 작업 대기 %.1f초"
 msgstr "Priority · %s: default 2 · %d unserved · %.1f sec work wait"
