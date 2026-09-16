@@ -12,6 +12,10 @@
 x86_64 override 빌드는 성공했지만 Simulator 설치가 호환 아키텍처를 찾지 못해 실패했습니다.
 직접 플레이 증거가 없으므로 경험 평가는 `NOT_EVALUATED`이며, 제품 실패는 관찰되지 않았습니다.
 
+이번 실행은 요청 대상 revision, 실행 당시 `git rev-parse HEAD`, worktree 변경 상태, build 실행 파일 SHA-256과 설치된 앱 identity를 기록하지 않았습니다.
+따라서 source revision과 build provenance는 `[UNKNOWN]`이며, 이 기록을 특정 commit의 앱 동작 증거로 사용하지 않습니다.
+아래 결과는 로그에 남은 export template과 Simulator 사이의 아키텍처 호환성만 뒷받침합니다.
+
 ## 시뮬레이터 사전 점검
 
 | 항목              | 관찰 결과                                                            | 증거 상태     |

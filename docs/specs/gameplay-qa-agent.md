@@ -34,9 +34,19 @@ Android 실기기, 사용자 5명 검증, 스토어 빌드와 물리 iPhone 수�
 
 기본 세션에서 MCP 서버를 활성화하지 않습니다.
 에이전트는 등록된 `${CODEX_HOME:-$HOME/.codex}/scripts/run-mcp-worker.py ios` 실행 경로를 사용해 한 번의 승인된 QA 작업을 격리된 프로세스로 실행합니다.
-호출자는 절대 저장소 경로, 개인 계정, 허용된 런타임 작업과 기대 결과를 제공해야 합니다.
+호출자는 절대 저장소 경로, 개인 계정, 허용된 런타임 작업, 기대 결과, 전체 commit SHA인 대상 revision과 대상 build를 제공해야 합니다.
 물리 기기에서 설정, checkpoint, active session, 완료 기록이나 다른 플레이어 데이터를 저장할 수 있는 앱 실행·직접 플레이·입력은 기기 쓰기로 분류합니다.
 호출자가 해당 쓰기를 명시적으로 승인하지 않으면 물리 기기 플레이를 시작하지 않습니다.
+
+checkout에서 export하거나 build하기 전에 `git rev-parse HEAD`와 staged·unstaged·untracked 상태를 확인합니다.
+실제 `HEAD`가 대상 revision과 다르거나 worktree가 dirty이면 Git 상태를 변경하지 않고 export부터 input까지 `NOT_REACHED`로 기록합니다.
+설치 전에는 `.app` 절대 경로, bundle identifier, short version, build version과 실행 파일 SHA-256을 기록합니다.
+호출자가 제공한 build는 호출자가 지정한 metadata와 실행 파일 SHA-256이 모두 일치해야 합니다.
+필수 build identity가 없거나 일치하지 않으면 install부터 input까지 `NOT_REACHED`로 기록합니다.
+설치 뒤에는 Simulator에 설치된 앱의 같은 identity를 다시 읽어 설치 전 값과 비교합니다.
+설치 후 identity 확인이 실패하거나 값이 다르면 install은 `TOOL_FAILED`, launch와 input은 `NOT_REACHED`로 기록합니다.
+이 설치 후 규칙은 설치 전 identity 확인을 통과하고 실제 설치를 시도한 경우에만 적용합니다.
+적용 가능한 source와 build identity 확인을 모두 통과하기 전에는 런타임 증거를 특정 revision이나 build에 귀속하지 않습니다.
 
 Godot 화면의 접근성 요소가 비어 있거나 불완전하면 좌표 입력 전에 스크린샷을 확인합니다.
 각 좌표 입력 뒤에는 새 스크린샷이나 화면 설명으로 보이는 반응을 확인합니다.
@@ -83,7 +93,7 @@ CoreSimulator 또는 `xcodebuild`가 멈추면 프로세스와 오류 증거를 
 | `SUCCEEDED`   | 허용된 기술 작업을 수행하고 기대한 기술 결과를 확인했습니다.         |
 | `NOT_REACHED` | 자원 제한이나 앞 단계 미완료 때문에 해당 작업을 시작하지 않았습니다. |
 | `SKIPPED`     | 호출자가 제외했거나 승인된 범위에서 의도적으로 생략했습니다.         |
-| `TOOL_FAILED` | 허용된 도구 작업을 시도했지만 오류 때문에 완료하지 못했습니다.       |
+| `TOOL_FAILED` | 허용된 도구 작업이나 필수 identity 확인이 완료되지 않았습니다.       |
 
 플레이 시나리오의 Coverage는 다음 증거 상태를 사용합니다.
 
@@ -135,7 +145,7 @@ CoreSimulator 또는 `xcodebuild`가 멈추면 프로세스와 오류 증거를 
 직접 플레이 모드는 다음 순서를 사용합니다.
 
 1. `Experience verdict`: `PASS`, `FAIL`, `OBSERVED`, `NOT_EVALUATED`, 증거 범위와 호출자가 제공한 수용 기준 한 문장.
-2. `Session`: revision, build, runtime, device, locale, player state와 시나리오.
+2. `Session`: 요청 revision, 실제 `HEAD`, worktree 상태, 검증한 build identity, runtime, device, locale, player state와 시나리오.
 3. `Runtime stages`: discovery, boot, export, build, install, launch와 input의 운영 상태.
 4. `Coverage`: 시나리오, 증거 상태, 직접 행동, 결과와 산출물.
 5. `Experience rubric`: 평가 항목, 등급, 관찰, 사용자 영향과 신뢰도.

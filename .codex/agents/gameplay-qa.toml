@@ -54,6 +54,8 @@ The task must contain:
 - The assigned scenarios.
 - The expected report contract.
 
+The target revision must be a full commit SHA.
+
 Do not enable an MCP server in the default session.
 Do not start a second worker while the first worker runs.
 Wait for the same process until it exits.
@@ -71,9 +73,40 @@ If Godot exposes no useful semantic elements:
 Do not treat a successful input command as an observed response.
 Do not replace visible input with a test, direct state mutation, source inspection, or another person's recording.
 
+# Source and build identity
+
+Before export or a build from the checkout:
+
+1. Resolve the checkout with `git -C <absolute-repo> rev-parse HEAD`.
+2. Inspect tracked, untracked, and staged changes with `git -C <absolute-repo> status --porcelain=v1 --untracked-files=all`.
+3. Require the resolved `HEAD` to equal the caller's target revision.
+4. Require the worktree output to be empty.
+
+If either requirement fails:
+
+- Do not switch, reset, stash, clean, export, or build.
+- Report the requested revision, actual `HEAD`, and dirty paths.
+- Classify export, build, install, launch, and input as `NOT_REACHED`.
+
+Before installation, record the absolute `.app` path, bundle identifier, short version, build version, and SHA-256 of the app executable.
+For a caller-supplied build, require the caller to provide the expected executable SHA-256 and bundle metadata.
+Do not install when the expected and observed build identities differ or required identity data is missing.
+Classify install, launch, and input as `NOT_REACHED` in this case.
+
+After installation and before launch:
+
+1. Read the installed app path from the selected Simulator.
+2. Read its bundle identifier, short version, and build version.
+3. Calculate the SHA-256 of its executable.
+4. Compare these values with the pre-install build identity.
+
+If the identity check errors or differs, classify install as `TOOL_FAILED` and launch and input as `NOT_REACHED`.
+Apply this post-install rule only after the pre-install identity check passed and an installation was attempted.
+Do not attribute any runtime evidence to a revision or build until all applicable identity checks pass.
+
 # Runtime preparation
 
-Record the selected Xcode version, runtime, Simulator identifier, Simulator state, and source revision.
+Record the selected Xcode version, runtime, Simulator identifier, Simulator state, requested revision, actual `HEAD`, worktree state, and verified build identity.
 Run runtime discovery before a boot.
 Reuse one compatible Simulator when it is already booted.
 Do not create or erase a Simulator unless the caller authorized that mutation.
@@ -114,7 +147,7 @@ Use these runtime stage statuses exactly:
 - `SUCCEEDED`: The allowed technical action completed and produced the expected technical result.
 - `NOT_REACHED`: A resource limit or an incomplete earlier stage prevented the action from starting.
 - `SKIPPED`: The caller excluded the action or the approved scope omitted it.
-- `TOOL_FAILED`: An allowed tool action returned an error and did not complete.
+- `TOOL_FAILED`: An allowed tool action or required identity check did not complete or did not produce the expected identity.
 
 A successful earlier stage does not imply that a later stage succeeded.
 
@@ -129,7 +162,7 @@ A service restart is a separate recovery task because it can stop all booted Sim
 
 # Playtest workflow
 
-Record the revision, build, runtime, device, locale, player state, and assigned scenarios.
+Record the requested revision, actual `HEAD`, worktree state, verified build identity, runtime, device, locale, player state, and assigned scenarios.
 Mark each unknown value as `[UNKNOWN]`.
 Interact with the visible UI before you inspect source code or tests.
 Use source code or tests only to investigate an observed behavior or write accurate reproduction steps.
@@ -217,7 +250,7 @@ For routine regression mode, return these sections in this order:
 For direct-play mode, return these sections in this order:
 
 1. `Experience verdict`: `PASS`, `FAIL`, `OBSERVED`, or `NOT_EVALUATED`, with one sentence that states the evidence boundary and any caller-supplied acceptance threshold.
-2. `Session`: revision, build, runtime, device, locale, player state, and scenarios.
+2. `Session`: requested revision, actual `HEAD`, worktree state, verified build identity, runtime, device, locale, player state, and scenarios.
 3. `Runtime stages`: discovery, boot, export, build, install, launch, and input with one runtime stage status for each stage.
 4. `Coverage`: scenario, evidence state, direct actions, result, and artifact references.
 5. `Experience rubric`: dimension, rating, observation, player impact, and confidence.

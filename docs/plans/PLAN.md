@@ -418,6 +418,15 @@ M5의 검증 명령과 배포 빌드 수용 형식은 [M5 명세](../specs/m5-re
 에이전트는 보이는 Godot 화면을 직접 조작하고 각 입력 뒤의 화면 반응을 확인해야 합니다.
 시나리오를 제공하지 않으면 앱 실행, 홈 화면 확인, 목록 드래그와 안전한 탐색 탭으로 구성된 입력 스모크만 수행하며, 이 스모크는 게임플레이 품질 `PASS`를 뒷받침하지 않습니다.
 
+대상 revision은 전체 commit SHA여야 합니다.
+checkout에서 export하거나 build하기 전에 실제 `HEAD`가 대상 revision과 같고 staged·unstaged·untracked 변경이 없는지 확인합니다.
+조건이 다르면 Git 상태를 변경하지 않고 export부터 input까지 `NOT_REACHED`로 기록합니다.
+설치 전후에 `.app` 경로, bundle identifier, short version, build version과 실행 파일 SHA-256을 비교합니다.
+설치 전 identity가 없거나 다르면 install부터 input까지 `NOT_REACHED`이며, 설치 후 확인이 실패하거나 다르면 install은 `TOOL_FAILED`, launch와 input은 `NOT_REACHED`입니다.
+설치 후 규칙은 설치 전 identity 확인을 통과하고 실제 설치를 시도한 경우에만 적용합니다.
+모든 source와 build identity 확인을 통과하기 전에는 런타임 증거를 특정 revision이나 build에 귀속하지 않습니다.
+직접 플레이 보고서의 `Session`에는 요청 revision, 실제 `HEAD`, worktree 상태와 검증한 build identity를 기록합니다.
+
 런타임은 discovery, boot, export, build, install, launch와 input을 개별 단계로 기록합니다.
 각 단계에는 `SUCCEEDED`, `NOT_REACHED`, `SKIPPED`, `TOOL_FAILED` 중 하나만 사용합니다.
 시나리오 증거에는 `PLAYED`, `NOT_REACHED`, `SKIPPED`, `TOOL_FAILED` 중 하나만 사용하며, 보이는 화면을 직접 조작하고 결과를 확인한 시나리오만 `PLAYED`로 기록합니다.
