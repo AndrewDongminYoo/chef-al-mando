@@ -406,6 +406,47 @@ M4의 저장·새 프로세스·현지화·화면·export 검증 명령은 [M4 �
 실제 실행 결과와 실기기 수용 한계는 [M4 검증 기록](../notes/m4-verification.md)에 구분하여 기록합니다.
 M5의 검증 명령과 배포 빌드 수용 형식은 [M5 명세](../specs/m5-release-candidate.md)에 정의했습니다.
 검사 정의와 로컬 통과만으로 실제 다운로드 빌드의 수용을 주장하지 않습니다.
+
+### 10.3 게임플레이 QA 계약
+
+게임플레이 QA는 일상 회귀 모드와 직접 플레이 모드를 분리합니다.
+일상 회귀 모드는 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh ui-regressions`로 홈·주문 목록과 결과 내용의 드래그, 한국어 단어 줄바꿈을 검사합니다.
+이 모드에서는 Simulator를 부팅하거나 앱을 export·build·install·launch하지 않으며, 통과 결과는 렌더링이나 실기기 동작을 증명하지 않습니다.
+
+직접 플레이 모드는 기본 MCP 설정을 바꾸지 않고 격리된 `mcp-ios` worker 한 개를 사용합니다.
+호출자는 절대 저장소 경로, 개인 계정, 허용한 런타임 작업, 대상 revision과 build, 시나리오와 보고 계약을 제공해야 합니다.
+에이전트는 보이는 Godot 화면을 직접 조작하고 각 입력 뒤의 화면 반응을 확인해야 합니다.
+시나리오를 제공하지 않으면 앱 실행, 홈 화면 확인, 목록 드래그와 안전한 탐색 탭으로 구성된 입력 스모크만 수행하며, 이 스모크는 게임플레이 품질 `PASS`를 뒷받침하지 않습니다.
+
+대상 revision은 전체 commit SHA여야 합니다.
+checkout에서 export하거나 build하기 전에 실제 `HEAD`가 대상 revision과 같고 staged·unstaged·untracked 변경이 없는지 확인합니다.
+조건이 다르면 Git 상태를 변경하지 않고 export부터 input까지 `NOT_REACHED`로 기록합니다.
+설치 전후에 `.app` 경로, bundle identifier, short version, build version과 실행 파일 SHA-256을 비교합니다.
+설치 전 identity가 없거나 다르면 install부터 input까지 `NOT_REACHED`이며, 설치 후 확인이 실패하거나 다르면 install은 `TOOL_FAILED`, launch와 input은 `NOT_REACHED`입니다.
+설치 후 규칙은 설치 전 identity 확인을 통과하고 실제 설치를 시도한 경우에만 적용합니다.
+모든 source와 build identity 확인을 통과하기 전에는 런타임 증거를 특정 revision이나 build에 귀속하지 않습니다.
+직접 플레이 보고서의 `Session`에는 요청 revision, 실제 `HEAD`, worktree 상태와 검증한 build identity를 기록합니다.
+
+런타임은 discovery, boot, export, build, install, launch와 input을 개별 단계로 기록합니다.
+각 단계에는 `SUCCEEDED`, `NOT_REACHED`, `SKIPPED`, `TOOL_FAILED` 중 하나만 사용합니다.
+시나리오 증거에는 `PLAYED`, `NOT_REACHED`, `SKIPPED`, `TOOL_FAILED` 중 하나만 사용하며, 보이는 화면을 직접 조작하고 결과를 확인한 시나리오만 `PLAYED`로 기록합니다.
+
+각 Simulator 부팅, Godot export와 Xcode build 전에 1분 부하, 논리 CPU 수와 다른 무거운 모바일 작업을 확인합니다.
+1분 부하가 논리 CPU 수보다 높거나 다른 무거운 작업이 실행 중이면 다음 무거운 단계를 시작하지 않고 `NOT_REACHED`로 기록합니다.
+논리 CPU 수를 확인할 수 없거나 허용된 도구 작업이 오류로 끝나면 해당 단계를 `TOOL_FAILED`로 기록합니다.
+
+에이전트는 제품 파일, Git 상태와 원격 저장소를 변경하지 않습니다.
+물리 기기의 설치, 제거, `--terminate-existing` 실행, 플레이어 상태를 저장할 수 있는 앱 실행·직접 플레이·입력과 데이터 초기화는 각 작업에 대한 명시적 쓰기 승인 없이는 수행하지 않습니다.
+Simulator 데이터 초기화도 호출자가 해당 초기화를 명시적으로 승인한 경우에만 수행합니다.
+CoreSimulator 서비스 재시작은 플레이 테스트에 포함하지 않고 별도로 승인한 복구 작업으로 분리합니다.
+
+직접 플레이한 시나리오가 없으면 전체 경험 평가는 `NOT_EVALUATED`입니다.
+하나 이상의 시나리오를 직접 플레이했지만 호출자가 수용 기준을 제공하지 않으면 `OBSERVED`입니다.
+`PASS`와 `FAIL`은 호출자가 제공한 수용 기준에 대해서만 사용하며, 환경이나 도구 실패를 제품 `FAIL`로 바꾸지 않습니다.
+
+일상 회귀 보고서는 `Regression verdict`, `Session`, `Automated coverage`, `Findings`, `Evidence boundary` 순서로 작성합니다.
+직접 플레이 보고서는 `Experience verdict`, `Session`, `Runtime stages`, `Coverage`, `Experience rubric`, `Findings`, `What worked`, `Next playtest`, `Final runtime state` 순서로 작성합니다.
+[게임플레이 QA 에이전트 명세](../specs/gameplay-qa-agent.md)는 이 기준에 따른 세부 실행 절차와 수용 기준을 정의합니다.
 Android 실기기는 구매 예정이며 Android 기종·OS 확정과 실제 실행은 대기 상태입니다.
 각 후속 단계의 구현 명세도 해당 단계의 코드 작업 전에 정확한 명령, fixture, 수동 증거 형식을 고정해야 합니다.
 명령이 없는 상태에서 에디터 실행이나 정적 파싱만으로 마일스톤 통과를 주장하지 않습니다.
