@@ -22,12 +22,13 @@ runtimes:
 # This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
   enabled:
+    - pinact@4.1.1:
+        commands: [lint, upgrade]
     - trivy@0.70.0
-    - pinact@4.0.0
     - shellcheck@0.11.0
     - shfmt@3.13.1
     - actionlint@1.7.12
-    - checkov@3.3.16
+    - checkov@3.3.17
     - git-diff-check
     - grype@0.116.1
     - ktlint@1.8.0
