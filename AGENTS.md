@@ -154,6 +154,8 @@ Cross-update replay compatibility is not a v1 goal.
 
 - Use integer quantities for ingredients.
 - Use integer minor currency units for money.
+- Keep order arrival ticks fixed per scenario; generate the menu of each slot from the scenario's forecast slack with a seed (`docs/specs/mise-forecast-reviews.md`).
+- Seed 0 must reproduce the authored `order_recipe_ids` exactly; a retry from the closing screen reuses the seed, and a restart from the campaign screen draws a new seed from `attempt_index`.
 - End the service at game-time second 300.
 - Mark unfinished orders as unserved at closing.
 - Do not restore consumed ingredients at closing.
@@ -163,6 +165,7 @@ Cross-update replay compatibility is not a v1 goal.
 ### Ingredients and Work
 
 - In M1, reserve all raw ingredients when an order starts.
+- Define mise en place as ingredient-level items that recipes reference as a set; skip the prep process only when every required item is in stock, otherwise scale the prep duration by the missing fraction and consume raw ingredients only for the missing items.
 - Consume required ingredients exactly once when the applicable process starts.
 - Release reservations when the player cancels before a process starts.
 - Preserve consumed-ingredient loss when the player cancels after a process starts.

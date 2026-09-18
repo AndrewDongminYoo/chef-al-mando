@@ -90,6 +90,8 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 - [M4 구현 명세](docs/specs/m4-mobile.md)는 영업 저장·복원, 현지화, 화면·설정과 검증의 계약입니다.
 
 - [M5 출시 후보 명세](docs/specs/m5-release-candidate.md)는 라이선스·PCK 완주·저장 호환성과 배포 빌드의 수용 계약입니다.
+- [첫 사용자 플레이테스트와 가격 반응 검증](docs/specs/playtest-price-validation.md)은 재미·분량·가격·정체성을 한 세션에서 관찰하는 절차와 결정 게이트입니다.
+- [수요 예보·미장 비대칭·고객 리뷰 명세](docs/specs/mise-forecast-reviews.md)는 시드 기반 주문 구성, 재료 단위 미장과 부분 프렙, 마감 리뷰 피드백의 계약입니다.
 
 현재 검증 범위와 남은 배포·기기 검사는 [M5 검증 기록](docs/notes/m5-verification.md)에 정리합니다.
 주방 화면 안정화와 두 시나리오 공간 실험의 비교 결과·실행 명령은 [주방 실험 검증 기록](docs/notes/kitchen-space-verification.md)에 있습니다.
