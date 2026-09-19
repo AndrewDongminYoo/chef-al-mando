@@ -1,5 +1,7 @@
 extends "res://content/definitions.gd"
 
+const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+
 @export var display_name: String = ""
 @export_multiline var briefing: String = ""
 @export var operation_problem: String = ""
@@ -78,8 +80,9 @@ func with_service_seed(seed_value: int) -> Resource:
 
 func order_schedule() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	for index: int in order_recipe_ids.size():
-		var recipe := recipe_for(order_recipe_ids[index])
+	var recipe_ids := ScheduleGenerator.recipe_ids(self, service_seed)
+	for index: int in recipe_ids.size():
+		var recipe := recipe_for(recipe_ids[index])
 		if recipe == null:
 			return []
 		var arrival_tick := order_arrival_ticks[index] if not order_arrival_ticks.is_empty() else first_arrival_tick + arrival_interval_ticks * index
