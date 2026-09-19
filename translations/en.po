@@ -230,6 +230,9 @@ msgstr "%s · %s"
 msgid "%s %d건"
 msgstr "%s × %d"
 
+msgid "%s %d–%d건"
+msgstr "%s %d–%d orders"
+
 msgid "%s\n\n목표 · 제공 %d건 이상 / 손익 %s 이상\n\n예산 %s · 고정 인건비 %s\n직원 %d명 · 설비 %d개 · 준비 노동량 %d\n\n예상 주문 %d건 · 영업 300초\n%s"
 msgstr "%s\n\nGoal · serve at least %d / profit at least %s\n\nBudget %s · fixed labor %s\n%d employees · %d stations · preparation capacity %d\n\n%d expected orders · 300-second service\n%s"
 

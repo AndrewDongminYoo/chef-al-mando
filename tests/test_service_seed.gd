@@ -14,6 +14,69 @@ func run(tree: SceneTree) -> void:
 	_test_session_seed(campaign)
 	_test_attempts(campaign)
 	_test_store_schema(campaign)
+	await _test_campaign_screen(tree)
+
+
+func _test_campaign_screen(tree: SceneTree) -> void:
+	var entry: String = ProjectSettings.get_setting("application/run/main_scene")
+	var directory := "user://test_service_seed_ui_%d" % Time.get_ticks_usec()
+	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "campaign seed fixture directory is created")
+	var file_path := directory + "/records.json"
+	var screen := _boot(tree, entry, file_path)
+	await tree.process_frame
+	expect(screen.get("briefing_label").text.contains("채소 샐러드 12건"), "zero slack briefing shows an exact count")
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	await tree.process_frame
+	expect(service.get("definitions").service_seed == 0, "the first start of a service uses seed 0")
+	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.attempts == {"first_shift": 1.0}, "starting a service saves the attempt count immediately")
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	screen.call("_save_checkpoint", "test")
+	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.active_session.service_seed == 0.0, "the checkpoint stores the service seed")
+	screen.queue_free()
+	await tree.process_frame
+	screen = _boot(tree, entry, file_path)
+	await tree.process_frame
+	expect(screen.call("_resume_active_session"), "the saved session resumes")
+	service = screen.get("active_service")
+	service.set_process(false)
+	expect(service.get("definitions").service_seed == 0, "resume restores the stored seed")
+	service.get("resume_button").pressed.emit()
+	service.call("advance", 299.0)
+	expect(screen.get("last_result").passed, "the resumed first service closes with a passing result")
+	screen.get("retry_service_button").pressed.emit()
+	expect(service.get("definitions").service_seed == 0, "retry keeps the same seed")
+	screen.call("return_to_menu")
+	await tree.process_frame
+	screen.call("select_scenario", "first_shift")
+	screen.get("begin_button").pressed.emit()
+	service = screen.get("active_service")
+	service.set_process(false)
+	await tree.process_frame
+	expect(service.get("definitions").service_seed == ScheduleGenerator.service_seed_for("first_shift", 1), "a restart from the campaign screen draws attempt 1")
+	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.attempts == {"first_shift": 2.0}, "the second start increments the attempt count")
+	screen.queue_free()
+	await tree.process_frame
+
+
+func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
+	var scene: PackedScene = load(scene_path)
+	var screen: Control = scene.instantiate()
+	screen.set("save_path", file_path)
+	var settings_path := file_path + ".settings.json"
+	var settings := {"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	if not HarnessSettingsStore.new(settings_path).save_settings(settings).accepted:
+		return null
+	screen.set("settings_path", settings_path)
+	screen.tree_exited.connect(func() -> void: DirAccess.remove_absolute(settings_path))
+	tree.root.add_child(screen)
+	screen.set_process(false)
+	return screen
 
 
 func _test_scenario_fields(campaign: Resource) -> void:

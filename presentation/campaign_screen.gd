@@ -91,7 +91,7 @@ func _ready() -> void:
 	store = CampaignStore.new(campaign, save_path)
 	var loaded := store.load_records()
 	storage_blocked = not loaded.accepted
-	progress = CampaignProgress.new(campaign, loaded.records if loaded.accepted else {})
+	progress = CampaignProgress.new(campaign, loaded.records if loaded.accepted else {}, loaded.attempts if loaded.accepted else {})
 	active_session = loaded.get("active_session") if loaded.accepted else null
 	recover_button.visible = loaded.can_recover
 	session_only_button.visible = storage_blocked
@@ -484,12 +484,15 @@ func _update_briefing() -> void:
 		begin_button.disabled = true
 		return
 	briefing_title.text = tr("%s · %s") % [tr(scenario.display_name), tr(scenario.operation_problem)]
-	var counts: Dictionary = {}
-	for recipe_id: String in scenario.order_recipe_ids:
-		counts[recipe_id] = counts.get(recipe_id, 0) + 1
+	var ranges: Dictionary = scenario.forecast_ranges()
 	var menu_lines: PackedStringArray = []
 	for recipe_id: String in scenario.menu_ids:
-		menu_lines.append(tr("%s %d건") % [tr(scenario.recipe_for(recipe_id).display_name), counts[recipe_id]])
+		var range_values: Dictionary = ranges[recipe_id]
+		var menu_name: String = tr(scenario.recipe_for(recipe_id).display_name)
+		if range_values["min"] == range_values["max"]:
+			menu_lines.append(tr("%s %d건") % [menu_name, range_values["baseline"]])
+		else:
+			menu_lines.append(tr("%s %d–%d건") % [menu_name, range_values["min"], range_values["max"]])
 	briefing_label.text = tr("%s\n\n목표 · 제공 %d건 이상 / 손익 %s 이상\n\n예산 %s · 고정 인건비 %s\n직원 %d명 · 설비 %d개 · 준비 노동량 %d\n\n예상 주문 %d건 · 영업 300초\n%s") % [tr(scenario.briefing),
 		scenario.minimum_served, KitchenScreen._money(scenario.minimum_profit), KitchenScreen._money(scenario.starting_budget),
 		KitchenScreen._money(scenario.labor_cost), scenario.employees.size(), scenario.stations.size(), scenario.prep_labor_capacity,
@@ -514,14 +517,22 @@ func _begin_selected_service() -> bool:
 	if storage_blocked or active_service != null or progress == null or not progress.is_unlocked(selected_scenario_id):
 		return false
 	var scenario := campaign.scenario_for(selected_scenario_id)
-	_mount_service(scenario)
+	var draw := progress.next_service_seed(selected_scenario_id)
+	if not draw.accepted:
+		return false
+	var replacing_open_checkpoint: bool = active_session is Dictionary and not active_session.simulation.closed
+	if not session_only and not replacing_open_checkpoint:
+		var saved := store.save_records(progress.snapshot().records, progress.snapshot().attempts)
+		if not saved.accepted:
+			_set_save_message("storage", saved.reason)
+	_mount_service(scenario.with_service_seed(draw.service_seed))
 	return true
 
 
 func _mount_service(scenario: Resource) -> void:
 	active_service = ServiceScene.instantiate() as KitchenScreen
 	active_service.scenario_definition = scenario
-	active_service.scenario_path = scenario.resource_path
+	active_service.scenario_path = campaign.scenario_for(scenario.id).resource_path
 	active_service.settings_path = settings_path
 	active_service.app_preferences = preferences
 	active_service.modal_open_allowed = func() -> bool: return not pending_save
@@ -553,7 +564,7 @@ func _resume_active_session() -> bool:
 		return false
 	selected_scenario_id = restored.scenario_id
 	var scenario := campaign.scenario_for(selected_scenario_id)
-	_mount_service(scenario)
+	_mount_service(scenario.with_service_seed(restored.service_seed))
 	if not active_service.restore_service(restored):
 		return false
 	if active_service.state == KitchenScreen.State.CLOSED:
@@ -571,8 +582,9 @@ func _save_checkpoint(_reason: String = "checkpoint") -> bool:
 	if active_service == null or active_service.last_preparation.is_empty():
 		return false
 	var session := ServiceSession.capture(active_service.definitions.id, active_service.last_preparation,
-		active_service.simulation, active_service.driver.speed, active_service.driver.accumulator_us)
-	var result := store.save_active_session(session, progress.snapshot().records)
+		active_service.simulation, active_service.driver.speed, active_service.driver.accumulator_us,
+		int(active_service.definitions.get("service_seed")))
+	var result := store.save_active_session(session, progress.snapshot().records, progress.snapshot().attempts)
 	pending_save = not result.accepted
 	_set_save_message("service_saved" if result.accepted else "storage", result.reason)
 	if result.accepted:
@@ -728,7 +740,7 @@ func _recover() -> void:
 	if not result.accepted:
 		_set_save_message("storage", result.reason)
 		return
-	progress = CampaignProgress.new(campaign, result.records)
+	progress = CampaignProgress.new(campaign, result.records, result.attempts)
 	active_session = result.active_session
 	storage_blocked = false
 	recover_button.visible = false
