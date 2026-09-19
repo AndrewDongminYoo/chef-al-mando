@@ -45,7 +45,7 @@ jobs:
         run: python3 tests/test_m4_restart.py
       - name: Check M5 licenses
         run: bash scripts/check.sh m5
-      - name: mise
+      - name: Check mise suite
         run: bash scripts/check.sh mise
       - name: Check export failure handling
         run: python3 tests/test_export_check.py
