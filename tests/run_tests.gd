@@ -12,6 +12,7 @@ const SUITES := {
 	"m4": "res://tests/test_m4.gd",
 	"m5": "res://tests/test_m5.gd",
 	"ui-regressions": "res://tests/test_ui_regressions.gd",
+	"mise": "res://tests/test_mise.gd",
 }
 
 

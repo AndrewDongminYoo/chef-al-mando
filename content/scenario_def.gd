@@ -7,6 +7,11 @@ extends "res://content/definitions.gd"
 @export var minimum_profit: int = 0
 @export var order_recipe_ids: PackedStringArray = PackedStringArray()
 @export var order_arrival_ticks: PackedInt32Array = PackedInt32Array()
+## 메뉴별 예보 폭. 기준 건수 ± 폭이 브리핑에 보이는 범위이며, 비어 있으면 모든 메뉴가 폭 0입니다.
+@export var forecast_slack: Dictionary[String, int] = {}
+## 이번 영업이 쓰는 추첨. 작성된 .tres에서는 항상 0이며 with_service_seed()로만 바뀝니다.
+## export여야 PreparationPlan의 duplicate()가 값을 함께 복사합니다.
+@export var service_seed: int = 0
 
 
 func validate(require_stock: bool = true) -> Array[String]:
@@ -19,6 +24,11 @@ func validate(require_stock: bool = true) -> Array[String]:
 		errors.append("invalid campaign target")
 	if order_recipe_ids.size() != order_count:
 		errors.append("campaign order sequence must match the order count")
+	for recipe_id: String in forecast_slack:
+		if recipe_id not in menu_ids or forecast_slack[recipe_id] < 0:
+			errors.append("invalid forecast slack: " + recipe_id)
+	if service_seed < 0:
+		errors.append("invalid service seed")
 	if not order_arrival_ticks.is_empty():
 		if order_arrival_ticks.size() != order_count:
 			errors.append("campaign arrival schedule must match the order count")
@@ -42,6 +52,30 @@ func validate(require_stock: bool = true) -> Array[String]:
 	return errors
 
 
+func baseline_counts() -> Dictionary[String, int]:
+	var counts: Dictionary[String, int] = {}
+	for recipe_id: String in menu_ids:
+		counts[recipe_id] = 0
+	for recipe_id: String in order_recipe_ids:
+		counts[recipe_id] = counts.get(recipe_id, 0) + 1
+	return counts
+
+
+func forecast_ranges() -> Dictionary:
+	var ranges: Dictionary = {}
+	var counts := baseline_counts()
+	for recipe_id: String in menu_ids:
+		var slack: int = forecast_slack.get(recipe_id, 0)
+		ranges[recipe_id] = {"baseline": counts[recipe_id], "min": maxi(counts[recipe_id] - slack, 0), "max": counts[recipe_id] + slack}
+	return ranges
+
+
+func with_service_seed(seed_value: int) -> Resource:
+	var seeded := duplicate() as Resource
+	seeded.service_seed = seed_value
+	return seeded
+
+
 func order_schedule() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for index: int in order_recipe_ids.size():
@@ -56,7 +90,8 @@ func order_schedule() -> Array[Dictionary]:
 
 func maximum_profit(served_limit: int) -> int:
 	var margins: Array[int] = []
-	for recipe_id: String in order_recipe_ids:
+	var ranges := forecast_ranges()
+	for recipe_id: String in menu_ids:
 		var recipe := recipe_for(recipe_id)
 		if recipe == null:
 			continue
@@ -65,7 +100,8 @@ func maximum_profit(served_limit: int) -> int:
 			var ingredient := ingredient_for(ingredient_id)
 			if ingredient != null:
 				margin -= ingredient.unit_cost * recipe.ingredients[ingredient_id]
-		margins.append(margin)
+		for _index: int in ranges[recipe_id]["max"]:
+			margins.append(margin)
 	margins.sort()
 	margins.reverse()
 	var upper_bound: int = -labor_cost
