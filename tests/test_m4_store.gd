@@ -44,7 +44,8 @@ func run(_tree: SceneTree) -> void:
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
 	expect(migrated is Dictionary and migrated.size() == 6 and migrated.schema_version == 4
 		and migrated.content_version == 4 and migrated.sim_version == 1
-		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null,
+		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null
+		and migrated.has("attempts") and migrated.attempts == {},
 		"schema 1 upgrades to the exact schema 4 envelope")
 	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
 		"schema 1 record metrics remain exact after migration")
