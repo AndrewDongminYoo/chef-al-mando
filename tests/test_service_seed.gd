@@ -37,7 +37,25 @@ func _test_campaign_screen(tree: SceneTree) -> void:
 	service.call("advance", 1.0)
 	screen.call("_save_checkpoint", "test")
 	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
-	expect(document.active_session.service_seed == 0.0, "the checkpoint stores the service seed")
+	expect(document.active_session.service_seed == 0.0, "the checkpoint stores attempt 0's service seed")
+	screen.call("return_to_menu")
+	await tree.process_frame
+	screen.call("select_scenario", "first_shift")
+	var attempt_one_seed: int = ScheduleGenerator.service_seed_for("first_shift", 1)
+	screen.get("begin_button").pressed.emit()
+	expect(screen.get("active_service") == null and screen.get("replace_dialog").visible,
+		"attempt 0's open checkpoint requires confirmation before attempt 1 replaces it")
+	screen.get("replace_dialog").confirmed.emit()
+	service = screen.get("active_service")
+	service.set_process(false)
+	await tree.process_frame
+	expect(service.get("definitions").service_seed == attempt_one_seed, "starting again draws attempt 1's pinned seed")
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	screen.call("_save_checkpoint", "test")
+	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.active_session.service_seed == float(attempt_one_seed), "the checkpoint stores attempt 1's service seed")
+	expect(document.attempts == {"first_shift": 2.0}, "the deferred attempts save lands once attempt 1's checkpoint is written")
 	screen.queue_free()
 	await tree.process_frame
 	screen = _boot(tree, entry, file_path)
@@ -45,22 +63,12 @@ func _test_campaign_screen(tree: SceneTree) -> void:
 	expect(screen.call("_resume_active_session"), "the saved session resumes")
 	service = screen.get("active_service")
 	service.set_process(false)
-	expect(service.get("definitions").service_seed == 0, "resume restores the stored seed")
+	expect(service.get("definitions").service_seed == attempt_one_seed, "resume restores the stored seed")
 	service.get("resume_button").pressed.emit()
 	service.call("advance", 299.0)
-	expect(screen.get("last_result").passed, "the resumed first service closes with a passing result")
+	expect(screen.get("last_result").passed, "the resumed attempt-1 service closes with a passing result")
 	screen.get("retry_service_button").pressed.emit()
-	expect(service.get("definitions").service_seed == 0, "retry keeps the same seed")
-	screen.call("return_to_menu")
-	await tree.process_frame
-	screen.call("select_scenario", "first_shift")
-	screen.get("begin_button").pressed.emit()
-	service = screen.get("active_service")
-	service.set_process(false)
-	await tree.process_frame
-	expect(service.get("definitions").service_seed == ScheduleGenerator.service_seed_for("first_shift", 1), "a restart from the campaign screen draws attempt 1")
-	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
-	expect(document.attempts == {"first_shift": 2.0}, "the second start increments the attempt count")
+	expect(service.get("definitions").service_seed == attempt_one_seed, "retry keeps the same seed")
 	screen.queue_free()
 	await tree.process_frame
 
