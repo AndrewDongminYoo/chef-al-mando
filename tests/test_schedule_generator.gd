@@ -28,10 +28,22 @@ func run(_tree: SceneTree) -> void:
 		expect(counts.get(recipe_id, 0) >= ranges[recipe_id]["min"] and counts.get(recipe_id, 0) <= ranges[recipe_id]["max"], "drawn count stays inside the forecast range: " + recipe_id)
 	expect(_differs(counts, slacked.baseline_counts()), "a seed with available slack moves at least one order")
 	expect(drawn != ScheduleGenerator.recipe_ids(slacked, 53743680), "different seeds draw different orders")
+	var identical: int = 0
+	for sweep_seed: int in range(1, 51):
+		if ScheduleGenerator.recipe_ids(slacked, sweep_seed) == hot_queue.order_recipe_ids:
+			identical += 1
+	expect(identical == 0, "no seed in 1..50 reproduces the authored order on a slacked scenario (found %d)" % identical)
 	var one_sided: Resource = hot_queue.duplicate()
 	var one_slack: Dictionary[String, int] = {"grill": 2}
 	one_sided.forecast_slack = one_slack
-	expect(ScheduleGenerator.recipe_ids(one_sided, 104076537) == hot_queue.order_recipe_ids, "slack on a single menu cannot move anything because no other menu can give or take")
+	var one_sided_drawn := ScheduleGenerator.recipe_ids(one_sided, 104076537)
+	var one_sided_counts: Dictionary = {}
+	for recipe_id: String in one_sided_drawn:
+		one_sided_counts[recipe_id] = one_sided_counts.get(recipe_id, 0) + 1
+	var one_sided_baseline: Dictionary = one_sided.baseline_counts()
+	for recipe_id: String in one_sided.menu_ids:
+		expect(one_sided_counts.get(recipe_id, 0) == one_sided_baseline.get(recipe_id, 0),
+			"slack on a single menu cannot move anything because no other menu can give or take: " + recipe_id)
 	var schedule: Array = slacked.with_service_seed(104076537).order_schedule()
 	expect(schedule.size() == hot_queue.order_count, "the seeded scenario schedules every order")
 	for index: int in schedule.size():

@@ -1,7 +1,8 @@
 extends RefCounted
 
 ## (시나리오, 시드) → 주문 메뉴 순서의 순수 함수.
-## 시드 0은 작성된 순서를 그대로 돌려주고, 그 외 시드는 예보 범위 안에서 건수를 옮긴 뒤 슬롯을 섞습니다.
+## 시드 0이거나 모든 메뉴의 slack 합이 0이면 작성된 순서를 그대로 돌려줍니다.
+## 그 외에는 예보 범위 안에서 건수를 옮긴 뒤, 건수가 기준과 같아도 항상 슬롯을 섞습니다.
 ## 시뮬레이션 상태, 시계, 저장 파일을 읽지 않습니다.
 
 const FNV_OFFSET: int = 2166136261
@@ -25,17 +26,17 @@ static func service_seed_for(scenario_id: String, attempt_index: int) -> int:
 
 static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArray:
 	var authored: PackedStringArray = scenario.order_recipe_ids
-	if service_seed == 0:
-		return authored.duplicate()
 	var ranges: Dictionary = scenario.forecast_ranges()
 	var counts: Dictionary[String, int] = {}
 	var total_slack: int = 0
 	for recipe_id: String in scenario.menu_ids:
 		counts[recipe_id] = ranges[recipe_id]["baseline"]
 		total_slack += ranges[recipe_id]["max"] - ranges[recipe_id]["baseline"]
+	if service_seed == 0 or total_slack == 0:
+		return authored.duplicate()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = service_seed
-	var moves: int = rng.randi_range(1, maxi(total_slack, 1))
+	var moves: int = rng.randi_range(1, total_slack)
 	for _move: int in moves:
 		var donors: PackedStringArray = []
 		for recipe_id: String in scenario.menu_ids:
@@ -48,8 +49,6 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 		var receiver: String = receivers[rng.randi_range(0, receivers.size() - 1)]
 		counts[donor] -= 1
 		counts[receiver] += 1
-	if counts == scenario.baseline_counts():
-		return authored.duplicate()
 	var result: PackedStringArray = []
 	for recipe_id: String in scenario.menu_ids:
 		for _index: int in counts[recipe_id]:
