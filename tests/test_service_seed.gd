@@ -71,6 +71,9 @@ func _test_campaign_screen(tree: SceneTree) -> void:
 	expect(service.get("definitions").service_seed == attempt_one_seed, "retry keeps the same seed")
 	screen.queue_free()
 	await tree.process_frame
+	for owned_file: String in DirAccess.get_files_at(directory):
+		DirAccess.remove_absolute(directory + "/" + owned_file)
+	DirAccess.remove_absolute(directory)
 
 
 func _test_replace_defers_attempts_save(tree: SceneTree) -> void:
@@ -116,6 +119,9 @@ func _test_replace_defers_attempts_save(tree: SceneTree) -> void:
 		"the landed checkpoint stores the newly drawn seed")
 	screen.queue_free()
 	await tree.process_frame
+	for owned_file: String in DirAccess.get_files_at(directory):
+		DirAccess.remove_absolute(directory + "/" + owned_file)
+	DirAccess.remove_absolute(directory)
 
 
 func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
@@ -272,3 +278,18 @@ func _test_store_schema(campaign: Resource) -> void:
 	file.close()
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records", "attempts for an unknown service are rejected as corrupt")
+	var missing_attempts := {"schema_version": 4, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null}
+	file = FileAccess.open(file_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(missing_attempts))
+	file.close()
+	loaded = CampaignStore.new(campaign, file_path).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records", "a schema 4 document without an attempts key is rejected as corrupt")
+	var non_dictionary_attempts := {"schema_version": 4, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null, "attempts": 3}
+	file = FileAccess.open(file_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(non_dictionary_attempts))
+	file.close()
+	loaded = CampaignStore.new(campaign, file_path).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records", "a schema 4 document whose attempts is not a Dictionary is rejected as corrupt")
+	for owned_file: String in DirAccess.get_files_at(directory):
+		DirAccess.remove_absolute(directory + "/" + owned_file)
+	DirAccess.remove_absolute(directory)
