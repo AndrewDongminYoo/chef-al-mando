@@ -10,6 +10,7 @@ const ServiceSim := preload("res://sim/service_sim.gd")
 func run(tree: SceneTree) -> void:
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	_test_scenario_fields(campaign)
+	_test_session_seed(campaign)
 
 
 func _test_scenario_fields(campaign: Resource) -> void:
@@ -46,6 +47,56 @@ func _test_scenario_fields(campaign: Resource) -> void:
 	expect(seeded.service_seed == 7 and hot_queue.service_seed == 0, "with_service_seed returns a seeded copy and leaves the source untouched")
 	expect(seeded.id == hot_queue.id and seeded.order_recipe_ids == hot_queue.order_recipe_ids, "the seeded copy keeps the authored content")
 	expect(slacked.maximum_profit(20) == hot_queue.maximum_profit(20) + 2 * _margin(hot_queue, "grill") + _margin(hot_queue, "soup") - 3 * _margin(hot_queue, "salad"), "maximum profit uses the forecast upper bounds")
+
+
+func _test_session_seed(campaign: Resource) -> void:
+	var records: Dictionary = {}
+	var hot_queue: Resource = campaign.scenario_for("hot_queue")
+	var unlocked: Dictionary = {}
+	for scenario: Resource in campaign.scenarios:
+		if scenario.id == "hot_queue":
+			break
+		unlocked[scenario.id] = {"completed": true, "best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit}
+	records = unlocked
+	var seeded: Resource = hot_queue.with_service_seed(104076537)
+	var plan := PreparationPlan.new(seeded)
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
+	expect(started.accepted, "seeded preparation starts")
+	expect(started.definitions.service_seed == 104076537, "the started definition carries the service seed through duplicate()")
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	expect(simulation.errors.is_empty(), "seeded simulation builds")
+	var session := ServiceSession.capture("hot_queue", started.selection, simulation, 1, 0, 104076537)
+	expect(session.size() == 6 and session.service_seed == 104076537, "capture stores the service seed as the sixth field")
+	var restored := ServiceSession.restore(campaign, session, records)
+	expect(restored.accepted and restored.service_seed == 104076537, "restore returns the service seed")
+	expect(restored.definitions.order_schedule()[0].recipe_id == seeded.order_schedule()[0].recipe_id, "restore rebuilds the seeded schedule")
+	var legacy := session.duplicate(true)
+	legacy.erase("service_seed")
+	var legacy_restored := ServiceSession.restore(campaign, legacy, records)
+	expect(legacy_restored.accepted and legacy_restored.service_seed == 0, "a five-field session restores with seed 0")
+	var forged := session.duplicate(true)
+	forged.service_seed = "7"
+	expect(not ServiceSession.restore(campaign, forged, records).accepted, "a non-integer seed is rejected")
+	forged = session.duplicate(true)
+	forged.service_seed = -1
+	expect(not ServiceSession.restore(campaign, forged, records).accepted, "a negative seed is rejected")
+	var modified: Resource = campaign.duplicate(true)
+	var slacked: Resource = modified.scenario_for("hot_queue")
+	var slack: Dictionary[String, int] = {"grill": 2, "soup": 1, "salad": 1}
+	slacked.forecast_slack = slack
+	var drawn_scenario: Resource = slacked.with_service_seed(104076537)
+	var drawn_plan := PreparationPlan.new(drawn_scenario)
+	var drawn_started := drawn_plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
+	expect(drawn_started.accepted, "a slack-bearing seeded preparation starts")
+	var drawn_sim := ServiceSim.new(drawn_started.definitions, null, drawn_started.options)
+	while not drawn_sim.closed:
+		drawn_sim.step()
+	var drawn_session := ServiceSession.capture("hot_queue", drawn_started.selection, drawn_sim, 1, 0, 104076537)
+	expect(ServiceSession.restore(modified, drawn_session, records).accepted, "a closed session restores under the seed that produced it")
+	var wrong_seed := drawn_session.duplicate(true)
+	wrong_seed.service_seed = 0
+	var rejected := ServiceSession.restore(modified, wrong_seed, records)
+	expect(not rejected.accepted and rejected.reason == "invalid_schedule", "the same orders cannot restore under a seed whose draw differs")
 
 
 func _margin(scenario: Resource, recipe_id: String) -> int:
