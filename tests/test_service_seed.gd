@@ -15,6 +15,7 @@ func run(tree: SceneTree) -> void:
 	_test_attempts(campaign)
 	_test_store_schema(campaign)
 	await _test_campaign_screen(tree)
+	await _test_replace_defers_attempts_save(tree)
 
 
 func _test_campaign_screen(tree: SceneTree) -> void:
@@ -60,6 +61,51 @@ func _test_campaign_screen(tree: SceneTree) -> void:
 	expect(service.get("definitions").service_seed == ScheduleGenerator.service_seed_for("first_shift", 1), "a restart from the campaign screen draws attempt 1")
 	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
 	expect(document.attempts == {"first_shift": 2.0}, "the second start increments the attempt count")
+	screen.queue_free()
+	await tree.process_frame
+
+
+func _test_replace_defers_attempts_save(tree: SceneTree) -> void:
+	var entry: String = ProjectSettings.get_setting("application/run/main_scene")
+	var directory := "user://test_service_seed_replace_%d" % Time.get_ticks_usec()
+	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "replace fixture directory is created")
+	var file_path := directory + "/records.json"
+	var screen := _boot(tree, entry, file_path)
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	await tree.process_frame
+	service.get("start_button").pressed.emit()
+	service.call("advance", 1.0)
+	screen.call("_save_checkpoint", "test")
+	var pre_replace_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(pre_replace_document.attempts == {"first_shift": 1.0} and not pre_replace_document.active_session.simulation.closed,
+		"an open checkpoint with an unclosed simulation is on disk before any replacement")
+	var pre_replace_bytes := FileAccess.get_file_as_bytes(file_path)
+	screen.queue_free()
+	await tree.process_frame
+	screen = _boot(tree, entry, file_path)
+	await tree.process_frame
+	expect(screen.call("select_scenario", "first_shift"), "the same scenario can be reselected")
+	expect(not screen.call("begin_service"), "an open checkpoint requires an explicit replacement confirmation")
+	expect(screen.get("replace_dialog").visible and screen.get("active_service") == null,
+		"the replace dialog opens instead of mounting a new service directly")
+	screen.get("replace_dialog").confirmed.emit()
+	await tree.process_frame
+	service = screen.get("active_service")
+	expect(service != null, "confirming replacement mounts a fresh service")
+	service.set_process(false)
+	expect(service.get("definitions").service_seed == ScheduleGenerator.service_seed_for("first_shift", 1),
+		"confirming replacement draws attempt 1's seed even though the checkpoint being replaced held attempt 0")
+	expect(FileAccess.get_file_as_bytes(file_path) == pre_replace_bytes,
+		"confirming replacement leaves attempt count 1 on disk until the new checkpoint lands, by design")
+	service.get("start_button").pressed.emit()
+	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.attempts == {"first_shift": 2.0},
+		"the deferred draw reaches disk as attempt count 2 once the replacement's preparation checkpoint lands")
+	expect(document.active_session.service_seed == float(ScheduleGenerator.service_seed_for("first_shift", 1)),
+		"the landed checkpoint stores the newly drawn seed")
 	screen.queue_free()
 	await tree.process_frame
 

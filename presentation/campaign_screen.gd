@@ -581,9 +581,10 @@ func _save_checkpoint(_reason: String = "checkpoint") -> bool:
 		return true
 	if active_service == null or active_service.last_preparation.is_empty():
 		return false
+	var seed_value: Variant = active_service.definitions.get("service_seed")
 	var session := ServiceSession.capture(active_service.definitions.id, active_service.last_preparation,
 		active_service.simulation, active_service.driver.speed, active_service.driver.accumulator_us,
-		int(active_service.definitions.get("service_seed")))
+		seed_value if seed_value is int else 0)
 	var result := store.save_active_session(session, progress.snapshot().records, progress.snapshot().attempts)
 	pending_save = not result.accepted
 	_set_save_message("service_saved" if result.accepted else "storage", result.reason)
