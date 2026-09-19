@@ -33,6 +33,19 @@ func run(_tree: SceneTree) -> void:
 		if ScheduleGenerator.recipe_ids(slacked, sweep_seed) == hot_queue.order_recipe_ids:
 			identical += 1
 	expect(identical == 0, "no seed in 1..50 reproduces the authored order on a slacked scenario (found %d)" % identical)
+	var authored_pattern := PackedStringArray(["grill", "grill", "soup", "salad"])
+	var broken := ScheduleGenerator.break_identity(authored_pattern.duplicate(), authored_pattern)
+	expect(broken != authored_pattern, "a shuffle that lands on the authored order is broken deterministically")
+	expect(broken == PackedStringArray(["grill", "soup", "grill", "salad"]), "the fallback swaps the first adjacent pair of different recipes")
+	var sorted_broken := Array(broken)
+	sorted_broken.sort()
+	var sorted_authored := Array(authored_pattern)
+	sorted_authored.sort()
+	expect(sorted_broken == sorted_authored, "the fallback keeps the drawn counts")
+	var already_different := PackedStringArray(["soup", "grill", "grill", "salad"])
+	expect(ScheduleGenerator.break_identity(already_different.duplicate(), authored_pattern) == already_different, "a result that already differs is returned unchanged")
+	var single_menu := PackedStringArray(["salad", "salad", "salad"])
+	expect(ScheduleGenerator.break_identity(single_menu.duplicate(), single_menu) == single_menu, "a single-menu order has no distinguishable permutation and stays authored")
 	var one_sided: Resource = hot_queue.duplicate()
 	var one_slack: Dictionary[String, int] = {"grill": 2}
 	one_sided.forecast_slack = one_slack

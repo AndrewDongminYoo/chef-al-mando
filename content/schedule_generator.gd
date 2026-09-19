@@ -58,7 +58,23 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 		var held := result[index]
 		result[index] = result[swap_index]
 		result[swap_index] = held
-	return result
+	return break_identity(result, authored)
+
+
+## A shuffle can land on the authored order by chance, or on an equivalent permutation of duplicate
+## recipe IDs. A seeded draw must differ from the authored order, so swap the first adjacent pair of
+## different recipes; only a scenario whose every slot is the same recipe keeps the authored order.
+static func break_identity(result: PackedStringArray, authored: PackedStringArray) -> PackedStringArray:
+	if result != authored:
+		return result
+	var distinct := result.duplicate()
+	for index: int in range(distinct.size() - 1):
+		if distinct[index] != distinct[index + 1]:
+			var held := distinct[index]
+			distinct[index] = distinct[index + 1]
+			distinct[index + 1] = held
+			return distinct
+	return distinct
 
 
 static func _receivers(scenario: Resource, counts: Dictionary, ranges: Dictionary, donor: String) -> PackedStringArray:
