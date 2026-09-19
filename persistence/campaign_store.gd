@@ -212,6 +212,10 @@ func _read(target: String) -> Dictionary:
 		if active_session != null:
 			if not active_session is Dictionary:
 				return _failure("corrupt_records")
+			# Five-field sessions are legacy shapes from schema 1-3 writers; a schema 4 writer always
+			# records service_seed, so its absence means the session was edited or truncated.
+			if schema_version >= 4 and not active_session.has("service_seed"):
+				return _failure("corrupt_records")
 			if content_updated and _content_update_restarts_session(int(document.content_version), active_session):
 				active_session = null
 			elif not ServiceSession.restore(_campaign, active_session, records).accepted:
