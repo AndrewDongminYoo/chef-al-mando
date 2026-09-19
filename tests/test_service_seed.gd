@@ -143,12 +143,15 @@ func _test_replace_defers_attempts_save(tree: SceneTree) -> void:
 	service.set_process(false)
 	expect(service.get("definitions").service_seed == ScheduleGenerator.service_seed_for("first_shift", 1),
 		"confirming replacement draws attempt 1's seed even though the checkpoint being replaced held attempt 0")
-	expect(FileAccess.get_file_as_bytes(file_path) == pre_replace_bytes,
-		"confirming replacement leaves attempt count 1 on disk until the new checkpoint lands, by design")
+	var confirmed_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(FileAccess.get_file_as_bytes(file_path) != pre_replace_bytes and confirmed_document.attempts == {"first_shift": 2.0},
+		"confirming replacement persists attempt count 2 immediately so a quit before Start cannot redraw the same seed")
+	expect(confirmed_document.active_session == pre_replace_document.active_session,
+		"confirming replacement keeps the open checkpoint on disk until Start replaces it")
 	service.get("start_button").pressed.emit()
 	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
 	expect(document.attempts == {"first_shift": 2.0},
-		"the deferred draw reaches disk as attempt count 2 once the replacement's preparation checkpoint lands")
+		"the replacement's preparation checkpoint keeps attempt count 2")
 	expect(document.active_session.service_seed == float(ScheduleGenerator.service_seed_for("first_shift", 1)),
 		"the landed checkpoint stores the newly drawn seed")
 	screen.queue_free()

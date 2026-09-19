@@ -520,8 +520,9 @@ func _begin_selected_service() -> bool:
 	var draw := progress.next_service_seed(selected_scenario_id)
 	if not draw.accepted:
 		return false
-	var replacing_open_checkpoint: bool = active_session is Dictionary and not active_session.simulation.closed
-	if not session_only and not replacing_open_checkpoint:
+	# Persist the draw immediately; save_records keeps the primary's active session, so replacing
+	# an open checkpoint still happens only at Start while the attempt count can no longer be lost.
+	if not session_only:
 		var saved := store.save_records(progress.snapshot().records, progress.snapshot().attempts)
 		if not saved.accepted:
 			# The draw is only real once it is on disk; otherwise the next launch would reuse it.
