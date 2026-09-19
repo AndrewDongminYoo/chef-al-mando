@@ -249,10 +249,11 @@ func _test_failed_checkpoint_pauses_live_service(tree: SceneTree, entry: String,
 	var screen := _boot(tree, entry, start_path, directory + "/live-start-settings.json")
 	await tree.process_frame
 	var failed_store := StoreTests.FailedStore.new(screen.get("campaign"), start_path)
-	failed_store.failure = "write"
 	screen.set("store", failed_store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
+	# Storage fails only after the service is mounted, so the Start checkpoint is what fails here.
+	failed_store.failure = "write"
 	expect(service.is_processing(), "the failed Start fixture uses the real service process loop")
 	service.get("start_button").pressed.emit()
 	var failed_tick: int = service.get("simulation").tick
@@ -329,11 +330,12 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 	var screen := _boot(tree, entry, file_path, directory + "/failed-settings.json")
 	await tree.process_frame
 	var failed_store := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
-	failed_store.failure = "write"
 	screen.set("store", failed_store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)
+	# Storage fails only after the service is mounted, so the Start checkpoint is what fails here.
+	failed_store.failure = "write"
 	service.get("start_button").pressed.emit()
 	await tree.process_frame
 	var retry := _find_visible_button(screen, "저장 재시도")

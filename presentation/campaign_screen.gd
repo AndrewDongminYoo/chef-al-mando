@@ -524,7 +524,10 @@ func _begin_selected_service() -> bool:
 	if not session_only and not replacing_open_checkpoint:
 		var saved := store.save_records(progress.snapshot().records, progress.snapshot().attempts)
 		if not saved.accepted:
+			# The draw is only real once it is on disk; otherwise the next launch would reuse it.
+			progress.revert_service_seed(selected_scenario_id, draw.attempt_index)
 			_set_save_message("storage", saved.reason)
+			return false
 	_mount_service(scenario.with_service_seed(draw.service_seed))
 	return true
 

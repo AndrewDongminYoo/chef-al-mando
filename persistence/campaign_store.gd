@@ -222,6 +222,10 @@ func _read(target: String) -> Dictionary:
 				return _failure("corrupt_records")
 			else:
 				active_session = active_session.duplicate(true)
+				# A schema 1-3 session predates service_seed; normalize it so that every later write
+				# (primary, staged backup, recovery) produces a schema 4 session the guard above accepts.
+				if not active_session.has("service_seed"):
+					active_session["service_seed"] = 0
 	return {"accepted": true, "reason": "content_updated" if content_updated else "loaded", "records": records,
 		"attempts": attempts, "active_session": active_session, "can_recover": false}
 

@@ -99,6 +99,18 @@ func next_service_seed(scenario_id: String) -> Dictionary:
 		"attempt_index": attempt_index}
 
 
+## Undoes the draw that produced attempt_index when the caller could not persist it.
+## Only the most recent draw can be reverted, so a stale index is refused.
+func revert_service_seed(scenario_id: String, attempt_index: int) -> bool:
+	if _attempts.get(scenario_id, 0) != attempt_index + 1:
+		return false
+	if attempt_index == 0:
+		_attempts.erase(scenario_id)
+	else:
+		_attempts[scenario_id] = attempt_index
+	return true
+
+
 func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 	if not is_unlocked(scenario_id):
 		return {"accepted": false, "reason": "locked_service"}

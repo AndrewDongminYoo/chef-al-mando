@@ -6,6 +6,7 @@ const CampaignStore := preload("res://persistence/campaign_store.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+const StoreTests := preload("res://tests/test_campaign_store.gd")
 
 
 func run(tree: SceneTree) -> void:
@@ -16,6 +17,39 @@ func run(tree: SceneTree) -> void:
 	_test_store_schema(campaign)
 	await _test_campaign_screen(tree)
 	await _test_replace_defers_attempts_save(tree)
+	await _test_begin_rolls_back_when_save_fails(tree)
+
+
+func _test_begin_rolls_back_when_save_fails(tree: SceneTree) -> void:
+	var entry: String = ProjectSettings.get_setting("application/run/main_scene")
+	var directory := "user://test_service_seed_rollback_%d" % Time.get_ticks_usec()
+	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "rollback fixture directory is created")
+	var file_path := directory + "/records.json"
+	var screen := _boot(tree, entry, file_path)
+	await tree.process_frame
+	var failing := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
+	failing.failure = "write"
+	screen.set("store", failing)
+	screen.get("begin_button").pressed.emit()
+	expect(screen.get("active_service") == null, "a failed attempts save keeps the player on the campaign screen")
+	expect(screen.get("progress").snapshot().attempts == {}, "a failed attempts save rolls the draw back")
+	expect(screen.get("save_message_kind") == "storage", "a failed attempts save reports the storage problem")
+	expect(not FileAccess.file_exists(file_path), "nothing was written by the failed save")
+	failing.failure = ""
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	expect(service != null, "the next start succeeds once storage works")
+	if service != null:
+		service.set_process(false)
+		await tree.process_frame
+		expect(service.get("definitions").service_seed == 0, "the retried first start still uses seed 0 because the draw was rolled back")
+	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document is Dictionary and document.attempts == {"first_shift": 1.0}, "the successful start persists the attempt count once")
+	screen.queue_free()
+	await tree.process_frame
+	for owned_file: String in DirAccess.get_files_at(directory):
+		DirAccess.remove_absolute(directory + "/" + owned_file)
+	DirAccess.remove_absolute(directory)
 
 
 func _test_campaign_screen(tree: SceneTree) -> void:
@@ -241,6 +275,11 @@ func _test_attempts(campaign: Resource) -> void:
 	var second := progress.next_service_seed("first_shift")
 	expect(second.accepted and second.service_seed == ScheduleGenerator.service_seed_for("first_shift", 1) and second.attempt_index == 1, "the second start draws attempt 1")
 	expect(progress.snapshot().attempts == {"first_shift": 2}, "attempts count the starts")
+	expect(not progress.revert_service_seed("first_shift", 0), "only the most recent draw can be reverted")
+	expect(progress.revert_service_seed("first_shift", 1) and progress.snapshot().attempts == {"first_shift": 1}, "reverting the last draw restores the previous count")
+	expect(progress.revert_service_seed("first_shift", 0) and progress.snapshot().attempts == {}, "reverting the first draw removes the entry")
+	expect(progress.next_service_seed("first_shift").service_seed == 0, "the next draw after a full revert is attempt 0 again")
+	expect(progress.next_service_seed("first_shift").attempt_index == 1, "the count resumes after the reverted draws")
 	expect(not progress.next_service_seed("hot_queue").accepted, "a locked service cannot draw a seed")
 	expect(not progress.next_service_seed("missing").accepted, "an unknown service cannot draw a seed")
 	expect(CampaignProgress.validate_attempts(campaign, {"first_shift": 2}).is_empty(), "valid attempts pass")
@@ -301,7 +340,13 @@ func _test_store_schema(campaign: Resource) -> void:
 	file.store_string(JSON.stringify(legacy_session_document))
 	file.close()
 	loaded = CampaignStore.new(campaign, file_path).load_records()
-	expect(loaded.accepted and loaded.active_session is Dictionary, "a schema 3 document still restores a five-field session")
+	expect(loaded.accepted and loaded.active_session is Dictionary and loaded.active_session.service_seed == 0, "a schema 3 document still restores a five-field session, normalized to seed 0")
+	var upgrading_store := CampaignStore.new(campaign, file_path)
+	expect(upgrading_store.save_records({}).accepted, "a records save on top of a legacy five-field session succeeds")
+	var staged_backup: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path + ".backup"))
+	expect(int(staged_backup.schema_version) == 4 and staged_backup.active_session is Dictionary and staged_backup.active_session.service_seed == 0, "the staged backup re-encodes the legacy session with service_seed 0")
+	expect(upgrading_store.clear_active_session().accepted, "clearing a normalized legacy session succeeds")
+	expect(CampaignStore.new(campaign, file_path).load_records().active_session == null, "the legacy session is cleared on disk")
 	var truncated_session_document := {"schema_version": 4, "content_version": 4, "sim_version": 1, "records": {}, "active_session": five_field_session, "attempts": {}}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(truncated_session_document))
