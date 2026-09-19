@@ -120,7 +120,7 @@ func _test_restore(campaign: Resource) -> void:
 		expect(old_restored.accepted and old_restored.simulation.state_hash() == old_sim.state_hash(), "legacy session retains exact simulation state")
 	expect(store.save_active_session(session, {}).accepted, "a new menu-default session replaces the valid legacy save")
 	var new_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(target))
-	expect(new_document.schema_version == 3, "new writes use schema 3 for older-app future-version protection")
+	expect(new_document.schema_version == 4, "new writes use schema 4 for older-app future-version protection")
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(loaded.accepted and ServiceSession.restore(campaign, loaded.active_session, {}).accepted, "a fresh store reads saved menu defaults")
 	for owned: String in DirAccess.get_files_at(directory):

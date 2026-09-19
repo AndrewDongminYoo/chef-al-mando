@@ -404,7 +404,8 @@ static func _receivers(scenario: Resource, counts: Dictionary, ranges: Dictionar
 	return receivers
 ```
 
-건수가 기준과 같으면 섞지 않고 작성된 순서를 돌려주므로, 폭이 0인 시나리오는 어떤 시드에서도 항등입니다(명세 §4.2).
+~~건수가 기준과 같으면 섞지 않고 작성된 순서를 돌려주므로, 폭이 0인 시나리오는 어떤 시드에서도 항등입니다(명세 §4.2).~~
+(정정: 아래 "2026-09-19 정정" 절 참고.)
 
 `content/scenario_def.gd` 상단에 preload를 더하고 `order_schedule()`을 생성기 기반으로 바꿉니다.
 
@@ -1191,3 +1192,18 @@ git commit -m "docs(checks): register the mise suite and record the seed-0 basel
 
 2단계(미장 재구성)는 이 PR이 머지된 코드 위에서 별도 계획으로 씁니다.
 폭 작성과 시드 1~5 풀림 검사, 브리핑 인내 시간 표시는 미장 PR 뒤의 콘텐츠 계획에 둡니다.
+
+## 2026-09-19 정정
+
+아래 다섯 항목은 최종 전체 브랜치 리뷰에서 이 계획의 서술과 실제로 머지된 코드가 갈린 지점입니다.
+이 절 아래의 단계 서술은 고치지 않으며, 권위는 인용한 커밋의 코드와 테스트에 있습니다.
+
+- Task 5의 즉시 `save_records` 호출은 "끝나지 않은 진행 중 영업이 없을 때"로 제한됩니다.
+  `replacing_open_checkpoint`가 참이면 저장을 미루며, 이는 `tests/test_m4_ui.gd`가 고정한 출시된 UX 계약입니다(커밋 167d0c1).
+- `_save_checkpoint`가 읽는 시드 값은 `seed_value if seed_value is int else 0`입니다.
+  Godot 4.7.2에서 `int(null)`은 예외를 던지므로 이 계획이 서술한 방식은 성립하지 않습니다(커밋 8dfef16).
+- `_test_campaign_screen`은 이어하기 뒤 재개 전에 `resume_button.pressed.emit()`을 눌러야 합니다.
+  `restore_service`가 상태를 PAUSED로 남기기 때문입니다(커밋 167d0c1).
+- 생성기는 slack이 있으면 건수가 기준과 같아도 항상 슬롯을 섞습니다.
+  이는 Task 2 Step 3의 "건수가 기준과 같으면 섞지 않음" 서술을 대체합니다(커밋 86abefd).
+- `maximum_profit`은 예보 상한으로 기록 상한을 계산하며, slack이 0이면 기존 값과 같습니다(커밋 ee9c9d0).
