@@ -5,12 +5,15 @@ const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const CampaignStore := preload("res://persistence/campaign_store.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
+const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 
 
 func run(tree: SceneTree) -> void:
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	_test_scenario_fields(campaign)
 	_test_session_seed(campaign)
+	_test_attempts(campaign)
+	_test_store_schema(campaign)
 
 
 func _test_scenario_fields(campaign: Resource) -> void:
@@ -105,3 +108,50 @@ func _margin(scenario: Resource, recipe_id: String) -> int:
 	for ingredient_id: String in recipe.ingredients:
 		margin -= scenario.ingredient_for(ingredient_id).unit_cost * recipe.ingredients[ingredient_id]
 	return margin
+
+
+func _test_attempts(campaign: Resource) -> void:
+	var progress := CampaignProgress.new(campaign)
+	expect(progress.snapshot().attempts == {}, "a new campaign has no attempts")
+	var first := progress.next_service_seed("first_shift")
+	expect(first.accepted and first.service_seed == 0 and first.attempt_index == 0, "the first start of a service uses seed 0")
+	var second := progress.next_service_seed("first_shift")
+	expect(second.accepted and second.service_seed == ScheduleGenerator.service_seed_for("first_shift", 1) and second.attempt_index == 1, "the second start draws attempt 1")
+	expect(progress.snapshot().attempts == {"first_shift": 2}, "attempts count the starts")
+	expect(not progress.next_service_seed("hot_queue").accepted, "a locked service cannot draw a seed")
+	expect(not progress.next_service_seed("missing").accepted, "an unknown service cannot draw a seed")
+	expect(CampaignProgress.validate_attempts(campaign, {"first_shift": 2}).is_empty(), "valid attempts pass")
+	expect(not CampaignProgress.validate_attempts(campaign, {"missing": 1}).is_empty(), "attempts for an unknown service fail")
+	expect(not CampaignProgress.validate_attempts(campaign, {"first_shift": -1}).is_empty(), "negative attempts fail")
+	expect(not CampaignProgress.validate_attempts(campaign, {"first_shift": 1.5}).is_empty(), "non-integer attempts fail")
+	var restored := CampaignProgress.new(campaign, {}, {"first_shift": 2})
+	expect(restored.next_service_seed("first_shift").attempt_index == 2, "restored attempts continue the count")
+
+
+func _test_store_schema(campaign: Resource) -> void:
+	var directory := "user://test_service_seed_%d" % Time.get_ticks_usec()
+	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "store fixture directory is created")
+	var file_path := directory + "/records.json"
+	var store := CampaignStore.new(campaign, file_path)
+	expect(store.save_records({}, {"first_shift": 3}).accepted, "attempts save with empty records")
+	var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(document.size() == 6 and int(document.schema_version) == 4 and document.attempts == {"first_shift": 3.0}, "new writes use schema 4 with an attempts key")
+	var loaded := CampaignStore.new(campaign, file_path).load_records()
+	expect(loaded.accepted and loaded.attempts == {"first_shift": 3}, "attempts load as integers")
+	expect(store.save_records({}).accepted, "saving without attempts keeps the stored attempts")
+	expect(CampaignStore.new(campaign, file_path).load_records().attempts == {"first_shift": 3}, "a null attempts argument preserves the primary attempts")
+	var legacy := {"schema_version": 3, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null}
+	var file := FileAccess.open(file_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(legacy))
+	file.close()
+	loaded = CampaignStore.new(campaign, file_path).load_records()
+	expect(loaded.accepted and loaded.attempts == {}, "a schema 3 document loads with empty attempts")
+	expect(store.save_records({}, {"first_shift": 1}).accepted, "the next save upgrades the document")
+	document = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	expect(int(document.schema_version) == 4 and document.attempts == {"first_shift": 1.0}, "the upgraded document carries schema 4 and attempts")
+	var corrupt := {"schema_version": 4, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null, "attempts": {"missing": 1}}
+	file = FileAccess.open(file_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(corrupt))
+	file.close()
+	loaded = CampaignStore.new(campaign, file_path).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records", "attempts for an unknown service are rejected as corrupt")

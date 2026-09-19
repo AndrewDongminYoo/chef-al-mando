@@ -3,9 +3,10 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 3, "content_version": 4, "sim_version": 1}
+const VERSIONS := {"schema_version": 4, "content_version": 4, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
+const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
 
 var file_path: String
 var _campaign: CampaignDef
@@ -22,15 +23,15 @@ func load_records() -> Dictionary:
 		return primary
 	var backup := _read(file_path + ".backup")
 	if primary.reason == "missing" and backup.reason == "missing":
-		return {"accepted": true, "reason": "new_campaign", "records": {}, "active_session": null, "can_recover": false}
+		return {"accepted": true, "reason": "new_campaign", "records": {}, "attempts": {}, "active_session": null, "can_recover": false}
 	var protected: bool = primary.reason in ["future_version", "unsupported_version", "read_failed"] or backup.reason in ["future_version", "unsupported_version"]
 	var reason: String = primary.reason
 	if primary.reason == "missing" and backup.reason in ["future_version", "unsupported_version"]:
 		reason = backup.reason
-	return {"accepted": false, "reason": reason, "records": {}, "can_recover": backup.accepted and not protected}
+	return {"accepted": false, "reason": reason, "records": {}, "attempts": {}, "can_recover": backup.accepted and not protected}
 
 
-func save_records(records: Dictionary) -> Dictionary:
+func save_records(records: Dictionary, attempts: Variant = null) -> Dictionary:
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("invalid_records")
 	var primary := _read(file_path)
@@ -42,10 +43,13 @@ func save_records(records: Dictionary) -> Dictionary:
 	var active_session: Variant = primary.active_session if primary.accepted else null
 	if not _valid_session(active_session, records):
 		return _failure("invalid_session")
-	return _commit(records, active_session, primary)
+	var resolved := _resolve_attempts(attempts, primary)
+	if not resolved.accepted:
+		return _failure("invalid_attempts")
+	return _commit(records, active_session, resolved.attempts, primary)
 
 
-func save_active_session(active_session: Variant, records: Dictionary) -> Dictionary:
+func save_active_session(active_session: Variant, records: Dictionary, attempts: Variant = null) -> Dictionary:
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("invalid_records")
 	if not _valid_session(active_session, records):
@@ -56,24 +60,35 @@ func save_active_session(active_session: Variant, records: Dictionary) -> Dictio
 		return _failure(backup.reason)
 	if not primary.accepted and not (primary.reason == "missing" and backup.reason == "missing"):
 		return _failure("recovery_required" if primary.reason == "missing" else primary.reason)
-	return _commit(records, active_session, primary)
+	var resolved := _resolve_attempts(attempts, primary)
+	if not resolved.accepted:
+		return _failure("invalid_attempts")
+	return _commit(records, active_session, resolved.attempts, primary)
+
+
+func _resolve_attempts(attempts: Variant, primary: Dictionary) -> Dictionary:
+	if attempts == null:
+		return {"accepted": true, "attempts": primary.attempts.duplicate(true) if primary.accepted else {}}
+	if not attempts is Dictionary or not CampaignProgress.validate_attempts(_campaign, attempts).is_empty():
+		return {"accepted": false, "attempts": {}}
+	return {"accepted": true, "attempts": attempts.duplicate(true)}
 
 
 func clear_active_session() -> Dictionary:
 	var loaded := load_records()
 	if not loaded.accepted:
 		return loaded
-	return save_active_session(null, loaded.records)
+	return save_active_session(null, loaded.records, loaded.attempts)
 
 
-func _commit(records: Dictionary, active_session: Variant, primary: Dictionary) -> Dictionary:
+func _commit(records: Dictionary, active_session: Variant, attempts: Dictionary, primary: Dictionary) -> Dictionary:
 	var temporary := file_path + ".tmp"
-	var result := _prepare_file(temporary, records, active_session)
+	var result := _prepare_file(temporary, records, active_session, attempts)
 	if not result.accepted:
 		return result
 	if primary.accepted:
 		var staged_backup := file_path + ".backup.tmp"
-		result = _prepare_file(staged_backup, primary.records, primary.active_session)
+		result = _prepare_file(staged_backup, primary.records, primary.active_session, primary.attempts)
 		if result.accepted and _replace_file(staged_backup, file_path + ".backup") != OK:
 			result = _failure("backup_failed")
 		if not result.accepted:
@@ -83,7 +98,7 @@ func _commit(records: Dictionary, active_session: Variant, primary: Dictionary) 
 	if _replace_file(temporary, file_path) != OK:
 		DirAccess.remove_absolute(temporary)
 		return _failure("replace_failed")
-	return {"accepted": true, "reason": "saved", "records": records.duplicate(true),
+	return {"accepted": true, "reason": "saved", "records": records.duplicate(true), "attempts": attempts.duplicate(true),
 		"active_session": active_session.duplicate(true) if active_session is Dictionary else null}
 
 
@@ -100,20 +115,21 @@ func recover_backup() -> Dictionary:
 	if not backup.accepted:
 		return _failure(backup.reason)
 	var temporary := file_path + ".tmp"
-	var result := _prepare_file(temporary, backup.records, backup.active_session)
+	var result := _prepare_file(temporary, backup.records, backup.active_session, backup.attempts)
 	if not result.accepted:
 		return result
 	if _replace_file(temporary, file_path) != OK:
 		DirAccess.remove_absolute(temporary)
 		return _failure("replace_failed")
-	return {"accepted": true, "reason": "recovered", "records": backup.records.duplicate(true),
+	return {"accepted": true, "reason": "recovered", "records": backup.records.duplicate(true), "attempts": backup.attempts.duplicate(true),
 		"active_session": backup.active_session.duplicate(true) if backup.active_session is Dictionary else null}
 
 
-func _prepare_file(target: String, records: Dictionary, active_session: Variant) -> Dictionary:
+func _prepare_file(target: String, records: Dictionary, active_session: Variant, attempts: Dictionary) -> Dictionary:
 	var document := VERSIONS.duplicate()
 	document.records = records
 	document.active_session = active_session
+	document.attempts = attempts
 	if _write_text(target, JSON.stringify(document, "\t", true)) != OK:
 		DirAccess.remove_absolute(target)
 		return _failure("write_failed")
@@ -121,7 +137,7 @@ func _prepare_file(target: String, records: Dictionary, active_session: Variant)
 	var expected_session: Variant = null
 	if active_session is Dictionary:
 		expected_session = JSON.parse_string(JSON.stringify(active_session))
-	if not verified.accepted or verified.records != records or verified.active_session != expected_session:
+	if not verified.accepted or verified.records != records or verified.active_session != expected_session or verified.attempts != attempts:
 		DirAccess.remove_absolute(target)
 		return _failure("verification_failed")
 	return {"accepted": true}
@@ -150,7 +166,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("corrupt_records")
 		if version > VERSIONS[key]:
 			return _failure("future_version")
-		if key == "schema_version" and (version == LEGACY_SCHEMA_VERSION or version == 2):
+		if key == "schema_version" and int(version) in READABLE_SCHEMA_VERSIONS:
 			continue
 		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3]:
 			content_updated = true
@@ -159,9 +175,23 @@ func _read(target: String) -> Dictionary:
 		if version != VERSIONS[key]:
 			return _failure("unsupported_version")
 	var schema_version := int(document.schema_version)
-	var expected_size := 4 if schema_version == LEGACY_SCHEMA_VERSION else 5
+	var expected_size := 4
+	if schema_version in [2, 3]:
+		expected_size = 5
+	elif schema_version == 4:
+		expected_size = 6
 	if document.size() != expected_size or not document.get("records") is Dictionary:
 		return _failure("corrupt_records")
+	var attempts: Dictionary = {}
+	if schema_version == 4:
+		if not document.get("attempts") is Dictionary:
+			return _failure("corrupt_records")
+		for key: Variant in document.attempts:
+			if not _is_integer(document.attempts[key]):
+				return _failure("corrupt_records")
+			attempts[key] = int(document.attempts[key])
+		if not CampaignProgress.validate_attempts(_campaign, attempts).is_empty():
+			return _failure("corrupt_records")
 	var records: Dictionary = document.records.duplicate(true)
 	for key: Variant in records:
 		if not records[key] is Dictionary:
@@ -189,7 +219,7 @@ func _read(target: String) -> Dictionary:
 			else:
 				active_session = active_session.duplicate(true)
 	return {"accepted": true, "reason": "content_updated" if content_updated else "loaded", "records": records,
-		"active_session": active_session, "can_recover": false}
+		"attempts": attempts, "active_session": active_session, "can_recover": false}
 
 
 func _content_update_restarts_session(source_content_version: int, active_session: Dictionary) -> bool:
@@ -225,4 +255,4 @@ func _replace_file(source: String, target: String) -> Error:
 
 
 func _failure(reason: String) -> Dictionary:
-	return {"accepted": false, "reason": reason, "records": {}, "active_session": null, "can_recover": false}
+	return {"accepted": false, "reason": reason, "records": {}, "attempts": {}, "active_session": null, "can_recover": false}
