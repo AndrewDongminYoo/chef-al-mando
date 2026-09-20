@@ -902,6 +902,9 @@ git commit -m "docs: record partial prep in the spec, storage history and plans"
   (2) `_phase_duration`은 미장 집합이 전부 재고에 있는 prep 단계에서도 0을 돌려주며, `uses_prepared`가 그런 경우 prep 자체를 건너뛰기 때문에만 안전합니다.
   (3) `_release_ingredients`는 해제된 대기 주문의 `missing_mise_ids`를 갱신하지 않고 그대로 남겨 두며, 다음 예약에서 다시 계산되고 복원은 예약되었거나 소비된 상태에서만 그 배열을 제한합니다.
   (4) `unknown` ID 복원 테스트는 계획이 지시한 대로 `not accepted`만 검사합니다.
+- 최종 전체-브랜치 리뷰(커밋 `28f1576`)는 위 (1)의 스윕 로그 경로 인용을 재구성 가능한 문장으로 바꾸고, 죽은 코드가 된 `PreparationPlan.mise_ready`와 `_inventory_restore_error`의 남은 `uses_prepared` 타입 검사를 지우고, 명세 §10의 두 PCK 행을 현재 계약으로 일반화하고, `capture_m3.gd`의 초기화 줄이 `rush_hour` 기준 정책에 `marinated_protein`이 없다는 데 의존한다는 주석을 달았습니다.
+  (2)·(3)·(4)와 "부족 항목 목록을 `_available_inputs`와 `_try_assignment`에서 두 번 유도한다"는 지적은 고치지 않고 남깁니다.
+  (3)은 조작된 저장 파일에서 해제된 대기 주문의 배열이 레시피 순서의 부분집합이면 복원이 받아들이는 형태로, 재고·원가·시간에는 영향이 없고 `state_hash()`만 달라지며, 닫으려면 `_release_ingredients`에서 배열과 `uses_prepared`를 비우고 복원 검증이 예약·소비 전 주문에 빈 배열을 요구하게 하면 됩니다.
 
 ### Task 5 회귀 결과 (2026-09-21)
 
