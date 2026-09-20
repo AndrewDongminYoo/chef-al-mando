@@ -21,11 +21,11 @@ static func policy(scenario_id: String, layout: String = "original", duties: Str
 	assert(scenario_id in SCENARIOS and layout in LAYOUTS and duties in DUTIES)
 	var result: Dictionary = {"preparation": [], "priorities": {}}
 	if scenario_id == "hot_queue":
-		_add(result, "set_prep", "prepped_grill", 1)
-		_add(result, "set_prep", "prepped_salad", 3)
+		_add(result, "set_prep", "marinated_protein", 1)
+		_add(result, "set_prep", "prepped_vegetable", 3)
 		_add(result, "set_menu_priority", "grill", 2)
 	else:
-		_add(result, "set_prep", "prepped_grill", 4)
+		_add(result, "set_prep", "marinated_protein", 4)
 	if layout == "legacy":
 		for choice: Dictionary in Policies.reference_policy(scenario_id).preparation:
 			if choice.kind in ["move_station", "rotate_station"]:

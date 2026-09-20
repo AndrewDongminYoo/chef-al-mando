@@ -84,7 +84,7 @@ func run(tree: SceneTree) -> void:
 		"large service settings popups provide 64-pixel rows at the native 32-pixel font")
 	expect(service.get_node("SafeArea/Layout/Header/Title").text == "First service"
 		and service.get("status_label").text.contains("Preparing")
-		and service.get("preparation_panel").purchase_labels.vegetable.text.contains("Vegetables"),
+		and service.get("preparation_panel").purchase_labels.vegetable.text.contains("Tomatoes"),
 		"English refresh includes scenario, preparation, and dynamic content names")
 	var unchanged_state: String = service.get("simulation").state_hash()
 	service.get("settings_locale").item_selected.emit(0)
