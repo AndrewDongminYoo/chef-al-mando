@@ -114,9 +114,9 @@ func _test_mise_preparation() -> void:
 		and snapshot.inventory.grain == 6, "mise labor and raw inputs come from the item definition")
 	expect(not _command(plan, "set_prep", "prepped_grill", 1, 4).accepted, "a seventh labor unit cannot be spent")
 	var inventory := {"prepped_salad": 1, "prepped_soup": 0}
-	expect(PreparationPlan.mise_ready(inventory, plan.display_definition().recipe_for("salad"))
-		and not PreparationPlan.mise_ready(inventory, plan.display_definition().recipe_for("soup")),
-		"mise_ready requires every item of the recipe")
+	expect(PreparationPlan.missing_mise_ids(inventory, plan.display_definition().recipe_for("salad")).is_empty()
+		and PreparationPlan.missing_mise_ids(inventory, plan.display_definition().recipe_for("soup")) == ["prepped_soup"],
+		"missing_mise_ids lists every item of the recipe that is out of stock")
 
 	var started := _command(plan, "start", "", null, 5)
 	expect(started.accepted, "the prepared fixture starts")

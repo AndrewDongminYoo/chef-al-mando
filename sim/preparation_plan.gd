@@ -320,15 +320,6 @@ static func missing_mise_ids(available: Dictionary, recipe: Definitions.RecipeDe
 	return missing
 
 
-static func mise_ready(inventory: Dictionary, recipe: Definitions.RecipeDef) -> bool:
-	if recipe.mise_ids.is_empty():
-		return false
-	for mise_id: String in recipe.mise_ids:
-		if inventory.get(mise_id, 0) <= 0:
-			return false
-	return true
-
-
 ## 레시피 한 건이 예약·소비하는 입력. 미장 집합이 없으면 원재료 사전 그대로이고, 있으면 재고에 있는
 ## 항목은 그 미장 1개, missing_mise_ids에 든 항목은 그 항목의 원재료를 누적합니다. 키 순서는
 ## recipe.mise_ids 순서를 따르므로 같은 입력은 같은 스냅샷을 만듭니다.

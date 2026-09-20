@@ -142,8 +142,9 @@ M3_PRESSURE rush_hour goals={"profit": 8500, "served": 23} no_plan.accounting={"
 M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounting={"cancelled": 0, "cash": 16900, "expired": 14, "labor_cost": 3200, "profit": 1500, "purchased_cost": 11200, "revenue": 15900, "served": 18, "waste_cost": 5550} reference.accounting={"cancelled": 0, "cash": 25700, "expired": 7, "labor_cost": 3200, "profit": 10300, "purchased_cost": 11200, "revenue": 24700, "served": 25, "waste_cost": 2800}
 ```
 
-스윕은 scratchpad의 `sweep.gd`(기준 정책의 프렙 외 명령을 고정하고 미장 수량만 바꾸는 스크립트, 커밋하지 않음)로 돌렸고, 로그는 `/private/tmp/claude-501/-Users-dongminyu-Development-01-personal-chef-al-mando/5447f5fd-612e-4b94-bd16-356838f0670b/scratchpad/sweep-*.log`에 남겼습니다.
-조합 수는 로그별 `SWEEP_START` 줄의 상한 기준으로 `shared_stock` 645(통과 14), `split_duties` 기준 담당 3,361(통과 723)과 담당 없음 3,361(통과 359), `rush_hour` 우선순위 고정 3,976(통과 480)과 우선순위 없음 3,976(통과 150), `final_service` 구이 우선순위 고정 6,104와 15,807(통과 0), 우선순위와 화구 2 배치 고정 6,160(통과 0), 우선순위 없음 6,160(통과 1)이고, `final_service` 대체 B는 기준 정책에 발주·우선순위 변형 44가지를 더한 `probe.gd`로 골랐습니다.
+스윕은 시나리오마다 위 표에 적힌 미장 항목의 프렙 수량을 0부터 순회하며 `PreparationPlan.initial_state`가 받아들이는 조합만(노동량이 `prep_labor_capacity` 안에 들고 시나리오 `purchases`가 원재료를 댈 수 있는 조합만) 남기고, 남은 조합마다 그 영업의 담당·배치·우선순위 같은 프렙 외 명령을 아래에 적은 대로 고정하거나 뺀 채 실행해 두 목표에 모두 도달한 조합 수를 셌습니다.
+스윕 스크립트와 로그는 세션 스코프의 scratchpad에만 있었고 커밋하지 않아 지금은 남아 있지 않습니다.
+위 방식으로 돌린 조합 수는 `shared_stock` 645(통과 14), `split_duties` 기준 담당 3,361(통과 723)과 담당 없음 3,361(통과 359), `rush_hour` 우선순위 고정 3,976(통과 480)과 우선순위 없음 3,976(통과 150), `final_service` 구이 우선순위 고정 6,104와 15,807(통과 0), 우선순위와 화구 2 배치 고정 6,160(통과 0), 우선순위 없음 6,160(통과 1)이고, `final_service` 대체 B는 기준 정책에 발주·우선순위 변형 44가지를 더한 `probe.gd`로 골랐습니다.
 `split_duties`는 담당을 두지 않은 `thawed_protein 1`만으로도 26건·12,350원이 나와 담당 분리가 필수 조건이 아니게 됐고, 기준과 대체 둘의 회계가 같은 세 방향 동률은 2026-09-20 표와 마찬가지로 해시 차이로만 구분됩니다.
 
 ## 저장 호환성

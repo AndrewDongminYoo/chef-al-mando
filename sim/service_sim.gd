@@ -1149,7 +1149,7 @@ static func _inventory_restore_error(data: Definitions, state: Dictionary, prepa
 	for saved_order: Variant in state.orders:
 		if not saved_order is Dictionary or not saved_order.get("recipe_id") is String:
 			return "invalid_order"
-		if not saved_order.get("input_consumed") is bool or not saved_order.get("uses_prepared") is bool:
+		if not saved_order.get("input_consumed") is bool:
 			return "invalid_order"
 		if not saved_order.input_consumed:
 			continue
