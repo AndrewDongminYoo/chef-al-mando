@@ -1234,8 +1234,8 @@ git commit -m "docs(spec): record the reconciled mise table and the 2a/2b split"
   `mise` 기준 checks 수는 173이 아니라 175였습니다.
   준비된 항목의 레시피 간 고유성 제약은 의도적으로 두지 않았습니다(명세 §5.1이 항목을 메뉴 사이에 공유하도록 허용).
 - Task 2(커밋 121bad1)는 동작 보존 리팩터였고 `m3` 해시는 바뀌지 않았습니다.
-- Task 3(커밋 27152b9)에서 `m2`는 497에서 489로 줄었습니다.
-  `tests/test_m2_content.gd`의 레거시 필드 결함 사례 4건이 `tests/test_mise_items.gd`의 미장 규칙 검사로 흡수되어 제거됐기 때문입니다.
+- Task 3(커밋 27152b9)에서 `tests/test_m2_content.gd`의 레거시 필드 결함 사례 4건이 `tests/test_mise_items.gd`의 미장 규칙 검사로 흡수되어 제거되며 `m2` checks 수가 줄었습니다.
+  줄어든 뒤 수치는 아래 Task 6 회귀 표가 기록합니다.
 - Task 4(콘텐츠 커밋 abb8299, 재조정 커밋 041b17c)에서 계획의 Step 6이 가리킨 `tests/test_service_feedback.gd:299`는 M2 fixture를 읽는 테스트라 그대로 곡물 수프로 남았습니다.
   제거한 `손질한 … 재료` msgid 수는 계획의 "8건"이 아니라 7건입니다.
   `tests/fixtures/m2_extra_menu.tres`가 여전히 "손질한 곡물 샐러드 재료"를 쓰기 때문입니다.
@@ -1247,6 +1247,10 @@ git commit -m "docs(spec): record the reconciled mise table and the 2a/2b split"
   계획의 reader 분기는 `_interrupt_reader`를 다루지 않았고, 여기에도 구버전 콘텐츠 가드가 필요했습니다(콘텐츠 4→5 두 PCK 교차 실행: 9 OK, 1 skip, 0 failures).
   이 Task 뒤의 `m4` checks 수는 아래 Task 6 회귀 표가 기록합니다.
 - 부분 프렙은 계획 2b가 맡습니다(이 문서 Global Constraints에 이미 기록).
+- `sim/service_analysis.gd`의 `_prep_recommendation`(94~116행)은 미장 집합 {A, B}에서 A는 재고가 남고 B는 0인 레시피의 모든 주문이 원재료 경로로 가면, A 행이 `remaining > 0`으로 `reduce_prep`을, B 행이 `raw_orders > 0`으로 `increase_prep`을 매겨 둘 다 동순위가 됩니다.
+  A의 점수에는 `planned > 0`에 붙는 `+10000` 가산점이 있어 항상 A가 이기므로, 마감 조언은 A를 줄이라고만 말하고 B는 언급하지 않습니다.
+  `lunch_prep`에서 `prepped_grain` 4개만 준비하면 재현됩니다(마감 조언 "불린 현미 1개 줄여 보세요").
+  이 역전은 알려진 계획 2a의 한계로 남기며, 항목별 원재료 경로 주문 수의 정확한 귀속(명세 §5.4)을 구현하는 계획 2b가 고칩니다.
 
 ### Task 6 회귀 결과 (2026-09-20)
 
