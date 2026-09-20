@@ -527,8 +527,8 @@ msgstr "%s · yellow outline\nTile (%d, %d) · work tile (%d, %d)"
 msgid "%s %d개\n개당 %d"
 msgstr "%s × %d\n%d each"
 
-msgid "%s %d개\n노동 %d / 개"
-msgstr "%s × %d\nCapacity %d each"
+msgid "%s %d개\n메뉴 %d종 · 원가 %d · 노동 %d / 개"
+msgstr "%s × %d\n%d menus · cost %d · labor %d each"
 
 msgid "준비 확정 후 영업이 시작됩니다."
 msgstr "Service starts after preparation is confirmed."

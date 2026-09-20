@@ -278,7 +278,7 @@ func _between_process_fixture(service_sim_script: GDScript, prepared: bool) -> D
 	var preparation_sequence: int = 0
 	if prepared:
 		preparation_sequence = 1
-		expect(plan.apply_command({"kind": "set_prep", "target_id": "salad", "value": 1,
+		expect(plan.apply_command({"kind": "set_prep", "target_id": "prepped_salad", "value": 1,
 			"apply_tick": 0, "sequence": preparation_sequence}).accepted,
 			"the between-process fixture prepares one salad")
 	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
@@ -1021,7 +1021,7 @@ func _test_restore_checkpoints(service_sim_script: GDScript) -> void:
 func _prepared_service(service_sim_script: GDScript) -> Dictionary:
 	var plan := PreparationPlan.new(_fresh())
 	var commands: Array[Dictionary] = [
-		{"kind": "set_prep", "target_id": "salad", "value": 1, "apply_tick": 0, "sequence": 1},
+		{"kind": "set_prep", "target_id": "prepped_salad", "value": 1, "apply_tick": 0, "sequence": 1},
 		{"kind": "move_station", "target_id": "pass_01", "value": "left", "apply_tick": 0, "sequence": 2},
 		{"kind": "set_duty", "target_id": "employee_01", "value": "cold", "apply_tick": 0, "sequence": 3},
 		{"kind": "set_duty", "target_id": "employee_02", "value": "hot", "apply_tick": 0, "sequence": 4},
@@ -1031,7 +1031,7 @@ func _prepared_service(service_sim_script: GDScript) -> Dictionary:
 	for command: Dictionary in commands:
 		started = plan.apply_command(command)
 		expect(started.accepted, "the M4 prepared checkpoint accepts " + command.kind)
-	expect(started.selection.prep_quantities.salad == 1 and started.selection.placements.pass_01.tile == [8, 5],
+	expect(started.selection.prep_quantities.prepped_salad == 1 and started.selection.placements.pass_01.tile == [8, 5],
 		"the M4 checkpoint uses committed preparation and changed placement")
 	return {"simulation": service_sim_script.new(started.definitions, null, started.options),
 		"definitions": started.definitions, "options": started.options}

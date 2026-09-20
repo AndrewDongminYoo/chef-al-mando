@@ -20,7 +20,7 @@ func run(tree: SceneTree) -> void:
 func _test_hot_queue_limits() -> void:
 	var scenario: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "grill", 2).accepted, "hot queue accepts two grill preparations at capacity")
+	expect(_prepare(plan, "set_prep", "prepped_grill", 2).accepted, "hot queue accepts two grill preparations at capacity")
 	expect(_prepare(plan, "set_menu_priority", "grill", 2).accepted, "hot queue accepts maximum grill priority")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "hot queue feedback fixture starts from real preparation")
@@ -32,15 +32,15 @@ func _test_hot_queue_limits() -> void:
 	var fast_report: Dictionary = ServiceAnalysis.build(started.definitions, fast_simulation.snapshot(), started.selection)
 	expect(fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
 		"hot queue final state and service analysis are identical at 1x and 4x")
-	expect(report.prep.grill.planned == 2 and report.prep.grill.used == 2 and report.prep.grill.remaining == 0,
+	expect(report.prep.prepped_grill.planned == 2 and report.prep.prepped_grill.used == 2 and report.prep.prepped_grill.remaining == 0,
 		"analysis reports selected, used, and remaining grill preparation")
 	expect(report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
 		"analysis reports the maximum grill priority and its missed orders")
-	expect(not _has_action(report.recommendations, "increase_prep", "grill"),
+	expect(not _has_action(report.recommendations, "increase_prep", "prepped_grill"),
 		"full preparation labor never recommends impossible extra grill preparation")
 	expect(not _has_action(report.recommendations, "raise_priority", "grill"),
 		"maximum menu priority never recommends an impossible priority increase")
-	expect(_has_action(report.recommendations, "prep_at_capacity", "grill"),
+	expect(_has_action(report.recommendations, "prep_at_capacity", "prepped_grill"),
 		"analysis explains that grill preparation already consumes the available labor")
 	expect(_has_action(report.recommendations, "purchase_consumed", "protein"),
 		"analysis explains when costly purchases were consumed without ingredient shortages")
@@ -55,7 +55,7 @@ func _test_hot_queue_limits() -> void:
 func _test_incremental_prep_advice() -> void:
 	var scenario: Resource = load("res://content/m2_first_service.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "salad", 1).accepted,
+	expect(_prepare(plan, "set_prep", "prepped_salad", 1).accepted,
 		"incremental feedback fixture prepares one salad portion")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "incremental feedback fixture starts from real preparation")
@@ -65,7 +65,7 @@ func _test_incremental_prep_advice() -> void:
 	while not simulation.closed:
 		simulation.step()
 	var report: Dictionary = ServiceAnalysis.build(started.definitions, simulation.snapshot(), started.selection)
-	var recommendation := _find_action(report.recommendations, "increase_prep", "salad")
+	var recommendation := _find_action(report.recommendations, "increase_prep", "prepped_salad")
 	expect(not recommendation.is_empty() and recommendation.amount == 1,
 		"prep feedback recommends one incremental change instead of the theoretical maximum")
 
@@ -87,22 +87,22 @@ func _test_no_priority_advice_without_evidence() -> void:
 func _test_recommendation_branches() -> void:
 	var scenario: Resource = load("res://content/m2_first_service.tres")
 	var prep: Dictionary = {}
-	for recipe_id: String in scenario.menu_ids:
-		prep[recipe_id] = {"planned": 0, "remaining": 0, "raw_orders": 0,
-			"prep_labor_units": scenario.recipe_for(recipe_id).prep_labor_units}
-	prep.salad = {"planned": 3, "remaining": 2, "raw_orders": 0,
-		"prep_labor_units": scenario.recipe_for("salad").prep_labor_units}
+	for item: Resource in scenario.mise_items():
+		prep[item.id] = {"planned": 0, "remaining": 0, "raw_orders": 0,
+			"labor_units": item.labor_units}
+	prep.prepped_salad = {"planned": 3, "remaining": 2, "raw_orders": 0,
+		"labor_units": scenario.ingredient_for("prepped_salad").labor_units}
 	var prep_recommendation := ServiceAnalysis._prep_recommendation(scenario, prep, 3)
 	expect(prep_recommendation.action == "reduce_prep" and prep_recommendation.amount == 1,
 		"remaining prepared stock produces a one-portion reduction experiment")
 	var competing_prep := prep.duplicate(true)
-	competing_prep.salad = {"planned": 1, "remaining": 1, "raw_orders": 0,
-		"prep_labor_units": scenario.recipe_for("salad").prep_labor_units}
-	competing_prep.grill = {"planned": 4, "remaining": 0, "raw_orders": 50,
-		"prep_labor_units": scenario.recipe_for("grill").prep_labor_units}
+	competing_prep.prepped_salad = {"planned": 1, "remaining": 1, "raw_orders": 0,
+		"labor_units": scenario.ingredient_for("prepped_salad").labor_units}
+	competing_prep.prepped_grill = {"planned": 4, "remaining": 0, "raw_orders": 50,
+		"labor_units": scenario.ingredient_for("prepped_grill").labor_units}
 	var prep_change := ServiceAnalysis._prep_recommendation(
 		scenario, competing_prep, scenario.prep_labor_capacity)
-	expect(prep_change.action == "reduce_prep" and prep_change.target_id == "salad",
+	expect(prep_change.action == "reduce_prep" and prep_change.target_id == "prepped_salad",
 		"reducible preparation wins over a higher-scoring capacity notice")
 	var purchase_increase := ServiceAnalysis._ingredient_recommendation({"protein": {
 		"purchased": 2, "remaining": 0, "related_shortage_ticks": 10, "unit_cost": 400}})
@@ -171,14 +171,14 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 	]:
 		expect(_prepare(plan, "set_purchase", purchase.id, purchase.quantity).accepted,
 			"shared-stock fixture accepts its minimum purchase quantity for " + purchase.id)
-	expect(_prepare(plan, "set_prep", "salad", 1).accepted,
+	expect(_prepare(plan, "set_prep", "prepped_salad", 1).accepted,
 		"shared-stock fixture accepts one prepared salad")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "shared-stock fixture starts with all configured menus sellable")
 	if not started.accepted:
 		return
 	var invalid_selection: Dictionary = started.selection.duplicate(true)
-	invalid_selection.prep_quantities.salad = 2
+	invalid_selection.prep_quantities.prepped_salad = 2
 	var invalid_plan := PreparationPlan.new(scenario, invalid_selection)
 	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
 	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
@@ -187,7 +187,7 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 0,
 		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
 	var report: Dictionary = ServiceAnalysis.build(scenario, raw_salad_view, started.selection)
-	expect(not _has_action(report.recommendations, "increase_prep", "salad"),
+	expect(not _has_action(report.recommendations, "increase_prep", "prepped_salad"),
 		"prep feedback does not consume shared stock required to keep every menu sellable")
 
 
@@ -221,7 +221,7 @@ func _test_service_events() -> void:
 	prepared_data.order_count = 1
 	prepared_data.first_arrival_tick = 1
 	prepared_data.menu_ids = ["salad"]
-	var prepared_sim := ServiceSim.new(prepared_data, null, {"prep_quantities": {"salad": 1}})
+	var prepared_sim := ServiceSim.new(prepared_data, null, {"prep_quantities": {"prepped_salad": 1}})
 	var prepared_events: Array[Dictionary] = _advance_with_events(prepared_sim, 20)
 	var depleted := _first_event(prepared_events, "prepared_stock_depleted")
 	expect(_event_count(prepared_events, "prepared_stock_depleted") == 1 and depleted.get("recipe_id") == "salad",
@@ -249,7 +249,7 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame
-	expect(screen.call("submit_preparation", "set_prep", "salad", 1).accepted,
+	expect(screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
 		"live feedback fixture prepares one salad portion")
 	screen.get("start_button").pressed.emit()
 	screen.call("advance", 2.0)
@@ -278,9 +278,9 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 		screen.call("advance", 0.1)
 	expect(screen.get("duty_labels")[0].text.contains("제공대로 운반 중"),
 		"live feedback distinguishes carrying a completed dish to the pass")
-	var partial_capacity_report := {"prep": {"soup": {"used": 2, "raw_orders": 1,
-		"prep_labor_units": 2}}, "labor_used": 5, "labor_capacity": 6}
-	var partial_capacity := {"action": "prep_at_capacity", "target_id": "soup"}
+	var partial_capacity_report := {"prep": {"prepped_soup": {"used": 2, "raw_orders": 1,
+		"labor_units": 2}}, "labor_used": 5, "labor_capacity": 6}
+	var partial_capacity := {"action": "prep_at_capacity", "target_id": "prepped_soup"}
 	var capacity_text: String = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
 	expect(capacity_text.contains("프렙 1개를 더 만들 수 없습니다") and capacity_text.contains("필요한 노동량은 2")
 		and capacity_text.contains("남은 노동량은 1")
@@ -331,7 +331,7 @@ func _test_fast_chatter_lifetime(tree: SceneTree) -> void:
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame
-	expect(screen.call("submit_preparation", "set_prep", "salad", 1).accepted,
+	expect(screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
 		"fast chatter fixture prepares one salad portion")
 	screen.get("start_button").pressed.emit()
 	screen.get("speed_buttons")[2].pressed.emit()

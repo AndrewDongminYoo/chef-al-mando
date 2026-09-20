@@ -22,7 +22,7 @@ func run(_tree: SceneTree) -> void:
 
 func _prepared_replay(speed: int, frames: Array[int]) -> ServiceSim:
 	var plan := PreparationPlan.new(fresh())
-	_prep_command(plan, "set_prep", "grill", 2, 1)
+	_prep_command(plan, "set_prep", "prepped_grill", 2, 1)
 	_prep_command(plan, "move_station", "pass_01", "left", 2)
 	_prep_command(plan, "set_duty", "employee_01", "cold", 3)
 	_prep_command(plan, "set_duty", "employee_02", "hot", 4)
@@ -53,7 +53,7 @@ func _measure_choices() -> void:
 		var sequence: int = 0
 		if policy in ["prep", "combined"]:
 			sequence += 1
-			_prep_command(plan, "set_prep", "grill", 2, sequence)
+			_prep_command(plan, "set_prep", "prepped_grill", 2, sequence)
 		if policy in ["placement", "combined"]:
 			sequence += 1
 			_prep_command(plan, "move_station", "pass_01", "left", sequence)

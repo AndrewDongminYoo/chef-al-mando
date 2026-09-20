@@ -35,21 +35,21 @@ func view(plan: RefCounted) -> Dictionary:
 func _test_conversion_and_commit() -> void:
 	var data := fresh()
 	var plan: RefCounted = plan_script.new(data)
-	expect(command(plan, "set_prep", "soup", 2, 1).accepted, "two soup portions fit the preparation budget")
+	expect(command(plan, "set_prep", "prepped_soup", 2, 1).accepted, "two soup portions fit the preparation budget")
 	var prepared := view(plan)
 	expect(prepared.inventory.vegetable == 18 and prepared.inventory.grain == 6 and prepared.inventory.prepped_soup == 2, "soup preparation converts two complete raw portions")
 	expect(prepared.labor_used == 4 and prepared.purchased_cost == 6600, "preparation spends labor without adding a second cash cost")
 	var before := JSON.stringify(prepared, "", true)
-	expect(not command(plan, "set_prep", "grill", 1, 2).accepted, "a seventh labor unit cannot be spent")
+	expect(not command(plan, "set_prep", "prepped_grill", 1, 2).accepted, "a seventh labor unit cannot be spent")
 	expect(JSON.stringify(view(plan), "", true) == before, "rejected preparation changes neither stock nor sequence")
-	expect(command(plan, "set_prep", "soup", 1, 2).accepted, "reducing uncommitted preparation is allowed")
+	expect(command(plan, "set_prep", "prepped_soup", 1, 2).accepted, "reducing uncommitted preparation is allowed")
 	prepared = view(plan)
 	expect(prepared.inventory.vegetable == 20 and prepared.inventory.grain == 7 and prepared.inventory.prepped_soup == 1 and prepared.labor_used == 2, "reducing preparation restores only the preview inputs")
 	var result := command(plan, "start", "", null, 3)
 	expect(result.accepted and view(plan).committed, "a valid preparation plan commits once")
 	expect(result.inventory.prepped_soup == 1 and result.inventory.vegetable == 20, "the committed inventory matches the selected conversion")
 	expect(not command(plan, "start", "", null, 4).accepted, "a repeated start cannot convert ingredients twice")
-	expect(not command(plan, "set_prep", "soup", 0, 4).accepted, "preparation cannot change after service starts")
+	expect(not command(plan, "set_prep", "prepped_soup", 0, 4).accepted, "preparation cannot change after service starts")
 	expect(data.purchases.vegetable == 22 and data.purchased_cost() == 6600, "committing does not consume the source resource")
 
 
@@ -63,15 +63,15 @@ func _test_budget_and_invalid_commands() -> void:
 		["set_purchase", "vegetable", 25], ["set_purchase", "vegetable", -1],
 		["set_purchase", "protein", 9223372036854775807],
 		["set_purchase", "vegetable", "24"], ["set_purchase", "prepped_salad", 1],
-		["set_prep", "unknown", 1], ["set_prep", "salad", -1],
+		["set_prep", "unknown", 1], ["set_prep", "prepped_salad", -1],
 		["set_duty", "employee_01", "unknown"], ["set_duty", "unknown", "all"],
 		["move_station", "storage_01", "diagonal"], ["unknown", "", null],
 	]:
 		var before := JSON.stringify(view(plan), "", true)
 		expect(not command(plan, invalid[0], invalid[1], invalid[2], 3).accepted, "invalid preparation command is rejected: " + str(invalid))
 		expect(JSON.stringify(view(plan), "", true) == before, "invalid preparation command has no partial effect")
-	expect(not command(plan, "set_prep", "salad", 1, 2).accepted, "preparation sequences cannot be reused")
-	var future := {"kind": "set_prep", "target_id": "salad", "value": 1, "apply_tick": 1, "sequence": 3}
+	expect(not command(plan, "set_prep", "prepped_salad", 1, 2).accepted, "preparation sequences cannot be reused")
+	var future := {"kind": "set_prep", "target_id": "prepped_salad", "value": 1, "apply_tick": 1, "sequence": 3}
 	expect(not plan.call("apply_command", future).accepted, "preparation applies only at tick zero")
 
 
@@ -79,10 +79,10 @@ func _test_shared_raw_stock() -> void:
 	var data := fresh()
 	data.purchases = {"vegetable": 2, "grain": 1, "protein": 1}
 	var plan: RefCounted = plan_script.new(data)
-	expect(command(plan, "set_prep", "soup", 1, 1).accepted, "one soup consumes the two available vegetables")
+	expect(command(plan, "set_prep", "prepped_soup", 1, 1).accepted, "one soup consumes the two available vegetables")
 	expect(not view(plan).can_start, "soup preparation must not hide the salad ingredient shortage")
 	expect(not command(plan, "start", "", null, 2).accepted and not view(plan).committed, "an unsellable menu blocks service without committing")
-	expect(not command(plan, "set_prep", "salad", 1, 2).accepted, "different preparations cannot spend the same vegetable")
+	expect(not command(plan, "set_prep", "prepped_salad", 1, 2).accepted, "different preparations cannot spend the same vegetable")
 	expect(not command(plan, "set_purchase", "vegetable", 1, 2).accepted, "purchases cannot fall below the selected preparation inputs")
 	expect(command(plan, "set_purchase", "vegetable", 3, 2).accepted, "purchasing one more vegetable restores menu coverage")
 	expect(view(plan).can_start and view(plan).inventory.vegetable == 1, "coverage uses the remaining raw and prepared inventory")
@@ -148,7 +148,7 @@ func _test_source_isolation_and_restart() -> void:
 	var first: RefCounted = plan_script.new(data)
 	var second: RefCounted = plan_script.new(data)
 	command(first, "move_station", "pass_01", "left", 1)
-	command(first, "set_prep", "grill", 2, 2)
+	command(first, "set_prep", "prepped_grill", 2, 2)
 	command(first, "set_duty", "employee_01", "hot", 3)
 	var committed := command(first, "start", "", null, 4)
 	expect(_station(view(second), "pass_01").tile == [9, 5] and view(second).inventory.prepped_grill == 0, "preparing one session does not change another session")

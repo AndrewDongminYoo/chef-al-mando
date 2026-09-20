@@ -94,7 +94,7 @@ func run(_tree: SceneTree) -> void:
 func _test_hot_queue_focus(campaign: Resource) -> void:
 	var scenario: Resource = campaign.scenario_for("hot_queue")
 	var overprepared := Policies.run_policy(scenario, {"preparation": [
-		{"kind": "set_prep", "target_id": "grill", "value": 4}], "priorities": {}})
+		{"kind": "set_prep", "target_id": "prepped_grill", "value": 4}], "priorities": {}})
 	expect(not overprepared.accepted and overprepared.reason.contains("insufficient_labor"),
 		"hot queue rejects spending all preparation on four grilled dishes")
 	var reference: Dictionary = Policies.reference_policy("hot_queue")

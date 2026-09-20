@@ -559,7 +559,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var detail_panel := service.get("detail_panel") as Control
 	var preparation_panel: Control = service.get("preparation_panel")
 	preparation_panel.call("show_tab", 0)
-	preparation_panel.get("prep_plus")["salad"].pressed.emit()
+	preparation_panel.get("prep_plus")["prepped_salad"].pressed.emit()
 	preparation_panel.call("show_tab", 1)
 	preparation_panel.get("duty_buttons")["employee_01"].item_selected.emit(1)
 	var employee_one_label := _find_label(preparation_panel.get("pages")[1], "직원 1")
@@ -568,7 +568,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	expect(preparation_panel.visible and preparation_panel.get("pages")[1].visible
 		and employee_one_label != null and employee_one_label.is_visible_in_tree()
 		and employee_two_label != null and employee_two_label.is_visible_in_tree()
-		and ready_preparation.prep_quantities.salad == 1
+		and ready_preparation.prep_quantities.prepped_salad == 1
 		and ready_preparation.duties.employee_01 == "cold",
 		"the locale fixture shows the real layout tab with selected prep and duty state")
 	expect(service.get("state") == 0 and service.get("shown_tenths") == 0

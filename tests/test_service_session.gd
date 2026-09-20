@@ -47,7 +47,7 @@ func _test_preparation_shape(campaign: Resource, session_script: GDScript, valid
 			"extra_duty":
 				session.preparation.duties.unknown = "all"
 			"missing_prep":
-				session.preparation.prep_quantities.erase("salad")
+				session.preparation.prep_quantities.erase("prepped_salad")
 			"extra_prep":
 				session.preparation.prep_quantities.unknown = 0
 			"extra_purchase":

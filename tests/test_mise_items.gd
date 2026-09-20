@@ -1,10 +1,14 @@
 extends "res://tests/harness.gd"
 
 const FIXTURE := "res://content/m2_first_service.tres"
+const PreparationPlan := preload("res://sim/preparation_plan.gd")
+const ServiceAnalysis := preload("res://sim/service_analysis.gd")
+const ServiceSim := preload("res://sim/service_sim.gd")
 
 
 func run(_tree: SceneTree) -> void:
 	_test_mise_definitions()
+	_test_mise_preparation()
 
 
 func _fixture() -> Resource:
@@ -73,3 +77,38 @@ func _test_mise_definitions() -> void:
 
 func _has_error(data: Resource, message: String) -> bool:
 	return message in data.call("validate")
+
+
+func _command(plan: PreparationPlan, kind: String, target: String, value: Variant, sequence: int) -> Dictionary:
+	return plan.apply_command({"kind": kind, "target_id": target, "value": value, "apply_tick": 0, "sequence": sequence})
+
+
+func _test_mise_preparation() -> void:
+	var plan := PreparationPlan.new(_fixture())
+	expect(plan.snapshot().prep_quantities.keys() == ["prepped_salad", "prepped_soup", "prepped_grill"],
+		"preparation quantities are keyed by mise item in ingredient order")  # content/m2_first_service.tres:237
+	expect(not _command(plan, "set_prep", "salad", 1, 1).accepted, "set_prep no longer accepts a recipe ID")
+	expect(not _command(plan, "set_prep", "vegetable", 1, 2).accepted, "set_prep rejects a raw ingredient")
+	expect(_command(plan, "set_prep", "prepped_soup", 2, 3).accepted, "two soup mise items fit the labor budget")
+	var snapshot := plan.snapshot()
+	expect(snapshot.labor_used == 4 and snapshot.inventory.prepped_soup == 2 and snapshot.inventory.vegetable == 18
+		and snapshot.inventory.grain == 6, "mise labor and raw inputs come from the item definition")
+	expect(not _command(plan, "set_prep", "prepped_grill", 1, 4).accepted, "a seventh labor unit cannot be spent")
+	var inventory := {"prepped_salad": 1, "prepped_soup": 0}
+	expect(PreparationPlan.mise_ready(inventory, plan.display_definition().recipe_for("salad"))
+		and not PreparationPlan.mise_ready(inventory, plan.display_definition().recipe_for("soup")),
+		"mise_ready requires every item of the recipe")
+
+	var started := _command(plan, "start", "", null, 5)
+	expect(started.accepted, "the prepared fixture starts")
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	while not simulation.closed:
+		simulation.step()
+	var report: Dictionary = ServiceAnalysis.build(started.definitions, simulation.snapshot(), started.selection)
+	expect(report.prep.keys() == ["prepped_salad", "prepped_soup", "prepped_grill"], "analysis prep rows are keyed by mise item")
+	var soup_row: Dictionary = report.prep.prepped_soup
+	expect(soup_row.planned == 2 and soup_row.labor_units == 2 and soup_row.menu_count == 1
+		and soup_row.planned == soup_row.used + soup_row.remaining, "a prep row carries planned, used, remaining, labor and menu count")
+	for recommendation: Dictionary in report.recommendations:
+		if recommendation.category == "prep":
+			expect(started.definitions.ingredient_for(recommendation.target_id) != null, "prep recommendations target a mise item")

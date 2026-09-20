@@ -49,11 +49,11 @@ func run() -> void:
 			await save_frame("res://build/check/m3-first-preparation.png")
 		if index == 6:
 			var panel := service.preparation_panel
-			panel.pages[0].ensure_control_visible(panel.prep_plus.protein_bowl)
+			panel.pages[0].ensure_control_visible(panel.prep_plus.prepped_protein_bowl)
 			await process_frame
 			await process_frame
-			await _safe_click(panel.prep_plus.protein_bowl, service.safe_area.get_global_rect())
-			checks.expect(service.preparation.snapshot().prep_quantities.protein_bowl == 1, "the eighth-menu preparation row accepts an actual coordinate tap")
+			await _safe_click(panel.prep_plus.prepped_protein_bowl, service.safe_area.get_global_rect())
+			checks.expect(service.preparation.snapshot().prep_quantities.prepped_protein_bowl == 1, "the eighth-menu preparation row accepts an actual coordinate tap")
 			await save_frame("res://build/check/m3-eight-menu-preparation.png")
 		var policy := Policies.reference_policy(scenario.id)
 		for command: Dictionary in policy.preparation:

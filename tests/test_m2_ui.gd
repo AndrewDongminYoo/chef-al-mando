@@ -38,8 +38,8 @@ func run(tree: SceneTree) -> void:
 	panel.get("purchase_plus")[ingredient_id].pressed.emit()
 	expect(screen.get("summary_label").is_visible_in_tree() and screen.get("summary_label").text != initial_summary, "a purchase updates the visible preparation budget")
 	panel.get("purchase_minus")[ingredient_id].pressed.emit()
-	panel.get("prep_plus")["grill"].pressed.emit()
-	panel.get("prep_plus")["grill"].pressed.emit()
+	panel.get("prep_plus")["prepped_grill"].pressed.emit()
+	panel.get("prep_plus")["prepped_grill"].pressed.emit()
 	expect(plan.call("snapshot").inventory.prepped_grill == 2, "preparation buttons submit real conversion commands")
 	expect(screen.get("summary_label").text.contains("6 / 6"), "the main summary always shows used preparation labor")
 	panel.get("move_buttons")["up"].pressed.emit()
@@ -177,8 +177,8 @@ func _extra_menu(tree: SceneTree) -> void:
 	screen.set_process(false)
 	await tree.process_frame
 	var panel: Control = screen.get("preparation_panel")
-	expect(panel.get("prep_plus").has("grain_salad") and panel.get("prep_labels")["grain_salad"].text.contains("곡물 샐러드"), "a data-only menu receives a named preparation control")
-	panel.get("prep_plus")["grain_salad"].pressed.emit()
+	expect(panel.get("prep_plus").has("prepped_grain_salad") and panel.get("prep_labels")["prepped_grain_salad"].text.contains("곡물 샐러드"), "a data-only menu receives a named preparation control")
+	panel.get("prep_plus")["prepped_grain_salad"].pressed.emit()
 	screen.get("start_button").pressed.emit()
 	screen.call("advance", 20.0)
 	expect(screen.get("order_buttons")["order_01"].text.contains("곡물 샐러드"), "the fourth-menu order shows its resource name")
@@ -224,7 +224,7 @@ func _custom_ingredients(tree: SceneTree) -> void:
 		expect(snapshot.orders[0].state == "served", "a recipe using the renamed ingredient actually serves")
 		var summary: String = screen.get("summary_label").text
 		expect(summary.contains("잎채소 %d" % snapshot.inventory.greens) and summary.contains("식용유 0"), "service summary shows the actual custom raw stock")
-		expect(not summary.contains("손질한"), "raw stock summary excludes prepared ingredient definitions")
+		expect(not summary.split("\n프렙 · ")[0].contains("손질한"), "raw stock summary excludes prepared ingredient definitions")
 		screen.queue_free()
 		await tree.process_frame
 		DirAccess.remove_absolute(fixture_path)
