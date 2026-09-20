@@ -234,7 +234,7 @@ class RestartCheckTests(unittest.TestCase):
         reader = self.run_reader("reader")
         self.assertEqual(reader.returncode, 0, reader.stdout)
         expected = self.RESTART_PASS if os.environ.get("M4_WRITER_PACK") else self.RESTORE_PASS
-        if os.environ.get("M4_WRITER_PACK") and self.RESTORE_PASS in reader.stdout:
+        if os.environ.get("M4_WRITER_PACK") and not os.environ.get("M4_EXPECT_RESTART") and self.RESTORE_PASS in reader.stdout:
             expected = self.RESTORE_PASS
         self.assertIn(expected, reader.stdout)
 
