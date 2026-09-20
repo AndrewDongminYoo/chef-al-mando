@@ -99,6 +99,53 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 `hot_queue`·`shared_stock`·`long_route`는 1:1로 옮긴 미장이 옛 프렙과 같은 재고를 만들므로 기준·대체·무계획 결과가 위 표와 같고, 첫 두 영업도 같습니다.
 같은 명령을 두 번 실행한 `M3_PRESSURE`·`M3_STRATEGY` 줄은 서로 같았고, 각 정책의 반복 실행과 1배속·4배속 해시 일치는 `test_m3_playthrough.gd`가 검사합니다.
 
+### 2026-09-21 정정: 부분 프렙 기준
+
+[부분 프렙 계획 2b](../plans/partial-prep-implementation.md)에 따라 한 메뉴는 미장 집합 가운데 재고에 있는 항목은 그 미장을, 없는 항목은 그 항목의 원재료를 함께 예약·소비하고, `prep` 공정 시간은 부족 항목 비율만큼 정수 올림으로 줄어듭니다.
+2a에서는 먼저 도착한 샐러드가 손질 토마토를 가져가면 현미 샐러드가 전부 원재료로 떨어져 불린 현미가 남았지만, 지금은 그 현미 샐러드가 불린 현미를 쓰고 `prep`을 절반만 하므로 같은 정책의 재고 소진 순서와 공정 시간이 달라지고, 그래서 기준·대체 정책의 회계가 움직였습니다.
+무계획 영업은 프렙이 없어 모든 항목이 부족하므로 원재료 사전과 원래 `prep` 시간이 그대로 나오고, 여섯 압력 영업의 `no_plan` 회계는 위 2026-09-20 표와 정확히 같았습니다(혼합 소비 코드가 프렙 없는 경로를 바꾸지 않았다는 증거입니다).
+
+기준 정책은 `shared_stock`·`split_duties`·`rush_hour`·`final_service` 네 영업에서 목표에 미달했고(`hot_queue`·`long_route`는 그대로), 대체 정책은 `split_duties` 둘, `rush_hour` A, `final_service` B가 미달했습니다.
+목표값·`labor_units`·`prep_labor_capacity`·시나리오 `purchases`·레시피 재료 사전은 바꾸지 않았고, 아래 정책만 바꿨습니다.
+`final_service` 대체 B의 `set_purchase protein` 명령이 7에서 6으로 바뀐 것은 플레이어 선택인 정책의 발주 명령이지 시나리오 발주량이 아닙니다.
+`final_service` 기준 정책은 구이 우선순위 2를 잃고 프렙만 남았습니다: 구이 우선순위 2를 고정한 채 프렙 수량 15,807가지를 돌려도 최고가 24건·10,400원 또는 25건·8,900원이어서 목표(25건·10,000원)에 닿지 않았고, 화구 2 배치까지 더한 6,160가지도 통과가 없었으며, 우선순위 없는 6,160가지 가운데 통과는 `marinated_protein 5, prepped_grain 3` 하나뿐이었습니다.
+`rush_hour` 기준 정책은 `thawed_protein 1`을 빼고 `prepped_mushroom`을 1에서 3으로 올렸습니다.
+권위는 커밋된 `tests/fixtures/m3_policies.gd`에 있고, 위 2026-09-20 표의 정책 열은 이 절이 대체합니다.
+
+| 영업            | 항목   | 이전                                                                                                     | 이후                                                                                                    |
+| --------------- | ------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `shared_stock`  | 기준   | prepped_grain 4, soup_base 4, prepped_vegetable 1 · 9/9                                                  | prepped_grain 1, soup_base 6, prepped_mushroom 2 · 9/9                                                  |
+| `split_duties`  | 기준   | 직원 2 냉식·직원 3·4 온식 + prepped_vegetable 6, prepped_grain 3, prepped_mushroom 6 · 15/15             | 같은 담당 + prepped_vegetable 6, prepped_grain 3, prepped_mushroom 4, thawed_protein 2 · 15/15          |
+| `split_duties`  | 대체 A | prepped_vegetable 3, prepped_grain 4, thawed_protein 1, prepped_mushroom 4 · 12/15                       | prepped_vegetable 3, prepped_grain 4, thawed_protein 1, prepped_mushroom 5 · 13/15                      |
+| `split_duties`  | 대체 B | prepped_vegetable 6, prepped_mushroom 1 · 7/15                                                           | prepped_vegetable 6, prepped_mushroom 4 · 10/15                                                         |
+| `rush_hour`     | 기준   | prepped_vegetable 4, prepped_grain 3, thawed_protein 1, prepped_mushroom 1 · 9/18 · 구이·덮밥 우선순위 2 | prepped_vegetable 4, prepped_grain 3, prepped_mushroom 3 · 10/18 · 구이·덮밥 우선순위 2                 |
+| `rush_hour`     | 대체 A | marinated_protein 1, prepped_vegetable 4, prepped_grain 2, thawed_protein 3, prepped_mushroom 1 · 13/18  | marinated_protein 1, prepped_vegetable 5, prepped_grain 3, thawed_protein 1, prepped_mushroom 3 · 15/18 |
+| `final_service` | 기준   | marinated_protein 4, prepped_vegetable 4, prepped_grain 2 · 18/18 · 구이 우선순위 2                      | marinated_protein 5, prepped_grain 3 · 18/18                                                            |
+| `final_service` | 대체 B | 기준 + 연어 발주 7                                                                                       | 기준 + 연어 발주 6                                                                                      |
+
+`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,108개 검사를 실패 없이 통과했습니다(기준 정책 명령 수가 바뀌어 `test_m3_ui.gd`의 검사 수가 1,113에서 달라졌습니다).
+`build/check/m3.log`의 `M3_PRESSURE` 회계 발췌는 다음과 같습니다(무계획 열은 2026-09-20 표와 같습니다).
+
+| 영업            | 목표 제공 | 목표 손익 | 무계획 제공 | 무계획 손익 | 기준 제공 | 기준 손익 | 대체 A 제공·손익 | 대체 B 제공·손익 |
+| --------------- | --------: | --------: | ----------: | ----------: | --------: | --------: | ---------------: | ---------------: |
+| `hot_queue`     |        12 |      4750 |           8 |       -1850 |        12 |      4750 |       12 · 4,750 |       12 · 5,550 |
+| `shared_stock`  |        17 |      4000 |          15 |        2300 |        18 |      4700 |       17 · 4,150 |       17 · 4,450 |
+| `long_route`    |        21 |     12000 |           3 |      -10100 |        22 |     13700 |      21 · 12,200 |      24 · 16,800 |
+| `split_duties`  |        26 |     12000 |          23 |        8750 |        26 |     12350 |      26 · 12,350 |      26 · 12,350 |
+| `rush_hour`     |        23 |      8500 |          21 |        4650 |        24 |      9200 |       25 · 9,100 |      26 · 10,500 |
+| `final_service` |        25 |     10000 |          18 |        1500 |        25 |     10300 |      26 · 10,700 |      26 · 10,900 |
+
+```log
+M3_PRESSURE shared_stock goals={"profit": 4000, "served": 17} no_plan.accounting={"cancelled": 0, "cash": 11550, "expired": 7, "labor_cost": 2400, "profit": 2300, "purchased_cost": 5850, "revenue": 10550, "served": 15, "waste_cost": 2300} reference.accounting={"cancelled": 0, "cash": 13950, "expired": 4, "labor_cost": 2400, "profit": 4700, "purchased_cost": 5850, "revenue": 12950, "served": 18, "waste_cost": 1350}
+M3_PRESSURE split_duties goals={"profit": 12000, "served": 26} no_plan.accounting={"cancelled": 0, "cash": 21750, "expired": 3, "labor_cost": 3200, "profit": 8750, "purchased_cost": 8800, "revenue": 20750, "served": 23, "waste_cost": 1350} reference.accounting={"cancelled": 0, "cash": 25350, "expired": 0, "labor_cost": 3200, "profit": 12350, "purchased_cost": 8800, "revenue": 24350, "served": 26, "waste_cost": 0}
+M3_PRESSURE rush_hour goals={"profit": 8500, "served": 23} no_plan.accounting={"cancelled": 0, "cash": 19050, "expired": 9, "labor_cost": 3200, "profit": 4650, "purchased_cost": 10200, "revenue": 18050, "served": 21, "waste_cost": 4150} reference.accounting={"cancelled": 0, "cash": 23600, "expired": 6, "labor_cost": 3200, "profit": 9200, "purchased_cost": 10200, "revenue": 22600, "served": 24, "waste_cost": 2250}
+M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounting={"cancelled": 0, "cash": 16900, "expired": 14, "labor_cost": 3200, "profit": 1500, "purchased_cost": 11200, "revenue": 15900, "served": 18, "waste_cost": 5550} reference.accounting={"cancelled": 0, "cash": 25700, "expired": 7, "labor_cost": 3200, "profit": 10300, "purchased_cost": 11200, "revenue": 24700, "served": 25, "waste_cost": 2800}
+```
+
+스윕은 scratchpad의 `sweep.gd`(기준 정책의 프렙 외 명령을 고정하고 미장 수량만 바꾸는 스크립트, 커밋하지 않음)로 돌렸고, 로그는 `/private/tmp/claude-501/-Users-dongminyu-Development-01-personal-chef-al-mando/5447f5fd-612e-4b94-bd16-356838f0670b/scratchpad/sweep-*.log`에 남겼습니다.
+조합 수는 로그별 `SWEEP_START` 줄의 상한 기준으로 `shared_stock` 645(통과 14), `split_duties` 기준 담당 3,361(통과 723)과 담당 없음 3,361(통과 359), `rush_hour` 우선순위 고정 3,976(통과 480)과 우선순위 없음 3,976(통과 150), `final_service` 구이 우선순위 고정 6,104와 15,807(통과 0), 우선순위와 화구 2 배치 고정 6,160(통과 0), 우선순위 없음 6,160(통과 1)이고, `final_service` 대체 B는 기준 정책에 발주·우선순위 변형 44가지를 더한 `probe.gd`로 골랐습니다.
+`split_duties`는 담당을 두지 않은 `thawed_protein 1`만으로도 26건·12,350원이 나와 담당 분리가 필수 조건이 아니게 됐고, 기준과 대체 둘의 회계가 같은 세 방향 동률은 2026-09-20 표와 마찬가지로 해시 차이로만 구분됩니다.
+
 ## 저장 호환성
 
 새 쓰기는 콘텐츠 버전 4를 사용합니다.
