@@ -174,6 +174,17 @@ func _interrupt_reader(arguments: Dictionary) -> void:
 		return
 	var primary := CampaignStore.new(campaign, arguments.save).load_records()
 	var backup := CampaignStore.new(campaign, arguments.save + ".backup").load_records()
+	var saved_document: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save))
+	var saved_content_version: int = int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	if saved_content_version < CampaignStore.VERSIONS.content_version:
+		if not primary.accepted or primary.reason != "content_updated" or primary.active_session != null or primary.records != {} \
+			or not backup.accepted or backup.reason != "content_updated" or backup.active_session != null or backup.records != {}:
+			_fail("interrupted reader did not restart the older content primary and backup while keeping records")
+			return
+		print("PASS: interrupted reader restarts the older content service and keeps records")
+		TranslationServer.set_locale("ko")
+		quit(0)
+		return
 	if not primary.accepted or not backup.accepted or not primary.active_session is Dictionary \
 		or not backup.active_session is Dictionary:
 		_fail("interrupted primary or backup is not independently valid")

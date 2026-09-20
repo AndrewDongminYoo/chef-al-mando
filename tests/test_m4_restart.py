@@ -96,6 +96,8 @@ class VersionProbeTests(unittest.TestCase):
 class RestartCheckTests(unittest.TestCase):
     RESTART_PASS = "PASS: fresh M4 reader restarts the older content service and keeps records"
     RESTORE_PASS = "PASS: fresh M4 reader preserves checkpoint and final hash"
+    INTERRUPT_RESTART_PASS = "PASS: interrupted reader restarts the older content service and keeps records"
+    INTERRUPT_RESTORE_PASS = "PASS: interrupted save keeps only valid primary or backup recovery"
 
     @classmethod
     def setUpClass(cls):
@@ -264,7 +266,10 @@ class RestartCheckTests(unittest.TestCase):
         self.assertEqual(checkpoint["kind"], "replace_boundary")
         reader = self.run_reader("interrupt_reader")
         self.assertEqual(reader.returncode, 0, reader.stdout)
-        self.assertIn("PASS: interrupted save keeps only valid primary or backup recovery", reader.stdout)
+        expected = self.INTERRUPT_RESTART_PASS if os.environ.get("M4_WRITER_PACK") else self.INTERRUPT_RESTORE_PASS
+        if os.environ.get("M4_WRITER_PACK") and self.INTERRUPT_RESTORE_PASS in reader.stdout:
+            expected = self.INTERRUPT_RESTORE_PASS
+        self.assertIn(expected, reader.stdout)
 
 
 if __name__ == "__main__":
