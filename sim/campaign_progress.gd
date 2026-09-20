@@ -1,6 +1,7 @@
 extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
+const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 const LEGACY_COMPLETION_TARGETS := {
 	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
 	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
@@ -15,14 +16,27 @@ const LEGACY_COMPLETION_TARGETS := {
 var errors: Array[String] = []
 var _campaign: CampaignDef
 var _records: Dictionary = {}
+var _attempts: Dictionary = {}
 
 
-func _init(campaign: CampaignDef, records: Dictionary = {}) -> void:
+func _init(campaign: CampaignDef, records: Dictionary = {}, attempts: Dictionary = {}) -> void:
 	_campaign = campaign
 	errors = campaign.validate()
 	errors.append_array(validate_records(campaign, records))
+	errors.append_array(validate_attempts(campaign, attempts))
 	if errors.is_empty():
 		_records = records.duplicate(true)
+		_attempts = attempts.duplicate(true)
+
+
+static func validate_attempts(campaign: CampaignDef, attempts: Dictionary) -> Array[String]:
+	var problems: Array[String] = []
+	for scenario_id: Variant in attempts:
+		if not scenario_id is String or campaign.scenario_for(scenario_id) == null:
+			problems.append("attempts contain an unknown service")
+		elif not attempts[scenario_id] is int or attempts[scenario_id] < 0:
+			problems.append("invalid attempt count")
+	return problems
 
 
 static func validate_records(campaign: CampaignDef, records: Dictionary) -> Array[String]:
@@ -76,6 +90,27 @@ func is_unlocked(scenario_id: String) -> bool:
 	return false
 
 
+func next_service_seed(scenario_id: String) -> Dictionary:
+	if not is_unlocked(scenario_id):
+		return {"accepted": false, "reason": "locked_service", "service_seed": 0, "attempt_index": 0}
+	var attempt_index: int = _attempts.get(scenario_id, 0)
+	_attempts[scenario_id] = attempt_index + 1
+	return {"accepted": true, "reason": "", "service_seed": ScheduleGenerator.service_seed_for(scenario_id, attempt_index),
+		"attempt_index": attempt_index}
+
+
+## Undoes the draw that produced attempt_index when the caller could not persist it.
+## Only the most recent draw can be reverted, so a stale index is refused.
+func revert_service_seed(scenario_id: String, attempt_index: int) -> bool:
+	if _attempts.get(scenario_id, 0) != attempt_index + 1:
+		return false
+	if attempt_index == 0:
+		_attempts.erase(scenario_id)
+	else:
+		_attempts[scenario_id] = attempt_index
+	return true
+
+
 func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 	if not is_unlocked(scenario_id):
 		return {"accepted": false, "reason": "locked_service"}
@@ -111,4 +146,5 @@ func snapshot() -> Dictionary:
 		if scenario != null and is_unlocked(scenario.id):
 			unlocked.append(scenario.id)
 	var ending: bool = errors.is_empty() and not _campaign.scenarios.is_empty() and _records.get(_campaign.scenarios[-1].id, {}).get("completed", false)
-	return {"records": _records.duplicate(true), "unlocked": unlocked, "ending_unlocked": ending, "errors": errors.duplicate()}
+	return {"records": _records.duplicate(true), "attempts": _attempts.duplicate(true), "unlocked": unlocked,
+		"ending_unlocked": ending, "errors": errors.duplicate()}

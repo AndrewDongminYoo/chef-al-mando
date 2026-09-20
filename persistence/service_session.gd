@@ -10,9 +10,10 @@ const TICK_US: int = 100000
 
 
 static func capture(scenario_id: String, selection: Dictionary, simulation: ServiceSim, speed: int = 1,
-	accumulator_us: int = 0) -> Dictionary:
+	accumulator_us: int = 0, service_seed: int = 0) -> Dictionary:
 	return {"scenario_id": scenario_id, "preparation": selection.duplicate(true),
-		"simulation": simulation.export_state(), "speed": speed, "accumulator_us": accumulator_us}
+		"simulation": simulation.export_state(), "speed": speed, "accumulator_us": accumulator_us,
+		"service_seed": service_seed}
 
 
 static func restore(campaign: CampaignDef, session: Dictionary, records: Dictionary) -> Dictionary:
@@ -22,11 +23,16 @@ static func restore(campaign: CampaignDef, session: Dictionary, records: Diction
 	if not normalized.accepted:
 		return _failure("invalid_session")
 	var saved: Dictionary = normalized.value
-	if saved.size() != 5:
+	if saved.size() != 5 and saved.size() != 6:
 		return _failure("invalid_session")
 	for field: String in ["scenario_id", "preparation", "simulation", "speed", "accumulator_us"]:
 		if not saved.has(field):
 			return _failure("invalid_session")
+	var service_seed: int = 0
+	if saved.size() == 6:
+		if not saved.has("service_seed") or not saved.service_seed is int or saved.service_seed < 0:
+			return _failure("invalid_session")
+		service_seed = saved.service_seed
 	if not saved.scenario_id is String or not saved.preparation is Dictionary or not saved.simulation is Dictionary:
 		return _failure("invalid_session")
 	if not saved.speed is int or saved.speed not in [1, 2, 4]:
@@ -41,6 +47,7 @@ static func restore(campaign: CampaignDef, session: Dictionary, records: Diction
 	var scenario = campaign.scenario_for(saved.scenario_id)
 	if scenario == null:
 		return _failure("unknown_service")
+	scenario = scenario.with_service_seed(service_seed)
 	if not _exact_preparation(scenario, saved.preparation):
 		return _failure("invalid_preparation")
 	var preparation := PreparationPlan.new(scenario, saved.preparation)
@@ -53,7 +60,8 @@ static func restore(campaign: CampaignDef, session: Dictionary, records: Diction
 		return _failure(restored.reason)
 	return {"accepted": true, "reason": "", "simulation": restored.simulation,
 		"definitions": started.definitions, "selection": started.selection.duplicate(true),
-		"scenario_id": saved.scenario_id, "speed": saved.speed, "accumulator_us": saved.accumulator_us}
+		"scenario_id": saved.scenario_id, "speed": saved.speed, "accumulator_us": saved.accumulator_us,
+		"service_seed": service_seed}
 
 
 static func _normalize_json(value: Variant) -> Dictionary:

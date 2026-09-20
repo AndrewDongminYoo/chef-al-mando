@@ -249,10 +249,11 @@ func _test_failed_checkpoint_pauses_live_service(tree: SceneTree, entry: String,
 	var screen := _boot(tree, entry, start_path, directory + "/live-start-settings.json")
 	await tree.process_frame
 	var failed_store := StoreTests.FailedStore.new(screen.get("campaign"), start_path)
-	failed_store.failure = "write"
 	screen.set("store", failed_store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
+	# Storage fails only after the service is mounted, so the Start checkpoint is what fails here.
+	failed_store.failure = "write"
 	expect(service.is_processing(), "the failed Start fixture uses the real service process loop")
 	service.get("start_button").pressed.emit()
 	var failed_tick: int = service.get("simulation").tick
@@ -329,11 +330,12 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 	var screen := _boot(tree, entry, file_path, directory + "/failed-settings.json")
 	await tree.process_frame
 	var failed_store := StoreTests.FailedStore.new(screen.get("campaign"), file_path)
-	failed_store.failure = "write"
 	screen.set("store", failed_store)
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)
+	# Storage fails only after the service is mounted, so the Start checkpoint is what fails here.
+	failed_store.failure = "write"
 	service.get("start_button").pressed.emit()
 	await tree.process_frame
 	var retry := _find_visible_button(screen, "저장 재시도")
@@ -395,6 +397,9 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 		"the menu action succeeds after the checkpoint retry")
 	var saved_bytes := FileAccess.get_file_as_bytes(file_path)
 	var saved_session: Dictionary = screen.get("active_session").duplicate(true)
+	# Starting a replacement persists the attempt count at once, so the file's bytes change while the
+	# stored checkpoint itself must stay identical until Start replaces it.
+	var stored_session: Variant = _stored_session(file_path)
 	screen.get("begin_button").pressed.emit()
 	var replace := _find_visible_button(screen, "새 영업으로 교체")
 	expect(screen.get("active_service") == null and replace != null,
@@ -411,13 +416,13 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 	service = screen.get("active_service")
 	expect(service != null and service.get("state") == 0
 		and screen.get("active_session") == saved_session
-		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		and _stored_session(file_path) == stored_session,
 		"confirming replacement opens preparation without replacing the saved checkpoint")
 	screen.call("return_to_menu")
 	await tree.process_frame
 	expect(screen.get("active_service") == null and screen.get("continue_button").visible
 		and screen.get("active_session") == saved_session
-		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		and _stored_session(file_path) == stored_session,
 		"leaving fresh preparation keeps the previous checkpoint available")
 	screen.get("begin_button").pressed.emit()
 	var second_replace := _find_visible_button(screen, "새 영업으로 교체")
@@ -432,7 +437,7 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 	service.get("start_button").pressed.emit()
 	await tree.process_frame
 	expect(screen.get("pending_save") and screen.get("active_session") == saved_session
-		and FileAccess.get_file_as_bytes(file_path) == saved_bytes,
+		and _stored_session(file_path) == stored_session,
 		"a failed replacement Start preserves the previous checkpoint")
 	failed_store.failure = ""
 	retry.pressed.emit()
@@ -962,6 +967,13 @@ func _boot(tree: SceneTree, scene_path: String, save_path: String, settings_path
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	return screen
+
+
+## The checkpoint stored in the campaign file, as parsed JSON, so that tests can pin the session
+## alone while other keys of the document (such as attempts) are allowed to change.
+func _stored_session(file_path: String) -> Variant:
+	var document: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
+	return document.get("active_session") if document is Dictionary else null
 
 
 func _cleanup(directory: String) -> void:
