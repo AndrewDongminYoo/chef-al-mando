@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 4, "content_version": 4, "sim_version": 1}
+const VERSIONS := {"schema_version": 4, "content_version": 5, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
@@ -168,7 +168,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and int(version) in READABLE_SCHEMA_VERSIONS:
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4]:
 			content_updated = true
 			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue
@@ -230,10 +230,9 @@ func _read(target: String) -> Dictionary:
 		"attempts": attempts, "active_session": active_session, "can_recover": false}
 
 
-func _content_update_restarts_session(source_content_version: int, active_session: Dictionary) -> bool:
-	if source_content_version < 3:
-		return true
-	return source_content_version == 3 and active_session.get("scenario_id") == "hot_queue"
+func _content_update_restarts_session(source_content_version: int, _active_session: Dictionary) -> bool:
+	# Content 5 keys prep quantities by mise item, so no earlier session can restore.
+	return source_content_version < 5
 
 
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:

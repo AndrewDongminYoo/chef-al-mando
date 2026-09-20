@@ -10,8 +10,8 @@ const ProcessDef := preload("res://content/process_def.gd")
 @export var patience_ticks: int = 0
 @export var first_process_id: String = ""
 @export var processes: Array[ProcessDef] = []
-@export var prepared_ingredient_id: String = ""
-@export var prep_labor_units: int = 0
+## 이 메뉴가 쓰는 미장 항목 ID 집합. 전부 재고에 있을 때만 prep 공정을 생략합니다.
+@export var mise_ids: PackedStringArray = PackedStringArray()
 @export var icon: Texture2D
 
 

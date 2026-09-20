@@ -20,13 +20,13 @@ func run() -> void:
 	await process_frame
 	await save_frame("res://build/check/m2-ready.png")
 	var panel := screen.preparation_panel
-	panel.pages[0].ensure_control_visible(panel.prep_plus.grill)
+	panel.pages[0].ensure_control_visible(panel.prep_plus.prepped_grill)
 	await process_frame
 	await process_frame
-	await _safe_click(screen, panel.prep_plus.grill)
-	await _safe_click(screen, panel.prep_plus.grill)
+	await _safe_click(screen, panel.prep_plus.prepped_grill)
+	await _safe_click(screen, panel.prep_plus.prepped_grill)
 	checks.expect(screen.preparation.snapshot().inventory.prepped_grill == 2, "rendered preparation taps convert two grill portions")
-	checks.expect(panel.prep_labels.grill.text.contains("2개"), "the preparation label follows the committed quantity preview")
+	checks.expect(panel.prep_labels.prepped_grill.text.contains("2개"), "the preparation label follows the committed quantity preview")
 	await process_frame
 	await process_frame
 	await save_frame("res://build/check/m2-prepped.png")
@@ -77,10 +77,10 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	panel = extra.preparation_panel
-	panel.pages[0].ensure_control_visible(panel.prep_plus.grain_salad)
+	panel.pages[0].ensure_control_visible(panel.prep_plus.prepped_grain_salad)
 	await process_frame
 	await process_frame
-	await _safe_click(extra, panel.prep_plus.grain_salad)
+	await _safe_click(extra, panel.prep_plus.prepped_grain_salad)
 	await save_frame("res://build/check/m2-extra-menu-prep.png")
 	await _safe_click(extra, extra.start_button)
 	extra.advance(20.0)

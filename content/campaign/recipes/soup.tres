@@ -34,7 +34,7 @@ duration_ticks = 10
 [resource]
 script = ExtResource("3_m5ved")
 id = "soup"
-display_name = "곡물 수프"
+display_name = "토마토 수프"
 ingredients = Dictionary[String, int]({
 "grain": 1,
 "vegetable": 2
@@ -44,6 +44,5 @@ revenue = 900
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_ghcw4")]([SubResource("Resource_16anm"), SubResource("Resource_0qpaj"), SubResource("Resource_lcxot"), SubResource("Resource_xkr61")])
-prepared_ingredient_id = "prepped_soup"
-prep_labor_units = 2
+mise_ids = PackedStringArray("prepped_grain", "soup_base")
 icon = ExtResource("1_marr2")

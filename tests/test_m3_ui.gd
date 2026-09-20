@@ -20,7 +20,7 @@ func run(tree: SceneTree) -> void:
 	await _expect_row_drag_scrolls(tree, screen.get("list_scroll"), screen.get("scenario_buttons").first_shift, "campaign service")
 	expect(not screen.call("select_scenario", "lunch_prep"), "the scene rejects direct selection of a locked service")
 	expect(screen.call("select_scenario", "first_shift"), "the first service can be selected")
-	expect(screen.get("briefing_label").text.contains("채소 샐러드"), "briefing shows the actual first menu")
+	expect(screen.get("briefing_label").text.contains("토마토 샐러드"), "briefing shows the actual first menu")
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)

@@ -48,6 +48,8 @@ id = "prepped_salad"
 display_name = "손질한 샐러드 재료"
 unit_cost = 100
 purchasable = false
+inputs = Dictionary[String, int]({"vegetable": 1})
+labor_units = 1
 
 
 [sub_resource type="Resource" id="Ingredient_prepped_soup"]
@@ -56,6 +58,8 @@ id = "prepped_soup"
 display_name = "손질한 수프 재료"
 unit_cost = 350
 purchasable = false
+inputs = Dictionary[String, int]({"vegetable": 2, "grain": 1})
+labor_units = 2
 
 
 [sub_resource type="Resource" id="Ingredient_prepped_grill"]
@@ -64,6 +68,8 @@ id = "prepped_grill"
 display_name = "손질한 구이 재료"
 unit_cost = 400
 purchasable = false
+inputs = Dictionary[String, int]({"protein": 1})
+labor_units = 3
 
 
 [sub_resource type="Resource" id="Process_pickup"]
@@ -140,8 +146,7 @@ revenue = 500
 patience_ticks = 400
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_salad"), SubResource("Process_serve")])
-prepared_ingredient_id = "prepped_salad"
-prep_labor_units = 1
+mise_ids = PackedStringArray("prepped_salad")
 
 
 [sub_resource type="Resource" id="Recipe_soup"]
@@ -155,8 +160,7 @@ revenue = 900
 patience_ticks = 600
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_soup"), SubResource("Cook_soup"), SubResource("Process_serve")])
-prepared_ingredient_id = "prepped_soup"
-prep_labor_units = 2
+mise_ids = PackedStringArray("prepped_soup")
 
 
 [sub_resource type="Resource" id="Recipe_grill"]
@@ -170,8 +174,7 @@ revenue = 1500
 patience_ticks = 800
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_grill"), SubResource("Cook_grill"), SubResource("Process_serve")])
-prepared_ingredient_id = "prepped_grill"
-prep_labor_units = 3
+mise_ids = PackedStringArray("prepped_grill")
 
 
 [sub_resource type="Resource" id="Station_storage_01"]
@@ -230,6 +233,8 @@ id = "prepped_grain_salad"
 display_name = "손질한 곡물 샐러드 재료"
 unit_cost = 250
 purchasable = false
+inputs = Dictionary[String, int]({"vegetable": 1, "grain": 1})
+labor_units = 1
 
 [sub_resource type="Resource" id="Cook_grain_salad"]
 script = ExtResource("process")
@@ -249,8 +254,7 @@ revenue = 700
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_grain_salad"), SubResource("Process_serve")])
-prepared_ingredient_id = "prepped_grain_salad"
-prep_labor_units = 1
+mise_ids = PackedStringArray("prepped_grain_salad")
 
 [resource]
 script = ExtResource("scenario")

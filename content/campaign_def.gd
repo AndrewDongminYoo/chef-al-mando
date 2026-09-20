@@ -30,7 +30,8 @@ func validate() -> Array[String]:
 		for ingredient: ScenarioDef.IngredientDef in scenario.ingredients:
 			if ingredient == null:
 				continue
-			var signature: Array = [ingredient.display_name, ingredient.unit_cost, ingredient.purchasable]
+			var signature: Array = [ingredient.display_name, ingredient.unit_cost, ingredient.purchasable,
+				ingredient.inputs, ingredient.labor_units]
 			if ingredients.has(ingredient.id) and ingredients[ingredient.id] != signature:
 				errors.append("inconsistent campaign ingredient: " + ingredient.id)
 			ingredients[ingredient.id] = signature
@@ -42,7 +43,8 @@ func validate() -> Array[String]:
 				if process != null:
 					processes.append([process.id, process.station_role, process.duration_ticks, process.next_id])
 			var signature: Array = [recipe.display_name, recipe.ingredients, recipe.cook_role, recipe.revenue,
-				recipe.patience_ticks, recipe.prepared_ingredient_id, recipe.prep_labor_units, recipe.first_process_id, processes]
+				recipe.patience_ticks, Array(recipe.mise_ids),
+				recipe.first_process_id, processes]
 			if recipes.has(recipe.id) and recipes[recipe.id] != signature:
 				errors.append("inconsistent campaign recipe: " + recipe.id)
 			recipes[recipe.id] = signature

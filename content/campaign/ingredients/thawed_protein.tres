@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_mise"]
+
+[resource]
+script = ExtResource("1_mise")
+id = "thawed_protein"
+display_name = "해동 연어"
+unit_cost = 400
+purchasable = false
+inputs = Dictionary[String, int]({
+"protein": 1
+})
+labor_units = 1

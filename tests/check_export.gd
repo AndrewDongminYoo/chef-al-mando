@@ -184,10 +184,11 @@ func _check_scenario(scenario_path: String, settings_path: String) -> bool:
 	await process_frame
 	var prepared: bool = true
 	if data.call("supports_preparation"):
-		var recipe_id: String = data.get("menu_ids")[0]
-		var recipe: Resource = data.call("recipe_for", recipe_id)
-		var result: Dictionary = screen.call("submit_preparation", "set_prep", recipe_id, 1)
-		prepared = result.accepted and screen.get("preparation_panel").prep_labels[recipe_id].text.contains(recipe.get("display_name"))
+		var recipe: Resource = data.call("recipe_for", data.get("menu_ids")[0])
+		var mise_id: String = recipe.get("mise_ids")[0]
+		var item: Resource = data.call("ingredient_for", mise_id)
+		var result: Dictionary = screen.call("submit_preparation", "set_prep", mise_id, 1)
+		prepared = result.accepted and screen.get("preparation_panel").prep_labels[mise_id].text.contains(item.get("display_name"))
 	var can_start: bool = not screen.get("start_button").disabled
 	screen.get("start_button").pressed.emit()
 	screen.call("advance", 1.0)

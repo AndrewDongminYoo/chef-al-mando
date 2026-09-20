@@ -33,9 +33,9 @@ func run() -> void:
 		int(screen.size.y) - insets.y), Transform2D.IDENTITY)
 	await process_frame
 	await process_frame
-	var prep_recipe_id := "grill" if hot_queue else "salad"
+	var prep_mise_id := "marinated_protein" if hot_queue else "prepped_salad"
 	var prep_quantity := 2 if hot_queue else 1
-	checks.expect(screen.submit_preparation("set_prep", prep_recipe_id, prep_quantity).accepted,
+	checks.expect(screen.submit_preparation("set_prep", prep_mise_id, prep_quantity).accepted,
 		"service feedback capture prepares the target portions")
 	if hot_queue:
 		checks.expect(screen.submit_preparation("set_menu_priority", "grill", 2).accepted,

@@ -17,7 +17,7 @@ func run(_tree: SceneTree) -> void:
 
 
 func _prepared(data: Definitions = null, quantity: int = 1, routes: GridRoutes = null) -> RefCounted:
-	return sim_script.new(single() if data == null else data, routes, {"prep_quantities": {"salad": quantity}})
+	return sim_script.new(single() if data == null else data, routes, {"prep_quantities": {"prepped_salad": quantity}})
 
 
 func _test_prepared_route() -> void:
@@ -34,7 +34,7 @@ func _test_prepared_route() -> void:
 	expect(order(sim).state == "served" and snapshot(sim).accounting.revenue == 500, "prepared route completes at the original three-process boundary")
 	advance(sim, 3000)
 	expect(snapshot(sim).accounting.waste_cost == 6500 and snapshot(sim).accounting.profit == -8100, "served prepared cost is neither wasted nor charged twice")
-	var invalid: RefCounted = sim_script.new(single(), null, {"prep_quantities": {"salad": 7}})
+	var invalid: RefCounted = sim_script.new(single(), null, {"prep_quantities": {"prepped_salad": 7}})
 	expect(snapshot(invalid).closed and not snapshot(invalid).errors.is_empty(), "service rejects preparation beyond capacity")
 	invalid = sim_script.new(single(), null, {"inventory": {"prepped_salad": 999}})
 	expect(snapshot(invalid).closed and not snapshot(invalid).errors.is_empty(), "callers cannot supply invented prepared inventory")

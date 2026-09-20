@@ -34,7 +34,7 @@ duration_ticks = 10
 [resource]
 script = ExtResource("3_k1jvw")
 id = "salad"
-display_name = "채소 샐러드"
+display_name = "토마토 샐러드"
 ingredients = Dictionary[String, int]({
 "vegetable": 1
 })
@@ -43,6 +43,5 @@ revenue = 500
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_5glhq")]([SubResource("Resource_j1lgi"), SubResource("Resource_n3vsp"), SubResource("Resource_8tlou"), SubResource("Resource_kxlvb")])
-prepared_ingredient_id = "prepped_salad"
-prep_labor_units = 1
+mise_ids = PackedStringArray("prepped_vegetable")
 icon = ExtResource("1_mp06u")

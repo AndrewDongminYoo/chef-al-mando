@@ -11,15 +11,11 @@ func fresh() -> Definitions:
 
 func run(_tree: SceneTree) -> void:
 	expect(fresh().validate().is_empty(), "the production M2 content passes strict content validation")
-	for defect: String in ["missing_prepared", "prepared_purchase", "duplicate_prepared", "zero_labor", "negative_labor", "zero_duration", "wrong_role", "cycle", "skip", "prepared_input", "empty_input", "zero_input", "wrong_cost"]:
+	for defect: String in ["prepared_purchase", "zero_duration", "wrong_role", "cycle", "skip", "prepared_input", "empty_input", "zero_input", "wrong_cost"]:
 		var data := fresh()
 		var recipe := data.recipe_for("salad")
 		match defect:
-			"missing_prepared": recipe.prepared_ingredient_id = "unknown"
 			"prepared_purchase": data.purchases.prepped_salad = 1
-			"duplicate_prepared": data.recipe_for("soup").prepared_ingredient_id = "prepped_salad"
-			"zero_labor": recipe.prep_labor_units = 0
-			"negative_labor": recipe.prep_labor_units = -1
 			"zero_duration": recipe.processes[1].duration_ticks = 0
 			"wrong_role": recipe.processes[1].station_role = "hot"
 			"cycle": recipe.processes[1].next_id = "pickup"
@@ -34,7 +30,7 @@ func run(_tree: SceneTree) -> void:
 	var extra := ResourceLoader.load("res://tests/fixtures/m2_extra_menu.tres", "", ResourceLoader.CACHE_MODE_IGNORE) as Definitions
 	expect(extra != null and extra.validate().is_empty(), "the fourth menu loads as data without a simulation branch")
 	var plan := PreparationPlan.new(extra)
-	expect(plan.apply_command({"kind": "set_prep", "target_id": "grain_salad", "value": 1, "apply_tick": 0, "sequence": 1}).accepted, "the data-only fourth menu can be prepared")
+	expect(plan.apply_command({"kind": "set_prep", "target_id": "prepped_grain_salad", "value": 1, "apply_tick": 0, "sequence": 1}).accepted, "the data-only fourth menu can be prepared")
 	var committed := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 2})
 	var sim := ServiceSim.new(committed.definitions, null, committed.options)
 	while sim.tick < 200:

@@ -96,30 +96,20 @@ func _build_stock(column: VBoxContainer) -> void:
 		purchase_plus[ingredient.id] = plus
 	prep_heading = _label("프렙 · 영업 중 손질을 미리 준비")
 	column.add_child(prep_heading)
-	for recipe_id: String in definitions.menu_ids:
-		var recipe := definitions.recipe_for(recipe_id)
-		if recipe.prepared_ingredient_id.is_empty():
-			continue
+	for item: Definitions.IngredientDef in definitions.mise_items():
 		var row := HBoxContainer.new()
 		column.add_child(row)
-		if recipe.icon != null:
-			var icon := TextureRect.new()
-			icon.texture = recipe.icon
-			icon.custom_minimum_size = Vector2(36, 36)
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			row.add_child(icon)
 		var label := _label("")
 		row.add_child(label)
-		prep_labels[recipe.id] = label
+		prep_labels[item.id] = label
 		var minus := _button("−", false)
-		minus.pressed.connect(_change_quantity.bind("set_prep", recipe.id, -1))
+		minus.pressed.connect(_change_quantity.bind("set_prep", item.id, -1))
 		row.add_child(minus)
-		prep_minus[recipe.id] = minus
+		prep_minus[item.id] = minus
 		var plus := _button("+", false)
-		plus.pressed.connect(_change_quantity.bind("set_prep", recipe.id, 1))
+		plus.pressed.connect(_change_quantity.bind("set_prep", item.id, 1))
 		row.add_child(plus)
-		prep_plus[recipe.id] = plus
+		prep_plus[item.id] = plus
 	priority_heading = _label("메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능")
 	column.add_child(priority_heading)
 	for recipe_id: String in definitions.menu_ids:
@@ -227,11 +217,12 @@ func refresh(snapshot: Dictionary) -> void:
 		var quantity: int = snapshot.purchases.get(ingredient.id, 0)
 		purchase_labels[ingredient.id].text = tr("%s %d개\n개당 %d") % [tr(ingredient.display_name), quantity, ingredient.unit_cost]
 		purchase_minus[ingredient.id].disabled = quantity == 0
-	for recipe_id: String in prep_labels:
-		var recipe := definitions.recipe_for(recipe_id)
-		var quantity: int = snapshot.prep_quantities.get(recipe_id, 0)
-		prep_labels[recipe_id].text = tr("%s %d개\n노동 %d / 개") % [tr(recipe.display_name), quantity, recipe.prep_labor_units]
-		prep_minus[recipe_id].disabled = quantity == 0
+	for mise_id: String in prep_labels:
+		var item := definitions.ingredient_for(mise_id)
+		var quantity: int = snapshot.prep_quantities.get(mise_id, 0)
+		prep_labels[mise_id].text = tr("%s %d개\n메뉴 %d종 · 원가 %d · 노동 %d / 개") % [tr(item.display_name), quantity,
+			definitions.menu_count_for(mise_id), item.unit_cost, item.labor_units]
+		prep_minus[mise_id].disabled = quantity == 0
 	for employee_id: String in duty_buttons:
 		duty_buttons[employee_id].select(DUTIES.find(snapshot.duties[employee_id]))
 	for recipe_id: String in priority_labels:

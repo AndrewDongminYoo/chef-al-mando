@@ -41,9 +41,8 @@ func _defaults() -> Dictionary:
 		priorities[recipe_id] = 1
 	for station: Definitions.StationDef in _source.stations:
 		placements[station.id] = {"tile": _array(station.tile), "work_position": _array(station.work_position)}
-	for recipe: Definitions.RecipeDef in _source.recipes:
-		if not recipe.prepared_ingredient_id.is_empty():
-			quantities[recipe.id] = 0
+	for item: Definitions.IngredientDef in _source.mise_items():
+		quantities[item.id] = 0
 	for employee: Definitions.EmployeeDef in _source.employees:
 		duties[employee.id] = "all"
 	return {"purchases": _source.purchases.duplicate(), "prep_quantities": quantities, "placements": placements, "duties": duties, "menu_priorities": priorities}
@@ -126,8 +125,8 @@ func apply_command(command: Dictionary) -> Dictionary:
 				return _rejected("invalid_purchase")
 			candidate.purchases[target] = command.value
 		"set_prep":
-			var recipe := _source.recipe_for(target)
-			if recipe == null or recipe.prepared_ingredient_id.is_empty() or not command.value is int or command.value < 0:
+			var item := _source.ingredient_for(target)
+			if item == null or not item.is_mise() or not command.value is int or command.value < 0:
 				return _rejected("invalid_preparation")
 			candidate.prep_quantities[target] = command.value
 		"set_duty":
@@ -257,28 +256,28 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 	var labor_used: int = 0
 	var ordered_ids: Array = quantities.keys()
 	ordered_ids.sort()
-	for recipe_id: Variant in ordered_ids:
-		if not recipe_id is String or not quantities[recipe_id] is int or quantities[recipe_id] < 0:
+	for mise_id: Variant in ordered_ids:
+		if not mise_id is String or not quantities[mise_id] is int or quantities[mise_id] < 0:
 			errors.append("invalid_preparation")
 			return result
-		var recipe := data.recipe_for(recipe_id)
-		if recipe == null or recipe.prepared_ingredient_id.is_empty():
+		var item := data.ingredient_for(mise_id)
+		if item == null or not item.is_mise():
 			errors.append("invalid_preparation")
 			return result
-		var quantity: int = quantities[recipe_id]
-		if quantity > (data.prep_labor_capacity - labor_used) / recipe.prep_labor_units:
+		var quantity: int = quantities[mise_id]
+		if quantity > (data.prep_labor_capacity - labor_used) / item.labor_units:
 			errors.append("insufficient_labor")
 			return result
-		labor_used += quantity * recipe.prep_labor_units
-		for ingredient_id: String in recipe.ingredients:
-			if quantity > (inventory[ingredient_id] - required.get(ingredient_id, 0)) / recipe.ingredients[ingredient_id]:
+		labor_used += quantity * item.labor_units
+		for input_id: String in item.inputs:
+			if quantity > (inventory[input_id] - required.get(input_id, 0)) / item.inputs[input_id]:
 				errors.append("missing_ingredients")
 				return result
-			required[ingredient_id] = required.get(ingredient_id, 0) + quantity * recipe.ingredients[ingredient_id]
-	for ingredient_id: String in required:
-		inventory[ingredient_id] -= required[ingredient_id]
-	for recipe_id: String in ordered_ids:
-		inventory[data.recipe_for(recipe_id).prepared_ingredient_id] += quantities[recipe_id]
+			required[input_id] = required.get(input_id, 0) + quantity * item.inputs[input_id]
+	for input_id: String in required:
+		inventory[input_id] -= required[input_id]
+	for mise_id: String in ordered_ids:
+		inventory[mise_id] += quantities[mise_id]
 	result.labor_used = labor_used
 	for employee_id: Variant in options.get("duties", {}):
 		var duty: Variant = options.duties[employee_id]
@@ -290,7 +289,9 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 		var available := inventory.duplicate()
 		for recipe_id: String in data.menu_ids:
 			var recipe := data.recipe_for(recipe_id)
-			if inventory.get(recipe.prepared_ingredient_id, 0) > 0:
+			if mise_ready(available, recipe):
+				for mise_id: String in recipe.mise_ids:
+					available[mise_id] -= 1
 				continue
 			for ingredient_id: String in recipe.ingredients:
 				if available[ingredient_id] < recipe.ingredients[ingredient_id]:
@@ -310,3 +311,12 @@ static func _array(tile: Vector2i) -> Array[int]:
 
 static func _vector(coordinates: Array) -> Vector2i:
 	return Vector2i(coordinates[0], coordinates[1])
+
+
+static func mise_ready(inventory: Dictionary, recipe: Definitions.RecipeDef) -> bool:
+	if recipe.mise_ids.is_empty():
+		return false
+	for mise_id: String in recipe.mise_ids:
+		if inventory.get(mise_id, 0) <= 0:
+			return false
+	return true

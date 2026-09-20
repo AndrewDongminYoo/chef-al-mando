@@ -11,14 +11,28 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 	var prep_quantities: Dictionary = selection.get("prep_quantities", {})
 	var menu_priorities: Dictionary = selection.get("menu_priorities", {})
 	var labor_used := 0
-	for recipe_id: String in data.menu_ids:
-		var recipe := data.recipe_for(recipe_id)
-		var planned: int = prep_quantities.get(recipe_id, 0)
-		labor_used += planned * recipe.prep_labor_units
-		var remaining: int = view.inventory.get(recipe.prepared_ingredient_id, 0)
+	for item: Definitions.IngredientDef in data.mise_items():
+		var planned: int = prep_quantities.get(item.id, 0)
+		labor_used += planned * item.labor_units
+		var remaining: int = view.inventory.get(item.id, 0)
 		var prep_row := {"planned": planned, "used": maxi(0, planned - remaining),
 			"remaining": remaining, "raw_orders": 0, "served": 0, "expired": 0,
-			"shortage_ticks": 0, "pressure_ticks": 0, "prep_labor_units": recipe.prep_labor_units}
+			"shortage_ticks": 0, "pressure_ticks": 0, "labor_units": item.labor_units,
+			"menu_count": data.menu_count_for(item.id)}
+		for order: Dictionary in view.orders:
+			if item.id not in data.recipe_for(order.recipe_id).mise_ids:
+				continue
+			if order.raw_consumed:
+				prep_row.raw_orders += 1
+			if order.state == "served":
+				prep_row.served += 1
+			elif order.state == "expired":
+				prep_row.expired += 1
+			prep_row.shortage_ticks += order.metrics.missing_ingredients
+			prep_row.pressure_ticks += order.metrics.station_in_use + order.metrics.responsible_employee_busy
+		prep[item.id] = prep_row
+	for recipe_id: String in data.menu_ids:
+		var recipe := data.recipe_for(recipe_id)
 		var priority_row := {"default_priority": menu_priorities.get(recipe_id, 1),
 			"served": 0, "expired": 0, "pressure_ticks": 0, "shortage_ticks": 0,
 			"employee_busy_ticks": 0, "station_ticks": 0, "moving_ticks": 0,
@@ -26,23 +40,16 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 		for order: Dictionary in view.orders:
 			if order.recipe_id != recipe_id:
 				continue
-			if order.raw_consumed:
-				prep_row.raw_orders += 1
 			if order.state == "served":
-				prep_row.served += 1
 				priority_row.served += 1
 			elif order.state == "expired":
-				prep_row.expired += 1
 				priority_row.expired += 1
 			var pressure: int = order.metrics.station_in_use + order.metrics.responsible_employee_busy
-			prep_row.shortage_ticks += order.metrics.missing_ingredients
-			prep_row.pressure_ticks += pressure
 			priority_row.shortage_ticks += order.metrics.missing_ingredients
 			priority_row.pressure_ticks += pressure
 			priority_row.employee_busy_ticks += order.metrics.responsible_employee_busy
 			priority_row.station_ticks += order.metrics.station_in_use
 			priority_row.moving_ticks += order.metrics.moving
-		prep[recipe_id] = prep_row
 		priorities[recipe_id] = priority_row
 	for ingredient: Definitions.IngredientDef in data.ingredients:
 		if not ingredient.purchasable:
@@ -88,8 +95,8 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 	var best: Dictionary = {}
 	var best_rank := -1
 	var best_score := -1
-	for recipe_id: String in data.menu_ids:
-		var row: Dictionary = prep[recipe_id]
+	for item: Definitions.IngredientDef in data.mise_items():
+		var row: Dictionary = prep[item.id]
 		var action := ""
 		var amount := 0
 		if row.remaining > 0:
@@ -97,8 +104,8 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 			amount = 1
 		elif row.raw_orders > 0:
 			var available_labor: int = data.prep_labor_capacity - labor_used
-			if available_labor >= row.prep_labor_units:
-				if not _valid_prep_change(data, selection, recipe_id, row.planned + 1):
+			if available_labor >= row.labor_units:
+				if not _valid_prep_change(data, selection, item.id, row.planned + 1):
 					continue
 				action = "increase_prep"
 				amount = 1
@@ -109,16 +116,16 @@ static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used
 		if not action.is_empty() and (rank > best_rank or (rank == best_rank and score > best_score)):
 			best_rank = rank
 			best_score = score
-			best = {"category": "prep", "action": action, "target_id": recipe_id, "amount": amount}
+			best = {"category": "prep", "action": action, "target_id": item.id, "amount": amount}
 	return best
 
 
-static func _valid_prep_change(data: Definitions, selection: Dictionary, recipe_id: String, quantity: int) -> bool:
+static func _valid_prep_change(data: Definitions, selection: Dictionary, mise_id: String, quantity: int) -> bool:
 	if selection.is_empty():
 		return true
 	var purchases: Dictionary = selection.get("purchases", data.purchases).duplicate()
 	var prep_quantities: Dictionary = selection.get("prep_quantities", {}).duplicate()
-	prep_quantities[recipe_id] = quantity
+	prep_quantities[mise_id] = quantity
 	var candidate := data.duplicate() as Definitions
 	candidate.purchases = {}
 	candidate.purchases.assign(purchases)
