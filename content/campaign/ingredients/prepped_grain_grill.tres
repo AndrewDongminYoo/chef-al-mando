@@ -8,3 +8,5 @@ id = "prepped_grain_grill"
 display_name = "손질한 곡물 볶음 재료"
 unit_cost = 350
 purchasable = false
+inputs = Dictionary[String, int]({"grain": 1, "mushroom": 1})
+labor_units = 2

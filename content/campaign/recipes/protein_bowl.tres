@@ -45,6 +45,7 @@ revenue = 1600
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_ls53t")]([SubResource("Resource_chmt1"), SubResource("Resource_kix2g"), SubResource("Resource_oxlg3"), SubResource("Resource_uhiuc")])
+mise_ids = PackedStringArray("prepped_protein_bowl")
 prepared_ingredient_id = "prepped_protein_bowl"
 prep_labor_units = 2
 icon = ExtResource("1_jabud")

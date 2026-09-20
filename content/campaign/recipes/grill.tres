@@ -43,6 +43,7 @@ revenue = 1500
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_qhsfl")]([SubResource("Resource_inpwx"), SubResource("Resource_brx7g"), SubResource("Resource_dxgdg"), SubResource("Resource_bc62s")])
+mise_ids = PackedStringArray("prepped_grill")
 prepared_ingredient_id = "prepped_grill"
 prep_labor_units = 3
 icon = ExtResource("1_u4wsj")

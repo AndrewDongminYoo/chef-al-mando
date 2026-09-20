@@ -8,3 +8,5 @@ id = "prepped_grill"
 display_name = "손질한 단백질 구이 재료"
 unit_cost = 400
 purchasable = false
+inputs = Dictionary[String, int]({"protein": 1})
+labor_units = 3

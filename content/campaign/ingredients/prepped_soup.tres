@@ -8,3 +8,5 @@ id = "prepped_soup"
 display_name = "손질한 곡물 수프 재료"
 unit_cost = 350
 purchasable = false
+inputs = Dictionary[String, int]({"grain": 1, "vegetable": 2})
+labor_units = 2

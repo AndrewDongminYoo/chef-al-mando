@@ -22,6 +22,15 @@ func validate(require_stock: bool = true) -> Array[String]:
 		errors.append("campaign service needs a title, briefing, and operating problem")
 	if closing_tick != 3000 or employees.size() > 4 or stations.size() > 6 or ingredients.size() > 12:
 		errors.append("campaign service exceeds the supported limits")
+	for recipe_id: String in menu_ids:
+		var recipe := recipe_for(recipe_id)
+		if recipe != null and recipe.mise_ids.is_empty():
+			errors.append("campaign menu needs mise items: " + recipe_id)
+	for ingredient: IngredientDef in ingredients:
+		if ingredient == null or not ingredient.is_mise():
+			continue
+		if menu_count_for(ingredient.id) == 0:
+			errors.append("unused mise item: " + ingredient.id)
 	if minimum_served <= 0 or minimum_served > order_count or minimum_profit < -starting_budget:
 		errors.append("invalid campaign target")
 	if order_recipe_ids.size() != order_count:

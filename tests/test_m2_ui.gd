@@ -200,6 +200,11 @@ func _custom_ingredients(tree: SceneTree) -> void:
 			if inputs.has("vegetable"):
 				inputs["greens"] = inputs["vegetable"]
 				inputs.erase("vegetable")
+		for other_ingredient: Resource in data.get("ingredients"):
+			var mise_inputs: Dictionary = other_ingredient.get("inputs")
+			if mise_inputs.has("vegetable"):
+				mise_inputs["greens"] = mise_inputs["vegetable"]
+				mise_inputs.erase("vegetable")
 		var oil: Resource = load("res://content/ingredient_def.gd").new()
 		oil.set("id", "oil")
 		oil.set("display_name", "식용유")

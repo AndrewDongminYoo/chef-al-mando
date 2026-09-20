@@ -45,6 +45,24 @@ func validate(require_stock: bool = true) -> Array[String]:
 		ingredient_ids[ingredient.id] = true
 		if ingredient.unit_cost < 0:
 			errors.append("negative ingredient cost: " + ingredient.id)
+	for ingredient: IngredientDef in ingredients:
+		if ingredient == null:
+			continue
+		if ingredient.purchasable:
+			if not ingredient.inputs.is_empty() or ingredient.labor_units != 0:
+				errors.append("raw ingredients cannot have inputs or labor: " + ingredient.id)
+			continue
+		if ingredient.inputs.is_empty() or ingredient.labor_units <= 0:
+			errors.append("mise items need inputs and labor: " + ingredient.id)
+		var input_cost: int = 0
+		for input_id: String in ingredient.inputs:
+			var input := ingredient_for(input_id)
+			if input == null or not input.purchasable or ingredient.inputs[input_id] <= 0:
+				errors.append("mise inputs must be raw ingredients: " + ingredient.id)
+			else:
+				input_cost += input.unit_cost * ingredient.inputs[input_id]
+		if ingredient.unit_cost != input_cost:
+			errors.append("mise cost must equal its raw input cost: " + ingredient.id)
 	for ingredient_id: String in purchases:
 		if not ingredient_ids.has(ingredient_id) or purchases[ingredient_id] < 0:
 			errors.append("invalid purchase: " + ingredient_id)
@@ -57,7 +75,6 @@ func validate(require_stock: bool = true) -> Array[String]:
 				errors.append("invalid station role: " + station.id)
 			else:
 				roles[station.role] = true
-	var prepared_ids: Dictionary[String, bool] = {}
 	for recipe: RecipeDef in recipes:
 		if recipe == null:
 			continue
@@ -66,25 +83,24 @@ func validate(require_stock: bool = true) -> Array[String]:
 		for ingredient_id: String in recipe.ingredients:
 			if not ingredient_ids.has(ingredient_id) or recipe.ingredients[ingredient_id] < 0:
 				errors.append("invalid recipe ingredient: " + ingredient_id)
-		var has_preparation := not recipe.prepared_ingredient_id.is_empty()
-		if has_preparation:
-			var prepared := ingredient_for(recipe.prepared_ingredient_id)
-			if prepared == null or prepared.purchasable or prepared_ids.has(recipe.prepared_ingredient_id):
-				errors.append("invalid prepared ingredient: " + recipe.id)
-			prepared_ids[recipe.prepared_ingredient_id] = true
-			if recipe.prep_labor_units <= 0 or recipe.ingredients.is_empty():
-				errors.append("invalid preparation inputs or labor: " + recipe.id)
-			var input_cost: int = 0
-			for ingredient_id: String in recipe.ingredients:
-				var ingredient := ingredient_for(ingredient_id)
-				if ingredient == null or not ingredient.purchasable or recipe.ingredients[ingredient_id] <= 0:
-					errors.append("preparation requires raw ingredients: " + recipe.id)
-				else:
-					input_cost += ingredient.unit_cost * recipe.ingredients[ingredient_id]
-			if prepared != null and prepared.unit_cost != input_cost:
-				errors.append("prepared ingredient cost must equal its raw input cost: " + recipe.id)
-		elif recipe.prep_labor_units != 0:
-			errors.append("preparation labor requires a prepared ingredient: " + recipe.id)
+		var has_preparation := not recipe.mise_ids.is_empty()
+		var seen_mise: Dictionary[String, bool] = {}
+		var mise_inputs: Dictionary[String, int] = {}
+		for mise_id: String in recipe.mise_ids:
+			var item := ingredient_for(mise_id)
+			if item == null or not item.is_mise() or seen_mise.has(mise_id):
+				errors.append("invalid recipe mise item: " + recipe.id)
+				continue
+			seen_mise[mise_id] = true
+			for input_id: String in item.inputs:
+				mise_inputs[input_id] = mise_inputs.get(input_id, 0) + item.inputs[input_id]
+		if has_preparation and mise_inputs != recipe.ingredients:
+			errors.append("recipe ingredients must equal the raw inputs of its mise items: " + recipe.id)
+		# Transitional until Task 3 removes the legacy fields: both representations must agree.
+		var legacy_ids := PackedStringArray([recipe.prepared_ingredient_id]) if not recipe.prepared_ingredient_id.is_empty() else PackedStringArray()
+		var legacy_labor: int = ingredient_for(recipe.prepared_ingredient_id).labor_units if has_preparation and ingredient_for(recipe.prepared_ingredient_id) != null else 0
+		if recipe.mise_ids != legacy_ids or recipe.prep_labor_units != legacy_labor:
+			errors.append("legacy preparation fields disagree with mise_ids: " + recipe.id)
 		_check_ids(recipe.processes, "process", errors)
 		var ordered_processes := recipe.ordered_processes()
 		if ordered_processes.is_empty():
@@ -151,7 +167,7 @@ func validate(require_stock: bool = true) -> Array[String]:
 
 func supports_preparation() -> bool:
 	for recipe: RecipeDef in recipes:
-		if recipe != null and not recipe.prepared_ingredient_id.is_empty():
+		if recipe != null and not recipe.mise_ids.is_empty():
 			return true
 	return false
 
@@ -246,6 +262,23 @@ func ingredient_for(ingredient_id: String) -> IngredientDef:
 		if ingredient != null and ingredient.id == ingredient_id:
 			return ingredient
 	return null
+
+
+func mise_items() -> Array[IngredientDef]:
+	var result: Array[IngredientDef] = []
+	for ingredient: IngredientDef in ingredients:
+		if ingredient != null and ingredient.is_mise():
+			result.append(ingredient)
+	return result
+
+
+func menu_count_for(mise_id: String) -> int:
+	var count: int = 0
+	for recipe_id: String in menu_ids:
+		var recipe := recipe_for(recipe_id)
+		if recipe != null and mise_id in recipe.mise_ids:
+			count += 1
+	return count
 
 
 func order_schedule() -> Array[Dictionary]:

@@ -44,6 +44,7 @@ revenue = 1100
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_avitn")]([SubResource("Resource_fukot"), SubResource("Resource_t4u74"), SubResource("Resource_6bbj3"), SubResource("Resource_23lwm")])
+mise_ids = PackedStringArray("prepped_mushroom_soup")
 prepared_ingredient_id = "prepped_mushroom_soup"
 prep_labor_units = 2
 icon = ExtResource("1_jn2px")
