@@ -66,6 +66,10 @@ func _test_mise_definitions() -> void:
 	_ingredient(no_labor, "prepped_grill").set("labor_units", 0)
 	expect(_has_error(no_labor, "mise items need inputs and labor: prepped_grill"), "a mise item needs positive labor")
 
+	var negative_labor := _fixture()
+	_ingredient(negative_labor, "prepped_grill").set("labor_units", -1)
+	expect(_has_error(negative_labor, "mise items need inputs and labor: prepped_grill"), "a mise item rejects negative labor")
+
 	var unknown_item := _fixture()
 	unknown_item.call("recipe_for", "salad").set("mise_ids", PackedStringArray(["prepped_salad", "missing"]))
 	expect(_has_error(unknown_item, "invalid recipe mise item: salad"), "unknown mise references are rejected")
@@ -169,9 +173,12 @@ func _test_mise_set_consumption() -> void:
 	var view: Dictionary = partial.snapshot()
 	expect(view.orders[0].raw_consumed and not view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 1,
 		"a recipe with one missing mise item takes the raw path and leaves the stocked item")
+	expect(view.orders[0].missing_mise_ids == ["prepped_soup_grain", "prepped_soup_vegetable"],
+		"a raw-path order records every mise item of its recipe as missing")
 	var full := ServiceSim.new(data, null, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	var events := _run_until_consumed(full, 40)
 	view = full.snapshot()
+	expect(view.orders[0].missing_mise_ids == [], "a fully prepared order records no missing mise item")
 	expect(view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 0 and view.inventory.prepped_soup_vegetable == 0
 		and view.orders[0].consumed_cost == 350, "a complete mise set is consumed item by item at its combined cost")
 	var depleted_ids: Array[String] = []
@@ -184,6 +191,26 @@ func _test_mise_set_consumption() -> void:
 	var restored := ServiceSim.restore(data, saved, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	expect(restored.accepted and restored.simulation.state_hash() == full.state_hash(),
 		"a snapshot with a consumed mise set restores to the same hash")
+	var raw_state: Dictionary = partial.export_state()
+	var reordered: Dictionary = raw_state.duplicate(true)
+	reordered.orders[0].missing_mise_ids = ["prepped_soup_vegetable", "prepped_soup_grain"]
+	var reordered_restore := ServiceSim.restore(data, reordered, {"prep_quantities": {"prepped_soup_grain": 1}})
+	expect(not reordered_restore.accepted and reordered_restore.reason == "invalid_consumption",
+		"restore rejects missing mise IDs that are not in recipe order")
+	var unknown: Dictionary = raw_state.duplicate(true)
+	unknown.orders[0].missing_mise_ids = ["prepped_soup_grain", "missing"]
+	expect(not ServiceSim.restore(data, unknown, {"prep_quantities": {"prepped_soup_grain": 1}}).accepted,
+		"restore rejects a missing mise ID the recipe does not use")
+	var understated: Dictionary = raw_state.duplicate(true)
+	understated.orders[0].missing_mise_ids = ["prepped_soup_grain"]
+	var understated_restore := ServiceSim.restore(data, understated, {"prep_quantities": {"prepped_soup_grain": 1}})
+	expect(not understated_restore.accepted and understated_restore.reason == "invalid_inventory",
+		"restore rejects a missing list that does not explain the consumed inventory")
+	var contradictory: Dictionary = full.export_state()
+	contradictory.orders[0].missing_mise_ids = ["prepped_soup_grain", "prepped_soup_vegetable"]
+	var contradictory_restore := ServiceSim.restore(data, contradictory, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
+	expect(not contradictory_restore.accepted and contradictory_restore.reason == "invalid_consumption",
+		"restore rejects uses_prepared with a non-empty missing list")
 
 
 func _test_campaign_mise_content() -> void:

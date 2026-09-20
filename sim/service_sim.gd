@@ -31,6 +31,7 @@ class OrderState extends RefCounted:
 	var input_consumed: bool = false
 	var uses_prepared: bool = false
 	var reserved_inputs: Dictionary[String, int] = {}
+	var missing_mise_ids: Array[String] = []
 	var consumed_cost: int = 0
 	var intermediate_ready: bool = false
 	var intermediate_consumed: bool = false
@@ -299,6 +300,10 @@ func _try_assignment(order: OrderState) -> void:
 			if not order.input_consumed:
 				order.reserved_inputs = inputs
 				order.uses_prepared = not order.recipe.mise_ids.is_empty() and inputs.has(order.recipe.mise_ids[0])
+				order.missing_mise_ids.clear()
+				if not order.uses_prepared:
+					for mise_id: String in order.recipe.mise_ids:
+						order.missing_mise_ids.append(mise_id)
 				for ingredient_id: String in inputs:
 					_reserved[ingredient_id] += inputs[ingredient_id]
 				order.ingredients_reserved = true
@@ -381,11 +386,10 @@ func _begin_work(order: OrderState, task: TaskState) -> void:
 		order.input_consumed = true
 		order.raw_consumed = not order.uses_prepared
 		order.intermediate_ready = order.uses_prepared
-		if order.uses_prepared:
-			for mise_id: String in order.recipe.mise_ids:
-				if _inventory[mise_id] == 0:
-					_events.append({"kind": "prepared_stock_depleted", "order_id": order.id,
-						"recipe_id": order.recipe.id, "ingredient_id": mise_id, "employee_id": task.employee_id})
+		for mise_id: String in order.recipe.mise_ids:
+			if mise_id not in order.missing_mise_ids and _inventory[mise_id] == 0:
+				_events.append({"kind": "prepared_stock_depleted", "order_id": order.id,
+					"recipe_id": order.recipe.id, "ingredient_id": mise_id, "employee_id": task.employee_id})
 	if order.phases[order.phase_index].id == "cook" and order.intermediate_ready:
 		order.intermediate_ready = false
 		order.intermediate_consumed = true
@@ -523,6 +527,7 @@ func snapshot() -> Dictionary:
 			"priority": order.priority, "wait_reason": order.wait_reason, "wait_detail": order.wait_detail,
 			"raw_consumed": order.raw_consumed, "ingredients_reserved": order.ingredients_reserved,
 			"input_consumed": order.input_consumed, "uses_prepared": order.uses_prepared,
+			"missing_mise_ids": order.missing_mise_ids.duplicate(),
 			"reserved_inputs": order.reserved_inputs.duplicate(), "consumed_cost": order.consumed_cost,
 			"intermediate_ready": order.intermediate_ready, "intermediate_consumed": order.intermediate_consumed,
 			"ended_tick": order.ended_tick, "metrics": order.metrics.duplicate(),
@@ -619,6 +624,7 @@ static func restore(data: Definitions, state: Dictionary, preparation: Dictionar
 		order.input_consumed = saved_order.input_consumed
 		order.uses_prepared = saved_order.uses_prepared
 		order.reserved_inputs.assign(saved_order.reserved_inputs)
+		order.missing_mise_ids.assign(saved_order.missing_mise_ids)
 		order.consumed_cost = _consumed_cost(data, order)
 		order.intermediate_ready = saved_order.intermediate_ready
 		order.intermediate_consumed = saved_order.intermediate_consumed
@@ -831,7 +837,7 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 	scheduled: Dictionary, task_by_order: Dictionary) -> String:
 	var fields: Array[String] = ["id", "recipe_id", "arrival_tick", "deadline_tick", "state", "terminal_reason",
 		"phase_index", "priority", "wait_reason", "wait_detail", "raw_consumed", "ingredients_reserved",
-		"input_consumed", "uses_prepared", "reserved_inputs", "intermediate_ready", "intermediate_consumed",
+		"input_consumed", "uses_prepared", "missing_mise_ids", "reserved_inputs", "intermediate_ready", "intermediate_consumed",
 		"ended_tick", "metrics", "has_result", "result_position", "carrying"]
 	if not _exact_fields(saved_order, fields):
 		return "invalid_order"
@@ -893,6 +899,17 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			return "invalid_order"
 	if not saved_order.reserved_inputs is Dictionary:
 		return "invalid_order"
+	if not saved_order.missing_mise_ids is Array:
+		return "invalid_order"
+	var expected_missing: Array = []
+	for mise_id: String in recipe.mise_ids:
+		if mise_id in saved_order.missing_mise_ids:
+			expected_missing.append(mise_id)
+	if saved_order.missing_mise_ids != expected_missing:
+		return "invalid_consumption"
+	if (saved_order.ingredients_reserved or saved_order.input_consumed) \
+		and saved_order.uses_prepared != (not recipe.mise_ids.is_empty() and saved_order.missing_mise_ids.is_empty()):
+		return "invalid_consumption"
 	if not saved_order.metrics is Dictionary or not _valid_tile(saved_order.result_position):
 		return "invalid_order"
 	if saved_order.raw_consumed != (saved_order.input_consumed and not saved_order.uses_prepared):
@@ -908,7 +925,7 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 		if not saved_order.reserved_inputs.is_empty():
 			return "invalid_reservation"
 	if saved_order.ingredients_reserved:
-		var expected_inputs: Dictionary = _mise_inputs(recipe) if saved_order.uses_prepared else recipe.ingredients
+		var expected_inputs: Dictionary = PreparationPlan.mise_inputs_for(data, recipe, saved_order.missing_mise_ids)
 		if saved_order.reserved_inputs != expected_inputs:
 			return "invalid_reservation"
 	if saved_order.carrying and (saved_order.state != "moving" or not saved_order.has_result):
@@ -991,13 +1008,6 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			if saved_order.metrics.working != expected_working_ticks:
 				return "invalid_metrics"
 	return ""
-
-
-static func _mise_inputs(recipe: RecipeDef) -> Dictionary:
-	var inputs: Dictionary = {}
-	for mise_id: String in recipe.mise_ids:
-		inputs[mise_id] = 1
-	return inputs
 
 
 static func _valid_metrics(metrics: Dictionary, saved_order: Dictionary, current_tick: int) -> bool:
@@ -1156,16 +1166,13 @@ static func _inventory_restore_error(data: Definitions, state: Dictionary, prepa
 		var recipe: RecipeDef = data.recipe_for(saved_order.recipe_id)
 		if recipe == null:
 			return "invalid_order"
-		if saved_order.uses_prepared:
-			if recipe.mise_ids.is_empty():
+		if not saved_order.get("missing_mise_ids") is Array:
+			return "invalid_order"
+		var consumed: Dictionary = PreparationPlan.mise_inputs_for(data, recipe, saved_order.missing_mise_ids)
+		for ingredient_id: String in consumed:
+			if not initial_inventory.has(ingredient_id):
 				return "invalid_order"
-			for mise_id: String in recipe.mise_ids:
-				if not initial_inventory.has(mise_id):
-					return "invalid_order"
-				initial_inventory[mise_id] -= 1
-		else:
-			for ingredient_id: String in recipe.ingredients:
-				initial_inventory[ingredient_id] -= recipe.ingredients[ingredient_id]
+			initial_inventory[ingredient_id] -= consumed[ingredient_id]
 	if state.inventory != initial_inventory:
 		return "invalid_inventory"
 	return ""
@@ -1174,14 +1181,10 @@ static func _inventory_restore_error(data: Definitions, state: Dictionary, prepa
 static func _consumed_cost(data: Definitions, order: OrderState) -> int:
 	if not order.input_consumed:
 		return 0
-	if order.uses_prepared:
-		var prepared_cost: int = 0
-		for mise_id: String in order.recipe.mise_ids:
-			prepared_cost += data.ingredient_for(mise_id).unit_cost
-		return prepared_cost
 	var result: int = 0
-	for ingredient_id: String in order.recipe.ingredients:
-		result += data.ingredient_for(ingredient_id).unit_cost * order.recipe.ingredients[ingredient_id]
+	var consumed: Dictionary = PreparationPlan.mise_inputs_for(data, order.recipe, order.missing_mise_ids)
+	for ingredient_id: String in consumed:
+		result += data.ingredient_for(ingredient_id).unit_cost * consumed[ingredient_id]
 	return result
 
 
