@@ -22,7 +22,7 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 		for order: Dictionary in view.orders:
 			if item.id not in data.recipe_for(order.recipe_id).mise_ids:
 				continue
-			if order.raw_consumed:
+			if order.raw_consumed and item.id in order.missing_mise_ids:
 				prep_row.raw_orders += 1
 			if order.state == "served":
 				prep_row.served += 1

@@ -138,7 +138,7 @@ func _test_purchase_advice_requires_valid_preparation() -> void:
 		"budget fixture rejects the one-unit increase reported by the review")
 	var hot_selection: Dictionary = hot_plan.snapshot().selection
 	var shortage_view := {"inventory": {"protein": 0}, "orders": [{"recipe_id": "grill",
-		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 10,
+		"raw_consumed": true, "missing_mise_ids": ["marinated_protein"], "state": "expired", "metrics": {"missing_ingredients": 10,
 		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
 	var shortage_report: Dictionary = ServiceAnalysis.build(hot_queue, shortage_view, hot_selection)
 	expect(not _has_action(shortage_report.recommendations, "increase_purchase", "protein"),
@@ -186,7 +186,7 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
 		"a fourth prepared salad would consume the raw vegetables the soup needs")
 	var raw_salad_view := {"inventory": {"prepped_vegetable": 0}, "orders": [{"recipe_id": "salad",
-		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 0,
+		"raw_consumed": true, "missing_mise_ids": ["prepped_vegetable"], "state": "expired", "metrics": {"missing_ingredients": 0,
 		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
 	var report: Dictionary = ServiceAnalysis.build(scenario, raw_salad_view, started.selection)
 	expect(not _has_action(report.recommendations, "increase_prep", "prepped_vegetable"),

@@ -25,6 +25,7 @@ func run(_tree: SceneTree) -> void:
 	_test_shared_raw_stock()
 	_test_campaign_mise_content()
 	_test_shared_mise_stock()
+	_test_raw_attribution()
 
 
 func _fixture() -> Resource:
@@ -374,3 +375,38 @@ func _test_shared_raw_stock() -> void:
 		"the mixed-stock plan leaves one raw vegetable and no raw grain")
 	expect(snapshot.can_start and snapshot.errors.is_empty(),
 		"a menu whose missing item is covered by raw stock and whose other item is prepared counts as sellable")
+
+
+## 계획 2a에서는 불린 현미만 준비하면 현미 샐러드·수프가 전부 원재료 경로로 가서 현미가 남았고, 마감 조언이
+## "불린 현미 1개 줄여 보세요"라고 말했습니다. 혼합 소비 뒤에는 현미가 실제로 쓰이고, 원재료 경로 주문 수는
+## 비어 있던 항목에만 귀속됩니다.
+func _test_raw_attribution() -> void:
+	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var plan := PreparationPlan.new(campaign.call("scenario_for", "lunch_prep"))
+	expect(_command(plan, "set_prep", "prepped_grain", 4, 1).accepted, "lunch_prep prepares four grain items only")
+	var started := _command(plan, "start", "", null, 2)
+	expect(started.accepted, "the grain-only lunch_prep plan starts")
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	while not simulation.closed:
+		simulation.step()
+	var view: Dictionary = simulation.snapshot()
+	var consumed := {"salad": 0, "soup": 0, "grain_salad": 0}
+	for order: Dictionary in view.orders:
+		if order.input_consumed:
+			consumed[order.recipe_id] += 1
+	var report: Dictionary = ServiceAnalysis.build(started.definitions, view, started.selection)
+	var grain_row: Dictionary = report.prep.prepped_grain
+	var vegetable_row: Dictionary = report.prep.prepped_vegetable
+	var base_row: Dictionary = report.prep.soup_base
+	expect(consumed.soup + consumed.grain_salad >= 4 and grain_row.used == 4 and grain_row.remaining == 0,
+		"mixed consumption spends every prepared grain item on the first grain orders")
+	expect(grain_row.raw_orders == consumed.soup + consumed.grain_salad - 4,
+		"raw orders are attributed to the grain item only once its stock is gone")
+	expect(vegetable_row.raw_orders == consumed.salad + consumed.grain_salad and base_row.raw_orders == consumed.soup,
+		"raw orders are attributed to each never-prepared item exactly once per consumed order")
+	var prep_advice: Dictionary = {}
+	for recommendation: Dictionary in report.recommendations:
+		if recommendation.category == "prep":
+			prep_advice = recommendation
+	expect(not prep_advice.is_empty() and not (prep_advice.action == "reduce_prep" and prep_advice.target_id == "prepped_grain"),
+		"the closing advice no longer tells the player to reduce the grain item that ran out")
