@@ -338,7 +338,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	var six_field_session := ServiceSession.capture("first_shift", session_started.selection, session_sim, 1, 0, 0)
 	var five_field_session := six_field_session.duplicate(true)
 	five_field_session.erase("service_seed")
-	var legacy_session_document := {"schema_version": 3, "content_version": 4, "sim_version": 1, "records": {}, "active_session": five_field_session}
+	var legacy_session_document := {"schema_version": 3, "content_version": 5, "sim_version": 1, "records": {}, "active_session": five_field_session}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(legacy_session_document))
 	file.close()
@@ -356,7 +356,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	file.close()
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records", "a schema 4 document whose session lacks service_seed is rejected as corrupt")
-	var seeded_session_document := {"schema_version": 4, "content_version": 4, "sim_version": 1, "records": {}, "active_session": six_field_session, "attempts": {}}
+	var seeded_session_document := {"schema_version": 4, "content_version": 5, "sim_version": 1, "records": {}, "active_session": six_field_session, "attempts": {}}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(seeded_session_document))
 	file.close()

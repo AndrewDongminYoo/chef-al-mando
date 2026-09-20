@@ -5,6 +5,7 @@ const CampaignStore := preload("res://persistence/campaign_store.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
+const RECORDS := {"first_shift": {"completed": true, "best_served": 11, "best_profit": 1200}}
 
 
 class ReplaceBoundaryStore extends CampaignStore:
@@ -59,9 +60,9 @@ func _writer(arguments: Dictionary) -> void:
 	var partial_session := ServiceSession.capture("first_shift", fixture.selection, fixture.partial, 4, 43210)
 	var working_session := ServiceSession.capture("first_shift", fixture.selection, fixture.working, 2, 12345)
 	var store := CampaignStore.new(fixture.campaign, arguments.save)
-	var saved_partial := store.save_active_session(partial_session, {})
+	var saved_partial := store.save_active_session(partial_session, RECORDS)
 	var working_store := CampaignStore.new(fixture.campaign, str(arguments.save) + ".working")
-	var saved_working := working_store.save_active_session(working_session, {})
+	var saved_working := working_store.save_active_session(working_session, RECORDS)
 	if not saved_partial.accepted or not saved_working.accepted:
 		_fail("writer did not save both real simulation fixtures")
 		return
@@ -108,6 +109,22 @@ func _reader(arguments: Dictionary) -> void:
 		return
 	var loaded := CampaignStore.new(campaign, arguments.save).load_records()
 	var working_loaded := CampaignStore.new(campaign, str(arguments.save) + ".working").load_records()
+	var saved_document: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save))
+	var saved_content_version: int = int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	if saved_content_version < CampaignStore.VERSIONS.content_version:
+		if not loaded.accepted or loaded.reason != "content_updated" or loaded.active_session != null \
+			or loaded.records != RECORDS:
+			_fail("fresh reader did not restart the older content service while keeping records")
+			return
+		var store := CampaignStore.new(campaign, arguments.save)
+		var rewritten: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save)) if store.save_records(loaded.records).accepted else null
+		if not rewritten is Dictionary or int(rewritten.content_version) != CampaignStore.VERSIONS.content_version:
+			_fail("fresh reader did not upgrade the older content file on its next write")
+			return
+		print("PASS: fresh M4 reader restarts the older content service and keeps records")
+		TranslationServer.set_locale("ko")
+		quit(0)
+		return
 	if not loaded.accepted or not working_loaded.accepted or not loaded.active_session is Dictionary \
 		or not working_loaded.active_session is Dictionary:
 		_fail("fresh reader did not load the saved campaign session")
