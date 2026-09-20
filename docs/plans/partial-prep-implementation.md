@@ -856,3 +856,96 @@ git commit -m "docs: record partial prep in the spec, storage history and plans"
 
 - 콘텐츠 계획: 시드 1~5 풀림 게이트(먼저 실패하는 fixture 확인) 뒤 `forecast_slack` 작성, 브리핑 인내 시간 표시.
 - 3단계 리뷰, 4단계 화면(메뉴 상세·리뷰 패널·메뉴 아이콘·혼합 주문 문구), 6단계 문서는 명세 §12 순서대로입니다.
+
+## 2026-09-21 정정
+
+아래 항목은 Task 1~5 실행 중 이 계획의 서술과 실제로 머지된 코드가 갈린 지점입니다.
+이 절 위의 단계 서술은 고치지 않으며, 권위는 인용한 커밋의 코드와 테스트에 있습니다.
+
+- Task 1(커밋 `42b76b5`)은 동작 보존이었고, 이 Task 뒤 `mise` checks 수는 254였습니다(계획은 수치를 예측하지 않았습니다).
+  계획 Step 5의 sed 패턴 `"hash": "[0-9a-f]+"`(콜론 뒤 공백)는 Godot의 압축 JSON과 맞지 않아, 구현자는 `"hash":"[0-9a-f]+"`를 썼습니다.
+  건드리지 않은 트리 대비 `M3_*` 정규화 diff는 비어 있었습니다.
+- Task 2(코드 커밋 `e735f9a`, 재조정 커밋 `89d59c2`)에서 `check.sh m3`는 `e735f9a` 시점에 붉었습니다(1,113개 중 64개 실패).
+  `shared_stock`·`split_duties`·`rush_hour`·`final_service`의 기준 정책과 대체 정책 넷이 혼합 소비 아래서 목표를 놓쳤고, `no_plan` 행은 모두 2026-09-20 표와 같았습니다.
+  재조정한 정책(권위는 커밋된 `tests/fixtures/m3_policies.gd`; 근거는 `docs/notes/kitchen-pressure-verification.md`의 "2026-09-21 정정: 부분 프렙 기준"): `shared_stock` 기준 `1+6+2`(9/9), `split_duties` 기준은 기존 담당 배정에 `prepped_vegetable 6·prepped_grain 3·prepped_mushroom 4·thawed_protein 2`, `rush_hour`는 기준과 대체 A, `final_service` 기준은 우선순위 없이 `marinated_protein 5·prepped_grain 3`, 대체 B는 발주 `7→6`.
+  이 Task 뒤 `m3` checks 수는 1,108이었습니다(`test_m3_ui.gd`가 기준 정책 명령 수를 세기 때문).
+  범위 밖 수정: `tests/test_service_feedback.gd`의 shared-stock fixture를 `pv 1/2`에서 `pv 3/4`로 바꿨습니다.
+  옛 fixture가 "전부 아니면 무" 규칙을 인코딩하고 있었기 때문이며, 리뷰어가 최소한의 적응이고 가드가 여전히 공허하지 않음을 확인했습니다.
+- Task 2의 설계에 드러난 결과(컨트롤러 판정: 수용 — 게이트의 관계는 유지되고 계획은 목표·발주량 변경을 금지하며, 둘 다 콘텐츠 계획 후보입니다. `PLAN.md` §12는 목표 상향은 허용하지만 하향은 허용하지 않습니다): (1) `split_duties`는 이제 담당 배정 없이 `thawed_protein 1`만으로도 통과해, 담당 분리가 더 이상 필수 조건이 아닙니다.
+  (2) `final_service`의 기준은 구이 우선순위 레버를 잃었습니다: 구이 우선순위 2를 고정한 모든 스윕 조합(15,807가지 + 화구 2 배치를 더한 6,160가지)이 목표에 못 미쳤고, 우선순위 없는 스윕 범위(6,160가지)에서 통과하는 프렙-전용 조합이 정확히 하나뿐이라 이 스테이지는 knife edge 위에 있습니다.
+  노트의 2026-09-20 산문이 마지막 스테이지를 "프렙·우선순위"로 묘사한 서술은 2026-09-21 절이 대체합니다.
+- Task 3(커밋 `e030ac4`)의 곡물 전용 `lunch_prep`(`prepped_grain` 4개) fixture: salad 6·soup 6·grain_salad 6을 소비했고, `prepped_grain` 사용 4·잔여 0·`raw_orders` 8, `prepped_vegetable`의 `raw_orders` 12, `soup_base`의 `raw_orders` 6이었습니다.
+  마감 조언은 이제 `increase_prep prepped_grain 1`입니다(계획 2a는 "불린 현미 1개 줄여 보세요"였습니다).
+  이 Task 뒤 `mise` checks 수는 277이었습니다.
+- Task 4(커밋 `312c969`)에서 콘텐츠 버전은 6이 됐고, 이 Task 뒤 `m4` checks 수는 1,201이었습니다.
+  같은-PCK python 검사는 10개 OK, 두-PCK 교차(`c600e27`의 content5.pck 대 이 브랜치의 content6.pck, `M4_EXPECT_RESTART=1`)는 9개 OK·1개 skip(`RESTART_PASS`)이었고, 강제 `< 5` 프로브는 예상대로 실패했습니다.
+  편차: 계획이 지정한 `git -C <메인 체크아웃> archive`는 워크트리 가드가 거부해 워크트리 안에서 아카이브를 실행했습니다(같은 오브젝트 데이터베이스라 결과는 동일합니다).
+  `tests/test_m4_store.gd`의 expect 문구 두 곳을 "version 6"으로 올렸고, 같은 파일의 손상·미래 문서 fixture는 콘텐츠 4로 남겨 뒀습니다.
+- Task 5(이 작업)의 Step 3에서 `tests/capture_m3.gd`의 준비 화면 캡처가 처음 FAIL했습니다: `index == 6` 분기가 실제로 여는 시나리오는 `rush_hour`입니다(브리프 산문은 `final_service`라고 적었지만, `final_service.tres`와 `rush_hour.tres` 둘 다 `ingredients` 배열의 마지막이 `marinated_protein`이라 미장 ID 선택 자체는 맞았습니다).
+  이 분기의 수동 좌표 탭은 계획 2a 때는 `thawed_protein`을 눌러 `prep_quantities.thawed_protein`을 1로 만들었고, 바로 뒤 `rush_hour` 기준 정책의 `set_prep thawed_protein 1` 명령이 같은 값으로 덮어써 순 효과가 0이었습니다.
+  Task 2의 재조정(`89d59c2`)이 그 명령을 빼고 `prepped_mushroom`을 1에서 3으로 올리면서(위 Task 2 표), 탭이 남긴 수량을 되돌리는 명령이 사라졌습니다.
+  그 결과 이 캡처는 원본(`thawed_protein`) 그대로도, 이 작업이 지시받은 `marinated_protein` 치환도 `rush_hour`의 (이미 목표보다 딱 1건 여유인) 기준 정책 위에 여분의 노동·원재료를 얹어 목표(23건·8,500원)를 놓쳤습니다(재현: 기준 정책 자체는 24건·9,200원까지만 통과합니다).
+  `tests/capture_m3.gd`의 좌표 탭·스크린샷 직후에 `service.submit_preparation("set_prep", "marinated_protein", 0)` 한 줄을 추가해 기준 정책 루프가 실행되기 전에 탭의 수량을 되돌렸습니다(`tests/fixtures/m3_policies.gd`는 건드리지 않았습니다).
+  이 한 줄 뒤 기본 캡처와 `--phone-wide` 캡처 모두 `M3 rendered input checks=186 failures=0`으로 통과했습니다.
+- `grep -rn 'Until plan 2b\|2b에서 구현\|계획 2b가 맡' AGENTS.md docs/specs README.md docs/plans/PLAN.md`는 2개의 줄만 남겼고(`docs/specs/mise-forecast-reviews.md:133`·`:134`), 둘 다 §5.1의 "2026-09-20 정정" 단락 안에 있어 브리프가 예외로 둔 그날의 기록이므로 고치지 않고 그대로 뒀습니다.
+  `AGENTS.md`의 "Until plan 2b lands" 문장은 삭제했습니다.
+- 준비 화면 캡처 관찰: `build/check/m3-first-preparation.png`(첫 영업)는 미장 1종(손질 토마토)만 있는 짧은 패널이라 겹침이나 스크롤 문제가 없습니다.
+  `build/check/m3-last-mise-row-preparation.png`(`rush_hour`, "몰려오는 주문")는 패널이 마지막 행(재운 연어, `+` 버튼이 방금 눌려 강조된 상태)까지 스크롤돼 있고, 6개 미장 행 전부가 이 스크롤로 닿으며, 긴 표시명("재운 연어", "토마토 베이스")이 수량·원가 열과 겹치지 않고, 마지막 행의 `+`가 세이프 에어리어 안에 있습니다.
+  §12 4단계 화면 계획으로 넘길 문제는 보이지 않았습니다.
+
+### Task 5 회귀 결과 (2026-09-21)
+
+두 PCK 결과(같은 PCK python 10 OK, 콘텐츠 5→6 두 PCK `M4_EXPECT_RESTART=1` 9 OK·1 skip)는 위 Task 4 항목이 인용하는 `312c969`의 값입니다.
+`test_m4_restart.py`는 이 Task에서 다시 실행하지 않았습니다.
+
+```log
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check-export.sh
+PASS: exported M3 campaign and first served order
+PASS: exported M1 content and first order
+PASS: exported M2 preparation and first order
+PASS: exported M2 extra menu prepared and served
+PASS: exported M4 storage core
+PASS: exported M4 resume and localization
+PASS: exported M5 campaign ending and licenses
+
+$ python3 tests/test_export_check.py
+Ran 10 tests in 0.830s
+OK
+
+$ python3 tests/test_ios_export.py
+Ran 2 tests in 0.104s
+OK
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m0
+PASS: m0 checks=25 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m1
+PASS: m1 checks=192 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2
+PASS: m2 checks=489 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3
+PASS: m3 checks=1108 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4-core
+PASS: m4-core checks=897 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4
+PASS: m4 checks=1201 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m5
+PASS: m5 checks=583 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh mise
+PASS: mise checks=277 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh ui-regressions
+PASS: ui-regressions checks=302 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot "$GODOT_BIN" --path <worktree> --max-fps 60 --quit-after 1800 --script tests/capture_m3.gd
+M3 rendered input checks=186 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot "$GODOT_BIN" --path <worktree> --max-fps 60 --quit-after 1800 --script tests/capture_m3.gd -- --phone-wide
+M3 rendered input checks=186 failures=0
+```

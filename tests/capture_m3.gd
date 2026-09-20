@@ -49,12 +49,13 @@ func run() -> void:
 			await save_frame("res://build/check/m3-first-preparation.png")
 		if index == 6:
 			var panel := service.preparation_panel
-			panel.pages[0].ensure_control_visible(panel.prep_plus.thawed_protein)
+			panel.pages[0].ensure_control_visible(panel.prep_plus.marinated_protein)
 			await process_frame
 			await process_frame
-			await _safe_click(panel.prep_plus.thawed_protein, service.safe_area.get_global_rect())
-			checks.expect(service.preparation.snapshot().prep_quantities.thawed_protein == 1, "the eighth-menu preparation row accepts an actual coordinate tap")
-			await save_frame("res://build/check/m3-eight-menu-preparation.png")
+			await _safe_click(panel.prep_plus.marinated_protein, service.safe_area.get_global_rect())
+			checks.expect(service.preparation.snapshot().prep_quantities.marinated_protein == 1, "the last mise row accepts an actual coordinate tap")
+			await save_frame("res://build/check/m3-last-mise-row-preparation.png")
+			checks.expect(service.submit_preparation("set_prep", "marinated_protein", 0).accepted, "rendered fixture undoes the coordinate-tap quantity before the reference policy")
 		var policy := Policies.reference_policy(scenario.id)
 		for command: Dictionary in policy.preparation:
 			var result := service.submit_preparation(command.kind, command.target_id, command.value)
