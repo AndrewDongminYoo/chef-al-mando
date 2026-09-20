@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_mle77")
 id = "mushroom"
-display_name = "버섯"
+display_name = "양송이"
 unit_cost = 200

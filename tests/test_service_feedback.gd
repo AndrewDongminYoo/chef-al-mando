@@ -20,7 +20,7 @@ func run(tree: SceneTree) -> void:
 func _test_hot_queue_limits() -> void:
 	var scenario: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "prepped_grill", 2).accepted, "hot queue accepts two grill preparations at capacity")
+	expect(_prepare(plan, "set_prep", "marinated_protein", 2).accepted, "hot queue accepts two grill preparations at capacity")
 	expect(_prepare(plan, "set_menu_priority", "grill", 2).accepted, "hot queue accepts maximum grill priority")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "hot queue feedback fixture starts from real preparation")
@@ -32,15 +32,15 @@ func _test_hot_queue_limits() -> void:
 	var fast_report: Dictionary = ServiceAnalysis.build(started.definitions, fast_simulation.snapshot(), started.selection)
 	expect(fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
 		"hot queue final state and service analysis are identical at 1x and 4x")
-	expect(report.prep.prepped_grill.planned == 2 and report.prep.prepped_grill.used == 2 and report.prep.prepped_grill.remaining == 0,
+	expect(report.prep.marinated_protein.planned == 2 and report.prep.marinated_protein.used == 2 and report.prep.marinated_protein.remaining == 0,
 		"analysis reports selected, used, and remaining grill preparation")
 	expect(report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
 		"analysis reports the maximum grill priority and its missed orders")
-	expect(not _has_action(report.recommendations, "increase_prep", "prepped_grill"),
+	expect(not _has_action(report.recommendations, "increase_prep", "marinated_protein"),
 		"full preparation labor never recommends impossible extra grill preparation")
 	expect(not _has_action(report.recommendations, "raise_priority", "grill"),
 		"maximum menu priority never recommends an impossible priority increase")
-	expect(_has_action(report.recommendations, "prep_at_capacity", "prepped_grill"),
+	expect(_has_action(report.recommendations, "prep_at_capacity", "marinated_protein"),
 		"analysis explains that grill preparation already consumes the available labor")
 	expect(_has_action(report.recommendations, "purchase_consumed", "protein"),
 		"analysis explains when costly purchases were consumed without ingredient shortages")
@@ -171,23 +171,23 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 	]:
 		expect(_prepare(plan, "set_purchase", purchase.id, purchase.quantity).accepted,
 			"shared-stock fixture accepts its minimum purchase quantity for " + purchase.id)
-	expect(_prepare(plan, "set_prep", "prepped_salad", 1).accepted,
+	expect(_prepare(plan, "set_prep", "prepped_vegetable", 1).accepted,
 		"shared-stock fixture accepts one prepared salad")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "shared-stock fixture starts with all configured menus sellable")
 	if not started.accepted:
 		return
 	var invalid_selection: Dictionary = started.selection.duplicate(true)
-	invalid_selection.prep_quantities.prepped_salad = 2
+	invalid_selection.prep_quantities.prepped_vegetable = 2
 	var invalid_plan := PreparationPlan.new(scenario, invalid_selection)
 	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
 	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
 		"a second prepared salad would consume stock needed by another configured menu")
-	var raw_salad_view := {"inventory": {"prepped_salad": 0}, "orders": [{"recipe_id": "salad",
+	var raw_salad_view := {"inventory": {"prepped_vegetable": 0}, "orders": [{"recipe_id": "salad",
 		"raw_consumed": true, "state": "expired", "metrics": {"missing_ingredients": 0,
 		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
 	var report: Dictionary = ServiceAnalysis.build(scenario, raw_salad_view, started.selection)
-	expect(not _has_action(report.recommendations, "increase_prep", "prepped_salad"),
+	expect(not _has_action(report.recommendations, "increase_prep", "prepped_vegetable"),
 		"prep feedback does not consume shared stock required to keep every menu sellable")
 
 

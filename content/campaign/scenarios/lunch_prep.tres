@@ -4,9 +4,9 @@
 [ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_w1nil"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_1d0o7"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_tfebx"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="5_ma4l5"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="6_0gwel"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_salad.tres" id="7_6rlua"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_vegetable.tres" id="5_pvege"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain.tres" id="6_pgrai"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/soup_base.tres" id="7_sbase"]
 [ext_resource type="Script" path="res://content/recipe_def.gd" id="8_8evkg"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="9_1ujmr"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/soup.tres" id="10_44a6k"]
@@ -61,7 +61,7 @@ work_position = Vector2i(9, 4)
 [resource]
 script = ExtResource("12_flbmd")
 display_name = "점심 전 준비"
-briefing = "수프의 손질은 샐러드보다 오래 걸립니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
+briefing = "수프는 토마토 베이스와 불린 현미가 모두 있어야 손질을 건너뜁니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
 operation_problem = "프렙 배분"
 minimum_served = 14
 minimum_profit = 1000
@@ -72,7 +72,7 @@ closing_tick = 3000
 starting_budget = 7000
 labor_cost = 1800
 grid_size = Vector2i(12, 8)
-ingredients = Array[ExtResource("2_w1nil")]([ExtResource("3_1d0o7"), ExtResource("4_tfebx"), ExtResource("5_ma4l5"), ExtResource("6_0gwel"), ExtResource("7_6rlua")])
+ingredients = Array[ExtResource("2_w1nil")]([ExtResource("3_1d0o7"), ExtResource("4_tfebx"), ExtResource("5_pvege"), ExtResource("6_pgrai"), ExtResource("7_sbase")])
 recipes = Array[ExtResource("8_8evkg")]([ExtResource("9_1ujmr"), ExtResource("10_44a6k"), ExtResource("11_nfvh6")])
 stations = Array[ExtResource("13_wdji3")]([SubResource("Resource_si3dq"), SubResource("Resource_h4qj2"), SubResource("Resource_jj3er"), SubResource("Resource_26ba3")])
 employees = Array[ExtResource("1_svus2")]([SubResource("Resource_rec7u"), SubResource("Resource_0rakb")])

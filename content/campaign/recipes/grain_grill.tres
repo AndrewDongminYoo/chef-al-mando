@@ -34,7 +34,7 @@ duration_ticks = 10
 [resource]
 script = ExtResource("3_w6qkt")
 id = "grain_grill"
-display_name = "곡물 볶음"
+display_name = "현미 볶음밥"
 ingredients = Dictionary[String, int]({
 "grain": 1,
 "mushroom": 1
@@ -44,5 +44,5 @@ revenue = 1000
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_8jg65")]([SubResource("Resource_x5j5k"), SubResource("Resource_xt8nf"), SubResource("Resource_bxa20"), SubResource("Resource_lxygy")])
-mise_ids = PackedStringArray("prepped_grain_grill")
+mise_ids = PackedStringArray("prepped_grain", "prepped_mushroom")
 icon = ExtResource("1_wy4gq")

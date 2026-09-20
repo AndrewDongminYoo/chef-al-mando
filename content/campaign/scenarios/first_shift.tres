@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://content/employee_def.gd" id="1_evn8m"]
 [ext_resource type="Script" path="res://content/ingredient_def.gd" id="2_m5db0"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_s0dvg"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="4_x8qu1"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_vegetable.tres" id="4_pvege"]
 [ext_resource type="Script" path="res://content/recipe_def.gd" id="5_4a8fl"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="6_h8rxi"]
 [ext_resource type="Script" path="res://content/scenario_def.gd" id="7_dnrqh"]
@@ -56,7 +56,7 @@ work_position = Vector2i(9, 4)
 [resource]
 script = ExtResource("7_dnrqh")
 display_name = "첫 영업"
-briefing = "채소 샐러드 한 메뉴로 시작합니다. 준비를 확인하고 영업을 시작하세요. 언제든 일시정지할 수 있습니다. 마감 후 제공 수와 손익을 확인합니다."
+briefing = "토마토 샐러드 한 메뉴로 시작합니다. 준비를 확인하고 영업을 시작하세요. 언제든 일시정지할 수 있습니다. 마감 후 제공 수와 손익을 확인합니다."
 operation_problem = "기본 흐름"
 minimum_served = 10
 minimum_profit = 1000
@@ -67,7 +67,7 @@ closing_tick = 3000
 starting_budget = 3800
 labor_cost = 1600
 grid_size = Vector2i(12, 8)
-ingredients = Array[ExtResource("2_m5db0")]([ExtResource("3_s0dvg"), ExtResource("4_x8qu1")])
+ingredients = Array[ExtResource("2_m5db0")]([ExtResource("3_s0dvg"), ExtResource("4_pvege")])
 recipes = Array[ExtResource("5_4a8fl")]([ExtResource("6_h8rxi")])
 stations = Array[ExtResource("8_vrijj")]([SubResource("Resource_6xo7e"), SubResource("Resource_p6otv"), SubResource("Resource_mmten"), SubResource("Resource_42g7t")])
 employees = Array[ExtResource("1_evn8m")]([SubResource("Resource_6ypry"), SubResource("Resource_akrgk")])

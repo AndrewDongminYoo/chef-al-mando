@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://content/ingredient_def.gd" id="1_mise"]
+
+[resource]
+script = ExtResource("1_mise")
+id = "prepped_vegetable"
+display_name = "손질 토마토"
+unit_cost = 100
+purchasable = false
+inputs = Dictionary[String, int]({
+"vegetable": 1
+})
+labor_units = 1

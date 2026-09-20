@@ -6,14 +6,12 @@
 [ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_vniyi"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/protein.tres" id="5_o72l1"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/mushroom.tres" id="6_52ghm"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="7_1rvxw"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="8_hhjwo"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grill.tres" id="9_en8ww"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_salad.tres" id="10_n8sqk"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom_salad.tres" id="11_n3kxb"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom_soup.tres" id="12_qo8c3"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_grill.tres" id="13_epe1a"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_protein_bowl.tres" id="14_6juxr"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_vegetable.tres" id="7_pvege"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain.tres" id="8_pgrai"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom.tres" id="9_pmush"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/soup_base.tres" id="10_sbase"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/thawed_protein.tres" id="11_thawp"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/marinated_protein.tres" id="12_marip"]
 [ext_resource type="Script" path="res://content/recipe_def.gd" id="15_7b3uj"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/protein_bowl.tres" id="16_jjeps"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/grill.tres" id="17_lg7jv"]
@@ -116,7 +114,7 @@ starting_budget = 15400
 labor_cost = 3200
 grid_size = Vector2i(14, 9)
 extra_obstacles = Array[Vector2i]([Vector2i(7, 3), Vector2i(7, 4), Vector2i(7, 5)])
-ingredients = Array[ExtResource("2_0x1xe")]([ExtResource("3_hdjhp"), ExtResource("4_vniyi"), ExtResource("5_o72l1"), ExtResource("6_52ghm"), ExtResource("7_1rvxw"), ExtResource("8_hhjwo"), ExtResource("9_en8ww"), ExtResource("10_n8sqk"), ExtResource("11_n3kxb"), ExtResource("12_qo8c3"), ExtResource("13_epe1a"), ExtResource("14_6juxr")])
+ingredients = Array[ExtResource("2_0x1xe")]([ExtResource("3_hdjhp"), ExtResource("4_vniyi"), ExtResource("5_o72l1"), ExtResource("6_52ghm"), ExtResource("7_pvege"), ExtResource("8_pgrai"), ExtResource("9_pmush"), ExtResource("10_sbase"), ExtResource("11_thawp"), ExtResource("12_marip")])
 recipes = Array[ExtResource("15_7b3uj")]([ExtResource("16_jjeps"), ExtResource("17_lg7jv"), ExtResource("18_rbs1b"), ExtResource("19_do5x7"), ExtResource("20_1n8n6"), ExtResource("21_x1lap"), ExtResource("22_xfk72"), ExtResource("23_qv2do")])
 stations = Array[ExtResource("25_c22q5")]([SubResource("Resource_5ovgl"), SubResource("Resource_yvkqv"), SubResource("Resource_1a5qw"), SubResource("Resource_jbt3h"), SubResource("Resource_twgxa"), SubResource("Resource_pi7x1")])
 employees = Array[ExtResource("1_c12lr")]([SubResource("Resource_q2x1k"), SubResource("Resource_hbigc"), SubResource("Resource_ubeiu"), SubResource("Resource_kxrlw")])

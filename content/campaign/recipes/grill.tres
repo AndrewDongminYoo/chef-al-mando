@@ -34,7 +34,7 @@ duration_ticks = 10
 [resource]
 script = ExtResource("3_lwqqs")
 id = "grill"
-display_name = "단백질 구이"
+display_name = "연어 구이"
 ingredients = Dictionary[String, int]({
 "protein": 1
 })
@@ -43,5 +43,5 @@ revenue = 1500
 patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_qhsfl")]([SubResource("Resource_inpwx"), SubResource("Resource_brx7g"), SubResource("Resource_dxgdg"), SubResource("Resource_bc62s")])
-mise_ids = PackedStringArray("prepped_grill")
+mise_ids = PackedStringArray("marinated_protein")
 icon = ExtResource("1_u4wsj")

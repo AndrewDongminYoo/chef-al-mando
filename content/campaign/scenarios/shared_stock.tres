@@ -5,10 +5,10 @@
 [ext_resource type="Resource" path="res://content/campaign/ingredients/vegetable.tres" id="3_uq3tg"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/grain.tres" id="4_qk77k"]
 [ext_resource type="Resource" path="res://content/campaign/ingredients/mushroom.tres" id="5_itism"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_salad.tres" id="6_ktebe"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_soup.tres" id="7_mpnwi"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain_salad.tres" id="8_dj4k1"]
-[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom_salad.tres" id="9_aa8b1"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_vegetable.tres" id="6_pvege"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_grain.tres" id="7_pgrai"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/prepped_mushroom.tres" id="8_pmush"]
+[ext_resource type="Resource" path="res://content/campaign/ingredients/soup_base.tres" id="9_sbase"]
 [ext_resource type="Script" path="res://content/recipe_def.gd" id="10_s4cfn"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/salad.tres" id="11_uf42d"]
 [ext_resource type="Resource" path="res://content/campaign/recipes/soup.tres" id="12_ciobr"]
@@ -72,7 +72,7 @@ fixed = true
 [resource]
 script = ExtResource("15_fyd0s")
 display_name = "나눠 쓰는 재료"
-briefing = "채소를 여러 메뉴가 나눠 쓰고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 발주와 프렙을 함께 조절해 재료 부족과 남는 비용을 줄이세요."
+briefing = "토마토를 여러 메뉴가 나눠 쓰고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 발주와 프렙을 함께 조절해 재료 부족과 남는 비용을 줄이세요."
 operation_problem = "공동 재고와 발주"
 minimum_served = 17
 minimum_profit = 4000
@@ -84,7 +84,7 @@ closing_tick = 3000
 starting_budget = 9250
 labor_cost = 2400
 grid_size = Vector2i(12, 8)
-ingredients = Array[ExtResource("2_hsbed")]([ExtResource("3_uq3tg"), ExtResource("4_qk77k"), ExtResource("5_itism"), ExtResource("6_ktebe"), ExtResource("7_mpnwi"), ExtResource("8_dj4k1"), ExtResource("9_aa8b1")])
+ingredients = Array[ExtResource("2_hsbed")]([ExtResource("3_uq3tg"), ExtResource("4_qk77k"), ExtResource("5_itism"), ExtResource("6_pvege"), ExtResource("7_pgrai"), ExtResource("8_pmush"), ExtResource("9_sbase")])
 recipes = Array[ExtResource("10_s4cfn")]([ExtResource("11_uf42d"), ExtResource("12_ciobr"), ExtResource("13_8cpp0"), ExtResource("14_nuq5h")])
 stations = Array[ExtResource("16_krqm8")]([SubResource("Resource_htydn"), SubResource("Resource_48qu5"), SubResource("Resource_e5krk"), SubResource("Resource_l1u4n")])
 employees = Array[ExtResource("1_makjn")]([SubResource("Resource_rmvsc"), SubResource("Resource_xd4mu"), SubResource("Resource_xov7u")])

@@ -4,12 +4,24 @@ const FIXTURE := "res://content/m2_first_service.tres"
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceAnalysis := preload("res://sim/service_analysis.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
+const CAMPAIGN_MISE := {
+	"prepped_vegetable": {"name": "손질 토마토", "inputs": {"vegetable": 1}, "labor": 1, "cost": 100, "menus": 4},
+	"prepped_grain": {"name": "불린 현미", "inputs": {"grain": 1}, "labor": 1, "cost": 150, "menus": 4},
+	"prepped_mushroom": {"name": "손질 양송이", "inputs": {"mushroom": 1}, "labor": 1, "cost": 200, "menus": 3},
+	"soup_base": {"name": "토마토 베이스", "inputs": {"vegetable": 2}, "labor": 1, "cost": 200, "menus": 2},
+	"thawed_protein": {"name": "해동 연어", "inputs": {"protein": 1}, "labor": 1, "cost": 400, "menus": 1},
+	"marinated_protein": {"name": "재운 연어", "inputs": {"protein": 1}, "labor": 3, "cost": 400, "menus": 1},
+}
+const CAMPAIGN_NAMES := {"protein": "연어", "vegetable": "토마토", "grain": "현미", "mushroom": "양송이",
+	"grill": "연어 구이", "protein_bowl": "연어 덮밥", "salad": "토마토 샐러드", "grain_salad": "현미 샐러드",
+	"mushroom_salad": "양송이 샐러드", "soup": "토마토 수프", "mushroom_soup": "양송이 수프", "grain_grill": "현미 볶음밥"}
 
 
 func run(_tree: SceneTree) -> void:
 	_test_mise_definitions()
 	_test_mise_preparation()
 	_test_mise_set_consumption()
+	_test_campaign_mise_content()
 
 
 func _fixture() -> Resource:
@@ -71,7 +83,7 @@ func _test_mise_definitions() -> void:
 	var empty_menu: Resource = campaign.call("scenario_for", "first_shift")
 	empty_menu.call("recipe_for", "salad").set("mise_ids", PackedStringArray())
 	expect("campaign menu needs mise items: salad" in empty_menu.call("validate"), "a campaign menu without mise items is rejected")
-	expect("unused mise item: prepped_salad" in empty_menu.call("validate"), "a mise item no sale menu uses is rejected")
+	expect("unused mise item: prepped_vegetable" in empty_menu.call("validate"), "a mise item no sale menu uses is rejected")
 
 
 func _has_error(data: Resource, message: String) -> bool:
@@ -171,3 +183,28 @@ func _test_mise_set_consumption() -> void:
 	var restored := ServiceSim.restore(data, saved, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	expect(restored.accepted and restored.simulation.state_hash() == full.state_hash(),
 		"a snapshot with a consumed mise set restores to the same hash")
+
+
+func _test_campaign_mise_content() -> void:
+	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	expect(campaign.call("validate").is_empty(), "the restructured campaign validates")
+	var final_service: Resource = campaign.call("scenario_for", "final_service")
+	expect(final_service.get("ingredients").size() == 10, "the final service lists four raw ingredients and six mise items")
+	for mise_id: String in CAMPAIGN_MISE:
+		var expected: Dictionary = CAMPAIGN_MISE[mise_id]
+		var item: Resource = final_service.call("ingredient_for", mise_id)
+		expect(item != null and item.get("display_name") == expected.name and item.get("inputs") == _typed_inputs(expected.inputs)
+			and item.get("labor_units") == expected.labor and item.get("unit_cost") == expected.cost,
+			"campaign mise item matches the approved table: " + mise_id)
+		expect(item != null and final_service.call("menu_count_for", mise_id) == expected.menus,
+			"campaign mise item is shared by the approved number of menus: " + mise_id)
+	for id: String in CAMPAIGN_NAMES:
+		var definition: Resource = final_service.call("ingredient_for", id)
+		if definition == null:
+			definition = final_service.call("recipe_for", id)
+		expect(definition != null and definition.get("display_name") == CAMPAIGN_NAMES[id], "campaign display name is a real food: " + id)
+	expect(final_service.call("recipe_for", "grain_grill").get("mise_ids") == PackedStringArray(["prepped_grain", "prepped_mushroom"]),
+		"the rice stir-fry uses grain and mushroom mise, not protein")
+	TranslationServer.set_locale("en")
+	expect(TranslationServer.translate("재운 연어") == "Marinated salmon", "the English translation covers the new mise names")
+	TranslationServer.set_locale("ko")

@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_1g6xg")
 id = "grain"
-display_name = "곡물"
+display_name = "현미"
 unit_cost = 150

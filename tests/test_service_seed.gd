@@ -59,7 +59,7 @@ func _test_campaign_screen(tree: SceneTree) -> void:
 	var file_path := directory + "/records.json"
 	var screen := _boot(tree, entry, file_path)
 	await tree.process_frame
-	expect(screen.get("briefing_label").text.contains("채소 샐러드 12건"), "zero slack briefing shows an exact count")
+	expect(screen.get("briefing_label").text.contains("토마토 샐러드 12건"), "zero slack briefing shows an exact count")
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)

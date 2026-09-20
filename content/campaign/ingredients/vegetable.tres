@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_pm2qq")
 id = "vegetable"
-display_name = "채소"
+display_name = "토마토"
 unit_cost = 100

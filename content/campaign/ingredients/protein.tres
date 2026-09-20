@@ -5,5 +5,5 @@
 [resource]
 script = ExtResource("1_2lxgl")
 id = "protein"
-display_name = "단백질"
+display_name = "연어"
 unit_cost = 400
