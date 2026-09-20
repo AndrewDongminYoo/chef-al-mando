@@ -871,8 +871,13 @@ git commit -m "docs: record partial prep in the spec, storage history and plans"
   이 Task 뒤 `m3` checks 수는 1,108이었습니다(`test_m3_ui.gd`가 기준 정책 명령 수를 세기 때문).
   범위 밖 수정: `tests/test_service_feedback.gd`의 shared-stock fixture를 `pv 1/2`에서 `pv 3/4`로 바꿨습니다.
   옛 fixture가 "전부 아니면 무" 규칙을 인코딩하고 있었기 때문이며, 리뷰어가 최소한의 적응이고 가드가 여전히 공허하지 않음을 확인했습니다.
-- Task 2의 설계에 드러난 결과(컨트롤러 판정: 수용 — 게이트의 관계는 유지되고 계획은 목표·발주량 변경을 금지하며, 둘 다 콘텐츠 계획 후보입니다. `PLAN.md` §12는 목표 상향은 허용하지만 하향은 허용하지 않습니다): (1) `split_duties`는 이제 담당 배정 없이 `thawed_protein 1`만으로도 통과해, 담당 분리가 더 이상 필수 조건이 아닙니다.
-  (2) `final_service`의 기준은 구이 우선순위 레버를 잃었습니다: 구이 우선순위 2를 고정한 모든 스윕 조합(15,807가지 + 화구 2 배치를 더한 6,160가지)이 목표에 못 미쳤고, 우선순위 없는 스윕 범위(6,160가지)에서 통과하는 프렙-전용 조합이 정확히 하나뿐이라 이 스테이지는 knife edge 위에 있습니다.
+- Task 2의 설계에 드러난 결과가 있습니다(컨트롤러 판정: 수용).
+  게이트의 관계는 유지되고, 계획은 목표·발주량 변경을 금지합니다.
+  둘 다 콘텐츠 계획 후보입니다.
+  `PLAN.md` §12는 목표를 낮추는 것은 금지하지만, 올리는 것은 금지하지 않습니다.
+  (1) `split_duties`는 이제 담당 배정 없이 `thawed_protein 1`만으로도 통과해, 담당 분리가 더 이상 필수 조건이 아닙니다.
+  (2) `final_service`의 기준은 구이 우선순위 레버를 잃었습니다.
+  구이 우선순위 2를 고정한 모든 스윕 조합(15,807가지 + 화구 2 배치를 더한 6,160가지)이 목표에 못 미쳤고, 우선순위 없는 스윕 범위(6,160가지)에서 통과하는 프렙-전용 조합이 정확히 하나뿐이라 이 스테이지는 knife edge 위에 있습니다.
   노트의 2026-09-20 산문이 마지막 스테이지를 "프렙·우선순위"로 묘사한 서술은 2026-09-21 절이 대체합니다.
 - Task 3(커밋 `e030ac4`)의 곡물 전용 `lunch_prep`(`prepped_grain` 4개) fixture: salad 6·soup 6·grain_salad 6을 소비했고, `prepped_grain` 사용 4·잔여 0·`raw_orders` 8, `prepped_vegetable`의 `raw_orders` 12, `soup_base`의 `raw_orders` 6이었습니다.
   마감 조언은 이제 `increase_prep prepped_grain 1`입니다(계획 2a는 "불린 현미 1개 줄여 보세요"였습니다).
@@ -892,6 +897,11 @@ git commit -m "docs: record partial prep in the spec, storage history and plans"
 - 준비 화면 캡처 관찰: `build/check/m3-first-preparation.png`(첫 영업)는 미장 1종(손질 토마토)만 있는 짧은 패널이라 겹침이나 스크롤 문제가 없습니다.
   `build/check/m3-last-mise-row-preparation.png`(`rush_hour`, "몰려오는 주문")는 패널이 마지막 행(재운 연어, `+` 버튼이 방금 눌려 강조된 상태)까지 스크롤돼 있고, 6개 미장 행 전부가 이 스크롤로 닿으며, 긴 표시명("재운 연어", "토마토 베이스")이 수량·원가 열과 겹치지 않고, 마지막 행의 `+`가 세이프 에어리어 안에 있습니다.
   §12 4단계 화면 계획으로 넘길 문제는 보이지 않았습니다.
+- 다음 네 가지는 고치지 않고 최종 전체-브랜치 리뷰로 미룹니다.
+  (1) `docs/notes/kitchen-pressure-verification.md`의 2026-09-21 절은 기준·무계획 회계를 표와 `log` 블록에 중복 기록하고(파일 관례), 세션 스코프의 스윕 로그 경로를 인용합니다.
+  (2) `_phase_duration`은 미장 집합이 전부 재고에 있는 prep 단계에서도 0을 돌려주며, `uses_prepared`가 그런 경우 prep 자체를 건너뛰기 때문에만 안전합니다.
+  (3) `_release_ingredients`는 해제된 대기 주문의 `missing_mise_ids`를 갱신하지 않고 그대로 남겨 두며, 다음 예약에서 다시 계산되고 복원은 예약되었거나 소비된 상태에서만 그 배열을 제한합니다.
+  (4) `unknown` ID 복원 테스트는 계획이 지시한 대로 `not accepted`만 검사합니다.
 
 ### Task 5 회귀 결과 (2026-09-21)
 
