@@ -1251,6 +1251,10 @@ git commit -m "docs(spec): record the reconciled mise table and the 2a/2b split"
   A의 점수에는 `planned > 0`에 붙는 `+10000` 가산점이 있어 항상 A가 이기므로, 마감 조언은 A를 줄이라고만 말하고 B는 언급하지 않습니다.
   `lunch_prep`에서 `prepped_grain` 4개만 준비하면 재현됩니다(마감 조언 "불린 현미 1개 줄여 보세요").
   이 역전은 알려진 계획 2a의 한계로 남기며, 항목별 원재료 경로 주문 수의 정확한 귀속(명세 §5.4)을 구현하는 계획 2b가 고칩니다.
+  같은 한계로 `increase_prep`이 혼자서는 어떤 메뉴도 완성하지 못하는 항목을 추천할 수도 있습니다(Codex 로컬 리뷰 사례: `long_route`의 손질 토마토는 현미 샐러드와 연어 덮밥 모두에 쓰이지만 두 메뉴 다 다른 항목도 함께 필요합니다).
+  계획 2b의 항목별 귀속이 이 문제도 함께 고칩니다.
+- PR 전 Codex 로컬 리뷰에서 `require_stock` 블록이 공유 미장 항목을 셀 때 `inventory`만 읽고 차감하지 않아, 같은 항목을 쓰는 메뉴 수만큼 중복으로 "판매 가능"으로 셌던 결함이 드러났습니다.
+  `fix(prep): consume shared mise items in the sellable-menu check` 커밋에서 `available`을 읽고 채택한 미장 세트만큼 차감하도록 고쳤습니다.
 
 ### Task 6 회귀 결과 (2026-09-20)
 

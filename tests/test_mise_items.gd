@@ -22,6 +22,7 @@ func run(_tree: SceneTree) -> void:
 	_test_mise_preparation()
 	_test_mise_set_consumption()
 	_test_campaign_mise_content()
+	_test_shared_mise_stock()
 
 
 func _fixture() -> Resource:
@@ -208,3 +209,40 @@ func _test_campaign_mise_content() -> void:
 	TranslationServer.set_locale("en")
 	expect(TranslationServer.translate("재운 연어") == "Marinated salmon", "the English translation covers the new mise names")
 	TranslationServer.set_locale("ko")
+
+
+## lunch_prep's salad/soup/grain_salad share prepped_vegetable and prepped_grain across menus, so the
+## require_stock check must decrement a working copy of inventory as it credits each menu, not read the
+## static inventory for every menu independently.
+func _test_shared_mise_stock() -> void:
+	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var scenario: Resource = campaign.call("scenario_for", "lunch_prep")
+
+	# One unit of each: salad and grain_salad both need the single prepped_vegetable, and soup and
+	# grain_salad both need the single prepped_grain, so at most two of the three menus can actually be
+	# served from this stock even though the raw purchases (vegetable 3, grain 1) were fully spent
+	# preparing it.
+	var short_plan := PreparationPlan.new(scenario)
+	expect(_command(short_plan, "set_purchase", "vegetable", 3, 1).accepted, "lunch_prep accepts a vegetable purchase of 3")
+	expect(_command(short_plan, "set_purchase", "grain", 1, 2).accepted, "lunch_prep accepts a grain purchase of 1")
+	expect(_command(short_plan, "set_prep", "prepped_vegetable", 1, 3).accepted, "one prepped_vegetable fits the labor budget")
+	expect(_command(short_plan, "set_prep", "prepped_grain", 1, 4).accepted, "one prepped_grain fits the labor budget")
+	expect(_command(short_plan, "set_prep", "soup_base", 1, 5).accepted, "one soup_base fits the labor budget")
+	var short_snapshot: Dictionary = short_plan.snapshot()
+	expect(not short_snapshot.can_start and "menu_missing_ingredients" in short_snapshot.errors,
+		"a single unit of each shared mise item cannot cover all three lunch_prep menus at once")
+
+	# Two of each shared item: salad(prepped_vegetable) + soup(prepped_grain, soup_base) +
+	# grain_salad(prepped_vegetable, prepped_grain) need prepped_vegetable twice and prepped_grain twice
+	# across the three menus, so doubling those two (and the raw purchases that feed them: vegetable
+	# 2*1 + 1*2 = 4, grain 2*1 = 2) is the smallest stock where every menu is served from the prepared
+	# path rather than falling back to raw ingredients, which is what exercises the fixed decrement.
+	var full_plan := PreparationPlan.new(scenario)
+	expect(_command(full_plan, "set_purchase", "vegetable", 4, 1).accepted, "lunch_prep accepts a vegetable purchase of 4")
+	expect(_command(full_plan, "set_purchase", "grain", 2, 2).accepted, "lunch_prep accepts a grain purchase of 2")
+	expect(_command(full_plan, "set_prep", "prepped_vegetable", 2, 3).accepted, "two prepped_vegetable fit the labor budget")
+	expect(_command(full_plan, "set_prep", "prepped_grain", 2, 4).accepted, "two prepped_grain fit the labor budget")
+	expect(_command(full_plan, "set_prep", "soup_base", 1, 5).accepted, "one soup_base fits the labor budget")
+	var full_snapshot: Dictionary = full_plan.snapshot()
+	expect(full_snapshot.can_start and full_snapshot.errors.is_empty(),
+		"one prepared unit per menu's own share of prepped_vegetable and prepped_grain lets lunch_prep start")

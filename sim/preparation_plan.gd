@@ -289,7 +289,9 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 		var available := inventory.duplicate()
 		for recipe_id: String in data.menu_ids:
 			var recipe := data.recipe_for(recipe_id)
-			if mise_ready(inventory, recipe):
+			if mise_ready(available, recipe):
+				for mise_id: String in recipe.mise_ids:
+					available[mise_id] -= 1
 				continue
 			for ingredient_id: String in recipe.ingredients:
 				if available[ingredient_id] < recipe.ingredients[ingredient_id]:
