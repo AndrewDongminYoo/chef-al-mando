@@ -45,6 +45,4 @@ patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("2_4kgnk")]([SubResource("Resource_m5h4w"), SubResource("Resource_sj0au"), SubResource("Resource_ia74s"), SubResource("Resource_ycxot")])
 mise_ids = PackedStringArray("prepped_mushroom_salad")
-prepared_ingredient_id = "prepped_mushroom_salad"
-prep_labor_units = 1
 icon = ExtResource("1_8yods")

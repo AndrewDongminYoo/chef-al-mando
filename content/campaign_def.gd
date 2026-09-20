@@ -43,7 +43,7 @@ func validate() -> Array[String]:
 				if process != null:
 					processes.append([process.id, process.station_role, process.duration_ticks, process.next_id])
 			var signature: Array = [recipe.display_name, recipe.ingredients, recipe.cook_role, recipe.revenue,
-				recipe.patience_ticks, Array(recipe.mise_ids), recipe.prepared_ingredient_id, recipe.prep_labor_units,
+				recipe.patience_ticks, Array(recipe.mise_ids),
 				recipe.first_process_id, processes]
 			if recipes.has(recipe.id) and recipes[recipe.id] != signature:
 				errors.append("inconsistent campaign recipe: " + recipe.id)

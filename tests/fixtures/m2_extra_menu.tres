@@ -147,8 +147,6 @@ patience_ticks = 400
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_salad"), SubResource("Process_serve")])
 mise_ids = PackedStringArray("prepped_salad")
-prepared_ingredient_id = "prepped_salad"
-prep_labor_units = 1
 
 
 [sub_resource type="Resource" id="Recipe_soup"]
@@ -163,8 +161,6 @@ patience_ticks = 600
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_soup"), SubResource("Cook_soup"), SubResource("Process_serve")])
 mise_ids = PackedStringArray("prepped_soup")
-prepared_ingredient_id = "prepped_soup"
-prep_labor_units = 2
 
 
 [sub_resource type="Resource" id="Recipe_grill"]
@@ -179,8 +175,6 @@ patience_ticks = 800
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_grill"), SubResource("Cook_grill"), SubResource("Process_serve")])
 mise_ids = PackedStringArray("prepped_grill")
-prepared_ingredient_id = "prepped_grill"
-prep_labor_units = 3
 
 
 [sub_resource type="Resource" id="Station_storage_01"]
@@ -261,8 +255,6 @@ patience_ticks = 500
 first_process_id = "pickup"
 processes = Array[ExtResource("process")]([SubResource("Process_pickup"), SubResource("Prep_salad"), SubResource("Cook_grain_salad"), SubResource("Process_serve")])
 mise_ids = PackedStringArray("prepped_grain_salad")
-prepared_ingredient_id = "prepped_grain_salad"
-prep_labor_units = 1
 
 [resource]
 script = ExtResource("scenario")

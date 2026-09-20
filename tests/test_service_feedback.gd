@@ -224,7 +224,8 @@ func _test_service_events() -> void:
 	var prepared_sim := ServiceSim.new(prepared_data, null, {"prep_quantities": {"prepped_salad": 1}})
 	var prepared_events: Array[Dictionary] = _advance_with_events(prepared_sim, 20)
 	var depleted := _first_event(prepared_events, "prepared_stock_depleted")
-	expect(_event_count(prepared_events, "prepared_stock_depleted") == 1 and depleted.get("recipe_id") == "salad",
+	expect(_event_count(prepared_events, "prepared_stock_depleted") == 1 and depleted.get("recipe_id") == "salad"
+		and depleted.get("ingredient_id") == "prepped_salad",
 		"consuming the last prepared portion emits one menu-specific depletion event")
 
 	var expiry_data: Resource = ResourceLoader.load("res://content/m1_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE)

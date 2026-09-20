@@ -947,7 +947,7 @@ func _consider_chatter(event: Dictionary) -> void:
 		priority = 3
 	if priority == 0:
 		return
-	var repeat_key := "%s:%s" % [event.kind, event.get("recipe_id", "")]
+	var repeat_key := "%s:%s" % [event.kind, event.get("ingredient_id", event.get("recipe_id", ""))]
 	if simulation.tick - chatter_last_tick.get(repeat_key, -1000) < 50:
 		return
 	if not chatter_event.is_empty() and priority < chatter_event.get("priority", 0):
@@ -967,7 +967,7 @@ func _visible_chatter() -> Dictionary:
 		"order_wait_started":
 			result.text = tr("으악, %s 재료가 없어!") % tr(recipe.display_name)
 		"prepared_stock_depleted":
-			result.text = tr("%s 프렙 다 썼다!") % tr(recipe.display_name)
+			result.text = tr("%s 프렙 다 썼다!") % tr(definitions.ingredient_for(result.ingredient_id).display_name)
 		"order_ended":
 			result.text = tr("으악, 다 만들었는데 가버리셨어!")
 	if result.get("employee_id", "").is_empty():

@@ -9,6 +9,7 @@ const ServiceSim := preload("res://sim/service_sim.gd")
 func run(_tree: SceneTree) -> void:
 	_test_mise_definitions()
 	_test_mise_preparation()
+	_test_mise_set_consumption()
 
 
 func _fixture() -> Resource:
@@ -69,8 +70,6 @@ func _test_mise_definitions() -> void:
 	expect(campaign.call("validate").is_empty(), "the campaign validates with one-item mise sets")
 	var empty_menu: Resource = campaign.call("scenario_for", "first_shift")
 	empty_menu.call("recipe_for", "salad").set("mise_ids", PackedStringArray())
-	empty_menu.call("recipe_for", "salad").set("prepared_ingredient_id", "")
-	empty_menu.call("recipe_for", "salad").set("prep_labor_units", 0)
 	expect("campaign menu needs mise items: salad" in empty_menu.call("validate"), "a campaign menu without mise items is rejected")
 	expect("unused mise item: prepped_salad" in empty_menu.call("validate"), "a mise item no sale menu uses is rejected")
 
@@ -112,3 +111,63 @@ func _test_mise_preparation() -> void:
 	for recommendation: Dictionary in report.recommendations:
 		if recommendation.category == "prep":
 			expect(started.definitions.ingredient_for(recommendation.target_id) != null, "prep recommendations target a mise item")
+
+
+func _split_soup_fixture() -> Resource:
+	var data := _fixture()
+	var grain_item: Resource = _ingredient(data, "prepped_soup").duplicate()
+	grain_item.set("id", "prepped_soup_grain")
+	grain_item.set("unit_cost", 150)
+	grain_item.set("inputs", _typed_inputs({"grain": 1}))
+	grain_item.set("labor_units", 1)
+	var vegetable_item: Resource = _ingredient(data, "prepped_soup").duplicate()
+	vegetable_item.set("id", "prepped_soup_vegetable")
+	vegetable_item.set("unit_cost", 200)
+	vegetable_item.set("inputs", _typed_inputs({"vegetable": 2}))
+	vegetable_item.set("labor_units", 1)
+	var items: Array = data.get("ingredients").duplicate()
+	items.append(grain_item)
+	items.append(vegetable_item)
+	data.set("ingredients", items)
+	data.call("recipe_for", "soup").set("mise_ids", PackedStringArray(["prepped_soup_grain", "prepped_soup_vegetable"]))
+	data.set("menu_ids", PackedStringArray(["soup"]))
+	data.set("order_count", 1)
+	data.set("first_arrival_tick", 1)
+	return data
+
+
+func _run_until_consumed(simulation: ServiceSim, limit: int) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for _step: int in limit:
+		simulation.step()
+		events.append_array(simulation.events())
+		if simulation.snapshot().orders.size() > 0 and simulation.snapshot().orders[0].input_consumed:
+			break
+	return events
+
+
+func _test_mise_set_consumption() -> void:
+	var data := _split_soup_fixture()
+	expect(_ingredient(data, "prepped_soup_grain").get("inputs") == _typed_inputs({"grain": 1}), "the split fixture keeps its typed inputs")
+	expect(data.call("validate").is_empty(), "a two-item mise set whose inputs sum to the recipe validates")
+	var partial := ServiceSim.new(data, null, {"prep_quantities": {"prepped_soup_grain": 1}})
+	expect(partial.errors.is_empty(), "one of two mise items can be prepared")
+	_run_until_consumed(partial, 40)
+	var view: Dictionary = partial.snapshot()
+	expect(view.orders[0].raw_consumed and not view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 1,
+		"a recipe with one missing mise item takes the raw path and leaves the stocked item")
+	var full := ServiceSim.new(data, null, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
+	var events := _run_until_consumed(full, 40)
+	view = full.snapshot()
+	expect(view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 0 and view.inventory.prepped_soup_vegetable == 0
+		and view.orders[0].consumed_cost == 350, "a complete mise set is consumed item by item at its combined cost")
+	var depleted_ids: Array[String] = []
+	for event: Dictionary in events:
+		if event.kind == "prepared_stock_depleted":
+			depleted_ids.append(event.ingredient_id)
+	expect(depleted_ids == ["prepped_soup_grain", "prepped_soup_vegetable"],
+		"each mise item that reaches zero emits its own depletion event")
+	var saved: Dictionary = full.export_state()
+	var restored := ServiceSim.restore(data, saved, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
+	expect(restored.accepted and restored.simulation.state_hash() == full.state_hash(),
+		"a snapshot with a consumed mise set restores to the same hash")

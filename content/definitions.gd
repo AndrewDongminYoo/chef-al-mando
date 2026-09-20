@@ -96,11 +96,6 @@ func validate(require_stock: bool = true) -> Array[String]:
 				mise_inputs[input_id] = mise_inputs.get(input_id, 0) + item.inputs[input_id]
 		if has_preparation and mise_inputs != recipe.ingredients:
 			errors.append("recipe ingredients must equal the raw inputs of its mise items: " + recipe.id)
-		# Transitional until Task 3 removes the legacy fields: both representations must agree.
-		var legacy_ids := PackedStringArray([recipe.prepared_ingredient_id]) if not recipe.prepared_ingredient_id.is_empty() else PackedStringArray()
-		var legacy_labor: int = ingredient_for(recipe.prepared_ingredient_id).labor_units if has_preparation and ingredient_for(recipe.prepared_ingredient_id) != null else 0
-		if recipe.mise_ids != legacy_ids or recipe.prep_labor_units != legacy_labor:
-			errors.append("legacy preparation fields disagree with mise_ids: " + recipe.id)
 		_check_ids(recipe.processes, "process", errors)
 		var ordered_processes := recipe.ordered_processes()
 		if ordered_processes.is_empty():
