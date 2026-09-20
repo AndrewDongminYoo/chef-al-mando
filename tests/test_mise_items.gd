@@ -21,6 +21,8 @@ func run(_tree: SceneTree) -> void:
 	_test_mise_definitions()
 	_test_mise_preparation()
 	_test_mise_set_consumption()
+	_test_partial_prep()
+	_test_shared_raw_stock()
 	_test_campaign_mise_content()
 	_test_shared_mise_stock()
 
@@ -163,21 +165,39 @@ func _run_until_consumed(simulation: ServiceSim, limit: int) -> Array[Dictionary
 	return events
 
 
+func _run_until(simulation: ServiceSim, limit: int, done: Callable) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for _step: int in limit:
+		simulation.step()
+		events.append_array(simulation.events())
+		if done.call(simulation.snapshot()):
+			break
+	return events
+
+
+func _three_item_soup_fixture() -> Resource:
+	var data := _split_soup_fixture()
+	var vegetable_item: Resource = _ingredient(data, "prepped_soup_vegetable")
+	vegetable_item.set("inputs", _typed_inputs({"vegetable": 1}))
+	vegetable_item.set("unit_cost", 100)
+	var second_vegetable: Resource = vegetable_item.duplicate()
+	second_vegetable.set("id", "prepped_soup_vegetable_2")
+	var items: Array = data.get("ingredients").duplicate()
+	items.append(second_vegetable)
+	data.set("ingredients", items)
+	var soup: Resource = data.call("recipe_for", "soup")
+	soup.set("mise_ids", PackedStringArray(["prepped_soup_grain", "prepped_soup_vegetable", "prepped_soup_vegetable_2"]))
+	soup.call("ordered_processes")[1].set("duration_ticks", 70)
+	return data
+
+
 func _test_mise_set_consumption() -> void:
 	var data := _split_soup_fixture()
 	expect(_ingredient(data, "prepped_soup_grain").get("inputs") == _typed_inputs({"grain": 1}), "the split fixture keeps its typed inputs")
 	expect(data.call("validate").is_empty(), "a two-item mise set whose inputs sum to the recipe validates")
-	var partial := ServiceSim.new(data, null, {"prep_quantities": {"prepped_soup_grain": 1}})
-	expect(partial.errors.is_empty(), "one of two mise items can be prepared")
-	_run_until_consumed(partial, 40)
-	var view: Dictionary = partial.snapshot()
-	expect(view.orders[0].raw_consumed and not view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 1,
-		"a recipe with one missing mise item takes the raw path and leaves the stocked item")
-	expect(view.orders[0].missing_mise_ids == ["prepped_soup_grain", "prepped_soup_vegetable"],
-		"a raw-path order records every mise item of its recipe as missing")
 	var full := ServiceSim.new(data, null, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	var events := _run_until_consumed(full, 40)
-	view = full.snapshot()
+	var view: Dictionary = full.snapshot()
 	expect(view.orders[0].missing_mise_ids == [], "a fully prepared order records no missing mise item")
 	expect(view.orders[0].uses_prepared and view.inventory.prepped_soup_grain == 0 and view.inventory.prepped_soup_vegetable == 0
 		and view.orders[0].consumed_cost == 350, "a complete mise set is consumed item by item at its combined cost")
@@ -191,26 +211,88 @@ func _test_mise_set_consumption() -> void:
 	var restored := ServiceSim.restore(data, saved, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	expect(restored.accepted and restored.simulation.state_hash() == full.state_hash(),
 		"a snapshot with a consumed mise set restores to the same hash")
-	var raw_state: Dictionary = partial.export_state()
-	var reordered: Dictionary = raw_state.duplicate(true)
-	reordered.orders[0].missing_mise_ids = ["prepped_soup_vegetable", "prepped_soup_grain"]
-	var reordered_restore := ServiceSim.restore(data, reordered, {"prep_quantities": {"prepped_soup_grain": 1}})
-	expect(not reordered_restore.accepted and reordered_restore.reason == "invalid_consumption",
-		"restore rejects missing mise IDs that are not in recipe order")
-	var unknown: Dictionary = raw_state.duplicate(true)
-	unknown.orders[0].missing_mise_ids = ["prepped_soup_grain", "missing"]
-	expect(not ServiceSim.restore(data, unknown, {"prep_quantities": {"prepped_soup_grain": 1}}).accepted,
-		"restore rejects a missing mise ID the recipe does not use")
-	var understated: Dictionary = raw_state.duplicate(true)
-	understated.orders[0].missing_mise_ids = ["prepped_soup_grain"]
-	var understated_restore := ServiceSim.restore(data, understated, {"prep_quantities": {"prepped_soup_grain": 1}})
-	expect(not understated_restore.accepted and understated_restore.reason == "invalid_inventory",
-		"restore rejects a missing list that does not explain the consumed inventory")
 	var contradictory: Dictionary = full.export_state()
 	contradictory.orders[0].missing_mise_ids = ["prepped_soup_grain", "prepped_soup_vegetable"]
 	var contradictory_restore := ServiceSim.restore(data, contradictory, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
 	expect(not contradictory_restore.accepted and contradictory_restore.reason == "invalid_consumption",
 		"restore rejects uses_prepared with a non-empty missing list")
+
+
+func _test_partial_prep() -> void:
+	var data := _split_soup_fixture()
+	var options := {"prep_quantities": {"prepped_soup_grain": 1}}
+	var partial := ServiceSim.new(data, null, options)
+	expect(partial.errors.is_empty(), "one of two mise items can be prepared")
+	_run_until(partial, 40, func(view: Dictionary) -> bool: return view.orders.size() > 0 and view.orders[0].ingredients_reserved)
+	var view: Dictionary = partial.snapshot()
+	expect(view.orders[0].reserved_inputs == {"prepped_soup_grain": 1, "vegetable": 2}
+		and view.orders[0].missing_mise_ids == ["prepped_soup_vegetable"] and not view.orders[0].uses_prepared,
+		"a recipe with one missing mise item reserves the stocked item and the raw inputs of the missing one")
+	var events := _run_until(partial, 40, func(current: Dictionary) -> bool: return current.orders[0].input_consumed)
+	view = partial.snapshot()
+	expect(view.orders[0].raw_consumed and view.inventory.prepped_soup_grain == 0 and view.inventory.vegetable == 20
+		and view.inventory.grain == 7 and view.orders[0].consumed_cost == 350,
+		"mixed consumption spends the stocked item once and the missing item's raw inputs once")
+	var depleted_ids: Array[String] = []
+	for event: Dictionary in events:
+		if event.kind == "prepared_stock_depleted":
+			depleted_ids.append(event.ingredient_id)
+	expect(depleted_ids == ["prepped_soup_grain"], "only the consumed mise item emits a depletion event")
+	_run_until(partial, 200, func(current: Dictionary) -> bool: return current.orders[0].state == "working" and current.orders[0].phase_id == "prep")
+	view = partial.snapshot()
+	expect(view.orders[0].phase_id == "prep" and view.tasks.size() == 1
+		and view.tasks[0].completion_tick - view.tasks[0].started_tick == 30,
+		"prep for one missing item of two takes half the recipe prep time (60 × 1/2)")
+	var working_restore := ServiceSim.restore(data, partial.export_state(), options)
+	expect(working_restore.accepted and working_restore.simulation.state_hash() == partial.state_hash(),
+		"a snapshot working on a scaled prep restores to the same hash")
+	while not partial.closed:
+		partial.step()
+	view = partial.snapshot()
+	expect(view.orders[0].state == "served", "the mixed order is served")
+	var raw_state: Dictionary = partial.export_state()
+	var reordered: Dictionary = raw_state.duplicate(true)
+	reordered.orders[0].missing_mise_ids = ["prepped_soup_vegetable", "prepped_soup_grain"]
+	expect(not ServiceSim.restore(data, reordered, options).accepted, "restore rejects missing mise IDs that are not in recipe order")
+	var unknown: Dictionary = raw_state.duplicate(true)
+	unknown.orders[0].missing_mise_ids = ["prepped_soup_grain", "missing"]
+	expect(not ServiceSim.restore(data, unknown, options).accepted, "restore rejects a missing mise ID the recipe does not use")
+	var understated: Dictionary = raw_state.duplicate(true)
+	understated.orders[0].missing_mise_ids = []
+	var understated_restore := ServiceSim.restore(data, understated, options)
+	expect(not understated_restore.accepted and understated_restore.reason == "invalid_consumption",
+		"restore rejects an empty missing list on an order that did not skip prep")
+	var overstated: Dictionary = raw_state.duplicate(true)
+	overstated.orders[0].missing_mise_ids = ["prepped_soup_grain", "prepped_soup_vegetable"]
+	var overstated_restore := ServiceSim.restore(data, overstated, options)
+	expect(not overstated_restore.accepted and overstated_restore.reason == "invalid_inventory",
+		"restore rejects a missing list that claims raw grain was consumed while the grain item is gone")
+
+	var three := _three_item_soup_fixture()
+	expect(three.call("validate").is_empty(), "a three-item mise set whose inputs sum to the recipe validates")
+	var two_missing := ServiceSim.new(three, null, {"prep_quantities": {"prepped_soup_grain": 1}})
+	_run_until(two_missing, 200, func(current: Dictionary) -> bool: return current.orders.size() > 0 and current.orders[0].state == "working" and current.orders[0].phase_id == "prep")
+	view = two_missing.snapshot()
+	expect(view.orders[0].missing_mise_ids == ["prepped_soup_vegetable", "prepped_soup_vegetable_2"]
+		and view.tasks[0].completion_tick - view.tasks[0].started_tick == 47,
+		"two missing items of three round 70 × 2/3 up to 47 ticks")
+	var one_missing := ServiceSim.new(three, null, {"prep_quantities": {"prepped_soup_grain": 1, "prepped_soup_vegetable": 1}})
+	_run_until(one_missing, 200, func(current: Dictionary) -> bool: return current.orders.size() > 0 and current.orders[0].state == "working" and current.orders[0].phase_id == "prep")
+	view = one_missing.snapshot()
+	expect(view.orders[0].missing_mise_ids == ["prepped_soup_vegetable_2"]
+		and view.tasks[0].completion_tick - view.tasks[0].started_tick == 24,
+		"one missing item of three rounds 70 × 1/3 up to 24 ticks")
+
+	var short := _split_soup_fixture()
+	short.set("purchases", _typed_inputs({"vegetable": 2, "grain": 2, "protein": 0}))
+	short.set("order_count", 2)
+	var starved := ServiceSim.new(short, null, {"prep_quantities": {"prepped_soup_grain": 1}})
+	expect(starved.errors.is_empty(), "one sellable soup lets the short fixture start")
+	_run_until(starved, 400, func(current: Dictionary) -> bool: return current.orders.size() == 2 and current.orders[0].input_consumed and current.orders[1].wait_reason == "missing_ingredients")
+	view = starved.snapshot()
+	expect(view.orders[1].wait_reason == "missing_ingredients" and not view.orders[1].ingredients_reserved
+		and view.orders[1].reserved_inputs.is_empty() and view.reserved.values().all(func(value: int) -> bool: return value == 0),
+		"a mixed set that is short on raw inputs reserves nothing and waits")
 
 
 func _test_campaign_mise_content() -> void:
@@ -273,3 +355,22 @@ func _test_shared_mise_stock() -> void:
 	var full_snapshot: Dictionary = full_plan.snapshot()
 	expect(full_snapshot.can_start and full_snapshot.errors.is_empty(),
 		"one prepared unit per menu's own share of prepped_vegetable and prepped_grain lets lunch_prep start")
+
+
+## grain_salad는 prepped_vegetable을 salad에, prepped_grain 하나를 soup에 내주고 나면 손질 토마토는 없고
+## 불린 현미만 남는 혼합 상태가 되는데, 원재료 곡물이 0이라 옛 전부-원재료 규칙으로는 팔 수 없고 혼합
+## 규칙으로만 팔 수 있습니다.
+func _test_shared_raw_stock() -> void:
+	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var scenario: Resource = campaign.call("scenario_for", "lunch_prep")
+	var plan := PreparationPlan.new(scenario)
+	expect(_command(plan, "set_purchase", "vegetable", 4, 1).accepted, "lunch_prep accepts a vegetable purchase of 4")
+	expect(_command(plan, "set_purchase", "grain", 2, 2).accepted, "lunch_prep accepts a grain purchase of 2")
+	expect(_command(plan, "set_prep", "prepped_vegetable", 1, 3).accepted, "one prepped_vegetable fits the labor budget")
+	expect(_command(plan, "set_prep", "prepped_grain", 2, 4).accepted, "two prepped_grain fit the labor budget")
+	expect(_command(plan, "set_prep", "soup_base", 1, 5).accepted, "one soup_base fits the labor budget")
+	var snapshot: Dictionary = plan.snapshot()
+	expect(snapshot.inventory.vegetable == 1 and snapshot.inventory.grain == 0,
+		"the mixed-stock plan leaves one raw vegetable and no raw grain")
+	expect(snapshot.can_start and snapshot.errors.is_empty(),
+		"a menu whose missing item is covered by raw stock and whose other item is prepared counts as sellable")

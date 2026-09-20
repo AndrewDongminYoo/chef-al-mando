@@ -289,15 +289,13 @@ static func initial_state(data: Definitions, options: Dictionary = {}, require_s
 		var available := inventory.duplicate()
 		for recipe_id: String in data.menu_ids:
 			var recipe := data.recipe_for(recipe_id)
-			if mise_ready(available, recipe):
-				for mise_id: String in recipe.mise_ids:
-					available[mise_id] -= 1
-				continue
-			for ingredient_id: String in recipe.ingredients:
-				if available[ingredient_id] < recipe.ingredients[ingredient_id]:
+			var inputs: Dictionary = mise_inputs_for(data, recipe, missing_mise_ids(available, recipe))
+			for ingredient_id: String in inputs:
+				if available[ingredient_id] < inputs[ingredient_id]:
 					errors.append("menu_missing_ingredients")
 					return result
-				available[ingredient_id] -= recipe.ingredients[ingredient_id]
+			for ingredient_id: String in inputs:
+				available[ingredient_id] -= inputs[ingredient_id]
 	return result
 
 
@@ -311,6 +309,15 @@ static func _array(tile: Vector2i) -> Array[int]:
 
 static func _vector(coordinates: Array) -> Vector2i:
 	return Vector2i(coordinates[0], coordinates[1])
+
+
+## 가용 재고에서 레시피 한 건을 만들 때 재고에 없는 미장 항목. 레시피 mise_ids 순서를 지킵니다.
+static func missing_mise_ids(available: Dictionary, recipe: Definitions.RecipeDef) -> Array[String]:
+	var missing: Array[String] = []
+	for mise_id: String in recipe.mise_ids:
+		if available.get(mise_id, 0) <= 0:
+			missing.append(mise_id)
+	return missing
 
 
 static func mise_ready(inventory: Dictionary, recipe: Definitions.RecipeDef) -> bool:

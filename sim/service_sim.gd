@@ -299,11 +299,11 @@ func _try_assignment(order: OrderState) -> void:
 				continue
 			if not order.input_consumed:
 				order.reserved_inputs = inputs
-				order.uses_prepared = not order.recipe.mise_ids.is_empty() and inputs.has(order.recipe.mise_ids[0])
 				order.missing_mise_ids.clear()
-				if not order.uses_prepared:
-					for mise_id: String in order.recipe.mise_ids:
+				for mise_id: String in order.recipe.mise_ids:
+					if not inputs.has(mise_id):
 						order.missing_mise_ids.append(mise_id)
+				order.uses_prepared = not order.recipe.mise_ids.is_empty() and order.missing_mise_ids.is_empty()
 				for ingredient_id: String in inputs:
 					_reserved[ingredient_id] += inputs[ingredient_id]
 				order.ingredients_reserved = true
@@ -330,25 +330,15 @@ func _set_wait(order: OrderState, reason: String, detail: String = "") -> void:
 
 
 func _available_inputs(order: OrderState) -> Dictionary[String, int]:
+	var available: Dictionary[String, int] = {}
+	for ingredient_id: String in _inventory:
+		available[ingredient_id] = _inventory[ingredient_id] - _reserved[ingredient_id]
 	var inputs: Dictionary[String, int] = {}
-	if _mise_ready(order.recipe):
-		for mise_id: String in order.recipe.mise_ids:
-			inputs[mise_id] = 1
-		return inputs
-	for ingredient_id: String in order.recipe.ingredients:
-		if _inventory[ingredient_id] - _reserved[ingredient_id] < order.recipe.ingredients[ingredient_id]:
+	inputs.assign(PreparationPlan.mise_inputs_for(_data, order.recipe, PreparationPlan.missing_mise_ids(available, order.recipe)))
+	for ingredient_id: String in inputs:
+		if available[ingredient_id] < inputs[ingredient_id]:
 			return {}
-	inputs.assign(order.recipe.ingredients)
 	return inputs
-
-
-func _mise_ready(recipe: RecipeDef) -> bool:
-	if recipe.mise_ids.is_empty():
-		return false
-	for mise_id: String in recipe.mise_ids:
-		if _inventory[mise_id] - _reserved[mise_id] <= 0:
-			return false
-	return true
 
 
 func _station_available(station: StationDef) -> bool:
@@ -398,7 +388,7 @@ func _begin_work(order: OrderState, task: TaskState) -> void:
 	order.has_result = true
 	order.result_position = task.station.work_position
 	task.started_tick = tick
-	task.completion_tick = tick + order.phases[order.phase_index].duration_ticks
+	task.completion_tick = tick + _phase_duration(order.recipe, order.phases[order.phase_index], order.missing_mise_ids)
 
 
 func _move_employees() -> void:
@@ -998,13 +988,13 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 				return "invalid_task"
 			if task.path_index != task.path.size() - 1 or task.started_tick < 0 or task.started_tick > state.tick:
 				return "invalid_task"
-			if task.completion_tick != task.started_tick + phases[saved_order.phase_index].duration_ticks \
+			if task.completion_tick != task.started_tick + _phase_duration(recipe, phases[saved_order.phase_index], saved_order.missing_mise_ids) \
 				or task.completion_tick <= state.tick:
 				return "invalid_task"
 			var expected_working_ticks: int = state.tick - task.started_tick + 1
 			for index: int in saved_order.phase_index:
 				if not saved_order.uses_prepared or phases[index].id != "prep":
-					expected_working_ticks += phases[index].duration_ticks
+					expected_working_ticks += _phase_duration(recipe, phases[index], saved_order.missing_mise_ids)
 			if saved_order.metrics.working != expected_working_ticks:
 				return "invalid_metrics"
 	return ""
@@ -1186,6 +1176,16 @@ static func _consumed_cost(data: Definitions, order: OrderState) -> int:
 	for ingredient_id: String in consumed:
 		result += data.ingredient_for(ingredient_id).unit_cost * consumed[ingredient_id]
 	return result
+
+
+## prep 공정만 부족 항목 비율로 줄어듭니다. 정수 올림이라 해시 경로에 float가 없고, 집합 전체가
+## 재고에 있는 주문은 0을 돌려주지만 그 주문은 prep 자체를 건너뜁니다.
+static func _phase_duration(recipe: RecipeDef, phase: ProcessDef, missing_mise_ids: Array) -> int:
+	if phase.id != "prep" or recipe.mise_ids.is_empty():
+		return phase.duration_ticks
+	var total: int = recipe.mise_ids.size()
+	@warning_ignore("integer_division")
+	return (phase.duration_ticks * missing_mise_ids.size() + total - 1) / total
 
 
 static func _station_for(data: Definitions, station_id: String) -> StationDef:
