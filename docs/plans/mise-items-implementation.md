@@ -1224,3 +1224,47 @@ git commit -m "docs(spec): record the reconciled mise table and the 2a/2b split"
 - 계획 2b(부분 프렙): §5.3의 비율 `prep` 시간과 부족 항목만 원재료로 소비하는 혼합 소비, 스냅샷 주문 필드 확장(`missing_mise_ids`, `prep_duration_ticks`)과 복원 검증, 마감 회계의 "그 항목이 비어서 원재료 경로로 간 주문 수"의 정확한 집계. 스냅샷 형식이 바뀌므로 진행 중 영업 재시작 규칙을 한 번 더 정합니다.
 - 콘텐츠 계획: 시드 1~5 풀림 게이트(먼저 실패하는 fixture 확인) 뒤 `forecast_slack` 작성, 브리핑 인내 시간 표시.
 - 3단계 리뷰, 4단계 화면(메뉴 상세·리뷰 패널·메뉴 아이콘), 6단계 문서는 명세 §12 순서대로입니다.
+
+## 2026-09-20 정정
+
+아래 항목은 Task 1~5 실행 중 이 계획의 서술과 실제로 머지된 코드가 갈린 지점입니다.
+이 절 위의 단계 서술은 고치지 않으며, 권위는 인용한 커밋의 코드와 테스트에 있습니다.
+
+- Task 1(커밋 cdb229b)의 파일 목록은 `tests/fixtures/m2_extra_menu.tres`(`prepared_ingredient_id`만 쓰는 네 번째 메뉴 fixture, M2 fixture와 같은 방식으로 이행)와 `tests/test_m2_ui.gd`의 `_custom_ingredients` 이름 변경 루프를 빠뜨렸습니다.
+  `mise` 기준 checks 수는 173이 아니라 175였습니다.
+  준비된 항목의 레시피 간 고유성 제약은 의도적으로 두지 않았습니다(명세 §5.1이 항목을 메뉴 사이에 공유하도록 허용).
+- Task 2(커밋 121bad1)는 동작 보존 리팩터였고 `m3` 해시는 바뀌지 않았습니다.
+- Task 3(커밋 27152b9)에서 `m2`는 497에서 489로 줄었습니다.
+  `tests/test_m2_content.gd`의 레거시 필드 결함 사례 4건이 `tests/test_mise_items.gd`의 미장 규칙 검사로 흡수되어 제거됐기 때문입니다.
+- Task 4(콘텐츠 커밋 abb8299, 재조정 커밋 041b17c)에서 계획의 Step 6이 가리킨 `tests/test_service_feedback.gd:299`는 M2 fixture를 읽는 테스트라 그대로 곡물 수프로 남았습니다.
+  제거한 `손질한 … 재료` msgid 수는 계획의 "8건"이 아니라 7건입니다.
+  `tests/fixtures/m2_extra_menu.tres`가 여전히 "손질한 곡물 샐러드 재료"를 쓰기 때문입니다.
+  `labor_units`, `prep_labor_capacity`, 목표값은 바뀌지 않았습니다.
+  `split_duties` 참조 정책의 담당 배정은 employee_01이 냉식대 대신 유동, 02가 냉식대, 03·04가 화구로 바뀌었습니다.
+  용량 15와 18에서의 전수 스윕이 2냉·2화 배정으로는 통과하는 프렙 조합을 찾지 못했기 때문이며, 그 기록은 `docs/notes/kitchen-pressure-verification.md`에 있습니다.
+  이 Task 뒤의 `m3`·`ui-regressions` checks 수는 아래 Task 6 회귀 표가 기록합니다.
+- Task 5(커밋 9104c4e, ed32d1e)에서 `tests/test_menu_priorities.gd`와 `tests/test_service_seed.gd`가 계획의 파일 목록 밖에서 콘텐츠 버전 상향이 필요했습니다.
+  계획의 reader 분기는 `_interrupt_reader`를 다루지 않았고, 여기에도 구버전 콘텐츠 가드가 필요했습니다(콘텐츠 4→5 두 PCK 교차 실행: 9 OK, 1 skip, 0 failures).
+  이 Task 뒤의 `m4` checks 수는 아래 Task 6 회귀 표가 기록합니다.
+- 부분 프렙은 계획 2b가 맡습니다(이 문서 Global Constraints에 이미 기록).
+
+### Task 6 회귀 결과 (2026-09-20)
+
+`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot`로 워크트리에서 한 번에 하나의 Godot 프로세스만 실행했습니다.
+
+```log
+bash scripts/check-export.sh                 → PASS (마커 7개 모두 확인, exit 0)
+python3 tests/test_export_check.py            → OK (10)
+python3 tests/test_ios_export.py               → OK (2)
+bash scripts/check.sh m0                       → PASS: m0 checks=25 failures=0
+bash scripts/check.sh m1                       → PASS: m1 checks=192 failures=0
+bash scripts/check.sh m2                       → PASS: m2 checks=489 failures=0
+bash scripts/check.sh m3                       → PASS: m3 checks=1113 failures=0
+bash scripts/check.sh m4-core                  → PASS: m4-core checks=892 failures=0
+bash scripts/check.sh m4                       → PASS: m4 checks=1196 failures=0
+bash scripts/check.sh m5                       → PASS: m5 checks=583 failures=0
+bash scripts/check.sh mise                     → PASS: mise checks=235 failures=0
+bash scripts/check.sh ui-regressions           → PASS: ui-regressions checks=307 failures=0
+```
+
+`test_m4_restart.py`의 같은 PCK·콘텐츠 4→5 두 PCK 교차 실행은 Task 5(커밋 ed32d1e)에서 9 OK, 1 skip, 0 failures로 이미 확인됐고 이번 Task는 다시 돌리지 않았습니다.

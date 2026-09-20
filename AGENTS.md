@@ -165,7 +165,7 @@ Cross-update replay compatibility is not a v1 goal.
 ### Ingredients and Work
 
 - In M1, reserve all raw ingredients when an order starts.
-- Define mise en place as ingredient-level items that recipes reference as a set; skip the prep process only when every required item is in stock, otherwise scale the prep duration by the missing fraction and consume raw ingredients only for the missing items.
+- Define mise en place as ingredient-level items that recipes reference as a set; skip the prep process only when every required item is in stock, otherwise scale the prep duration by the missing fraction and consume raw ingredients only for the missing items. Until plan 2b lands, the shipped rule skips prep only when every item is stocked and otherwise consumes the raw ingredients in full.
 - Consume required ingredients exactly once when the applicable process starts.
 - Release reservations when the player cancels before a process starts.
 - Preserve consumed-ingredient loss when the player cancels after a process starts.
