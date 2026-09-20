@@ -947,7 +947,22 @@ labor_units = 1
 
 사라진 msgid를 지웁니다: `손질한 ... 재료` 8건, 그리고 `grep -rn '<msgid>' content presentation tests`가 비는 옛 메뉴명(`버섯 수프`, `버섯 샐러드`, `곡물 샐러드`, `단백질 덮밥`, `곡물 볶음`). `채소`·`곡물`·`단백질`·`버섯`·`채소 샐러드`·`곡물 수프`·`단백질 구이`는 M2 fixture와 `tests/test_m2_ui.gd`가 아직 쓰므로 남깁니다.
 
-- [ ] **Step 6: 이름을 읽는 검사 갱신**
+- [ ] **Step 6: 이름과 캠페인 미장 ID를 읽는 검사 갱신**
+
+Task 2가 캠페인 시나리오를 쓰는 검사와 캡처 스크립트의 `set_prep` 대상을 1:1 ID(`prepped_salad` 등)로 옮겨 두었으므로, 이 Step에서 새 미장 ID로 다시 옮깁니다. `grep -rn 'prepped_salad\|prepped_soup\|prepped_grill\|prepped_grain_salad\|prepped_mushroom_salad\|prepped_mushroom_soup\|prepped_grain_grill\|prepped_protein_bowl' tests`로 목록을 만들고, M2 fixture(`m2_first_service.tres`, `tests/fixtures/m2_extra_menu.tres`)를 쓰는 검사는 그대로 두며, 캠페인 시나리오를 쓰는 검사(`tests/test_m4_determinism.gd`, `tests/test_service_session.gd`, `tests/test_m4_ui.gd`, `tests/capture_m3.gd`, `tests/capture_m4.gd`, `tests/test_space_experiment.gd` 등 grep이 찾는 모든 파일)는 아래 표로 옮깁니다. 한 레시피의 옛 프렙 1개는 새 미장 각 1개로 늘어나므로 `set_prep` 명령은 항목 수만큼 됩니다.
+
+| 옛 ID                    | 새 ID                                                  |
+| ------------------------ | ------------------------------------------------------ |
+| `prepped_salad`          | `prepped_vegetable`                                    |
+| `prepped_grain_salad`    | `prepped_vegetable`, `prepped_grain`                   |
+| `prepped_mushroom_salad` | `prepped_vegetable`, `prepped_mushroom`                |
+| `prepped_soup`           | `prepped_grain`, `soup_base`                           |
+| `prepped_mushroom_soup`  | `prepped_mushroom`, `soup_base`                        |
+| `prepped_grain_grill`    | `prepped_grain`, `prepped_mushroom`                    |
+| `prepped_protein_bowl`   | `prepped_vegetable`, `prepped_grain`, `thawed_protein` |
+| `prepped_grill`          | `marinated_protein`                                    |
+
+노동량이 상한을 넘게 되는 검사는 수량을 줄이고, 그 검사가 고정한 해시는 같은 명령으로 두 번 실행해 같은 값을 확인한 뒤 갱신합니다.
 
 `tests/test_m3_ui.gd:23`의 `"채소 샐러드"`를 `"토마토 샐러드"`로, `tests/test_service_seed.gd:62`의 `"채소 샐러드 12건"`을 `"토마토 샐러드 12건"`으로, `tests/test_service_feedback.gd:299`의 `"곡물 수프의 기본 우선순위를 2로"`를 `"토마토 수프의 기본 우선순위를 2로"`로 바꿉니다. 각 파일이 캠페인 시나리오를 쓰는지 M2 fixture를 쓰는지 확인하고, M2 fixture를 쓰는 검사는 건드리지 않습니다. `tests/test_mise_items.gd`의 Task 1 검사에서 `first_shift`의 미장을 비웠을 때 기대하는 `unused mise item: prepped_salad`는 `unused mise item: prepped_vegetable`로 바꿉니다.
 
