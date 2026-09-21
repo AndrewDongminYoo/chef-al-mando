@@ -13,8 +13,9 @@ func run(_tree: SceneTree) -> void:
 	_test_campaign_gate(campaign)
 
 
-## 시드 0의 추첨은 작성된 순서이므로 추첨 인지 발주는 작성된 purchases와 같아야 하고, 시드가 있으면 그
-## 시드의 구성이 필요로 하는 양이어야 합니다.
+## 시드 0의 추첨은 작성된 순서이므로 추첨 인지 발주는 작성된 purchases에 기준 정책의 set_purchase 명령을
+## 덮어쓴 값과 같아야 하고(shared_stock처럼 작성 발주가 시드 0 필요량 아래인 영업은 기준 정책이 채웁니다),
+## 시드가 있으면 그 시드의 구성이 필요로 하는 양이어야 합니다.
 func _test_draw_aware_policy(campaign: Resource) -> void:
 	for scenario: Resource in campaign.scenarios:
 		var policy: Dictionary = Policies.draw_aware_policy(scenario, 0)

@@ -91,11 +91,12 @@ employees = Array[ExtResource("1_makjn")]([SubResource("Resource_rmvsc"), SubRes
 purchases = Dictionary[String, int]({
 "grain": 13,
 "mushroom": 4,
-"vegetable": 31
+"vegetable": 20
 })
+forecast_slack = Dictionary[String, int]({"salad": 1, "soup": 1, "grain_salad": 1, "mushroom_salad": 1})
 menu_ids = PackedStringArray("salad", "soup", "grain_salad", "mushroom_salad")
 order_count = 22
 first_arrival_tick = 10
 arrival_interval_ticks = 120
-prep_labor_capacity = 9
+prep_labor_capacity = 11
 space_rules = true

@@ -4,6 +4,9 @@ const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const CampaignStore := preload("res://persistence/campaign_store.gd")
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const SeedGate := preload("res://tests/fixtures/seed_gate.gd")
+## §4.3의 배치 지렛대는 두 명령 종류가 한 지렛대이므로(pressure-rebalance.md §4.3 표) 게이트가 함께 뺍니다.
+## long_route의 기준 정책은 rotate_station만 빼도 회계가 같아(22건·13,700원) 종류별로 나누면 그 갈래만 실패합니다.
+const PLACEMENT_KINDS: Array = ["move_station", "rotate_station"]
 
 
 func run(_tree: SceneTree) -> void:
@@ -82,6 +85,30 @@ func run(_tree: SceneTree) -> void:
 					"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
 					"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
 					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
+				if Policies.LEVER_KINDS.has(scenario.id):
+					var levers: Array = Policies.LEVER_KINDS[scenario.id]
+					var subsets: Array = []
+					for kind: String in levers:
+						var lever: Array = PLACEMENT_KINDS if kind in PLACEMENT_KINDS else [kind]
+						if not subsets.has(lever):
+							subsets.append(lever)
+					if subsets.size() > 1:
+						subsets.append(levers)
+					for subset: Array in subsets:
+						var stripped: Dictionary = Policies.without_lever_policy(scenario.id, subset)
+						expect(stripped != policy, "the reference policy uses its lever %s: %s" % [str(subset), scenario.id])
+						var stripped_run := Policies.run_policy(scenario, stripped)
+						expect(stripped_run.accepted and not Policies.passes_targets(scenario, stripped_run),
+							"the reference policy misses a target without its lever %s: %s" % [str(subset), scenario.id])
+					var lever_free: Dictionary = Policies.lever_free_policy(scenario.id)
+					expect(Policies.without_kinds(lever_free, levers) == lever_free,
+						"the pinned lever-free policy contains no lever command: " + scenario.id)
+					var lever_free_run := Policies.run_policy(scenario, lever_free)
+					expect(lever_free_run.accepted and not Policies.passes_targets(scenario, lever_free_run),
+						"the strongest lever-free policy found by the sweep misses a target: " + scenario.id)
+					if lever_free_run.accepted:
+						print("M3_LEVER ", scenario.id, " ", JSON.stringify({"levers": levers,
+							"lever_free": {"accounting": lever_free_run.snapshot.accounting, "metrics": lever_free_run.snapshot.metrics}}, "", true))
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
 	_test_hot_queue_focus(campaign)
 	for owned_file: String in DirAccess.get_files_at(directory):
@@ -134,8 +161,9 @@ func _compare_choices(campaign: Resource) -> void:
 	for choice: Dictionary in Policies.reference_policy("split_duties").preparation:
 		if choice.kind == "set_duty":
 			variants.duties.policy.preparation.append(choice)
-	var stock: Resource = campaign.scenario_for("shared_stock")
-	variants.purchases.policy.preparation.append({"kind": "set_purchase", "target_id": "vegetable", "value": stock.purchases.vegetable + 5})
+	for choice: Dictionary in Policies.reference_policy("shared_stock").preparation:
+		if choice.kind == "set_purchase":
+			variants.purchases.policy.preparation.append(choice)
 	for kind: String in variants:
 		var variant: Dictionary = variants[kind]
 		var scenario: Resource = campaign.scenario_for(variant.scenario)
@@ -152,7 +180,7 @@ func _compare_choices(campaign: Resource) -> void:
 		if kind == "prep":
 			expect(changed.metrics.orders.working < baseline.metrics.orders.working, "preparation removes measured service work")
 		if kind == "purchases":
-			expect(changed.accounting.served == baseline.accounting.served and changed.accounting.profit == baseline.accounting.profit - 500, "five extra vegetables cost 500 without changing served orders")
+			expect(changed.accounting.served > baseline.accounting.served, "the reference purchase serves orders the authored stock cannot")
 		print("M3_COMPARISON ", kind, " ", JSON.stringify({"scenario": scenario.id,
 			"before": {"accounting": baseline.accounting, "metrics": baseline.metrics},
 			"after": {"accounting": changed.accounting, "metrics": changed.metrics}}, "", true))

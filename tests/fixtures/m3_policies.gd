@@ -5,6 +5,16 @@ const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 const TickDriver := preload("res://presentation/tick_driver.gd")
 
+## §4.3 영업별 지렛대(pressure-rebalance.md). 무지렛대 정책은 정책에서 이 종류의 명령만 뺀 것이고,
+## "priorities"는 priorities 사전을 비웁니다. 시나리오 .tres의 operation_problem은 표시용이며 게이트는 이 표를 읽습니다.
+const LEVER_KINDS: Dictionary = {
+	"hot_queue": ["priorities"],
+	"shared_stock": ["set_purchase"],
+	"long_route": ["move_station", "rotate_station"],
+	"split_duties": ["set_duty"],
+	"rush_hour": ["set_prep", "priorities"],
+}
+
 
 static func reference_policy(scenario_id: String) -> Dictionary:
 	var policy: Dictionary = {"preparation": [], "priorities": {}}
@@ -18,9 +28,9 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "prepped_vegetable", 3)
 			policy.priorities = {"grill": 2}
 		"shared_stock":
-			_add(policy, "set_prep", "prepped_grain", 1)
+			_add(policy, "set_purchase", "vegetable", 31)
+			_add(policy, "set_prep", "prepped_grain", 5)
 			_add(policy, "set_prep", "soup_base", 6)
-			_add(policy, "set_prep", "prepped_mushroom", 2)
 		"long_route":
 			_add(policy, "set_prep", "marinated_protein", 4)
 			_moves(policy, "cold_01", "up", 1)
@@ -57,6 +67,26 @@ static func without_kinds(policy: Dictionary, kinds: Array) -> Dictionary:
 	if "priorities" not in kinds:
 		stripped.priorities = policy.get("priorities", {}).duplicate(true)
 	return stripped
+
+
+## 기준 정책에서 지렛대 종류를 뺀 정책. kinds를 비우면 LEVER_KINDS의 그 영업 항목 전부를 뺍니다.
+static func without_lever_policy(scenario_id: String, kinds: Array = []) -> Dictionary:
+	var stripped_kinds: Array = kinds if not kinds.is_empty() else LEVER_KINDS.get(scenario_id, [])
+	return without_kinds(reference_policy(scenario_id), stripped_kinds)
+
+
+## tests/sweep_policies.gd --without <지렛대> --best 가 시드 0에서 찾은 가장 강한 무지렛대 정책(best_any).
+## 게이트는 이 정책이 한 목표 이상에 미달해야 통과하며, 값의 근거는 docs/notes/kitchen-pressure-verification.md의
+## 재조율 절입니다. 아직 스윕하지 않은 영업은 지렛대를 뺀 기준 정책이 그 자리를 채웁니다.
+static func lever_free_policy(scenario_id: String) -> Dictionary:
+	var policy: Dictionary = without_lever_policy(scenario_id)
+	match scenario_id:
+		## sweep: --scenario shared_stock --attempt 0 --without set_purchase --best → passed 0, best_any {"prepped_grain": 6, "soup_base": 5} · 15 · 3,700
+		"shared_stock":
+			policy = {"preparation": [], "priorities": {}}
+			_add(policy, "set_prep", "prepped_grain", 6)
+			_add(policy, "set_prep", "soup_base", 5)
+	return policy
 
 
 ## §4.2의 "추첨 인지 기준 정책": 시드 0 기준 정책 앞에, 원재료마다 작성 발주(기준 정책에 set_purchase가 있으면
@@ -142,6 +172,7 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 			policy = reference_policy(scenario_id)
 			_add(policy, "set_purchase", "protein", 5)
 		"shared_stock":
+			_add(policy, "set_purchase", "vegetable", 31)
 			policy.priorities = {"soup": 2}
 		"long_route":
 			policy = reference_policy(scenario_id)
