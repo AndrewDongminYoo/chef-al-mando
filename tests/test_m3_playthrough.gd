@@ -4,9 +4,6 @@ const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const CampaignStore := preload("res://persistence/campaign_store.gd")
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const SeedGate := preload("res://tests/fixtures/seed_gate.gd")
-## §4.3의 배치 지렛대는 두 명령 종류가 한 지렛대이므로(pressure-rebalance.md §4.3 표) 게이트가 함께 뺍니다.
-## long_route의 기준 정책은 rotate_station만 빼도 회계가 같아(22건·13,700원) 종류별로 나누면 그 갈래만 실패합니다.
-const PLACEMENT_KINDS: Array = ["move_station", "rotate_station"]
 
 
 func run(_tree: SceneTree) -> void:
@@ -87,14 +84,7 @@ func run(_tree: SceneTree) -> void:
 					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
 				if Policies.LEVER_KINDS.has(scenario.id):
 					var levers: Array = Policies.LEVER_KINDS[scenario.id]
-					var subsets: Array = []
-					for kind: String in levers:
-						var lever: Array = PLACEMENT_KINDS if kind in PLACEMENT_KINDS else [kind]
-						if not subsets.has(lever):
-							subsets.append(lever)
-					if subsets.size() > 1:
-						subsets.append(levers)
-					for subset: Array in subsets:
+					for subset: Array in Policies.lever_subsets(scenario.id):
 						var stripped: Dictionary = Policies.without_lever_policy(scenario.id, subset)
 						expect(stripped != policy, "the reference policy uses its lever %s: %s" % [str(subset), scenario.id])
 						var stripped_run := Policies.run_policy(scenario, stripped)

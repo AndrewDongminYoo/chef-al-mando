@@ -14,6 +14,9 @@ const LEVER_KINDS: Dictionary = {
 	"split_duties": ["set_duty"],
 	"rush_hour": ["set_prep", "priorities"],
 }
+## §4.3 표의 배치 지렛대는 두 명령 종류가 한 지렛대이므로 게이트가 함께 뺍니다. long_route의 기준 정책은
+## rotate_station만 빼도 회계가 같아(22건·13,700원) 종류별로 나누면 그 갈래만 실패합니다.
+const PLACEMENT_KINDS: Array = ["move_station", "rotate_station"]
 
 
 static func reference_policy(scenario_id: String) -> Dictionary:
@@ -73,6 +76,19 @@ static func without_kinds(policy: Dictionary, kinds: Array) -> Dictionary:
 static func without_lever_policy(scenario_id: String, kinds: Array = []) -> Dictionary:
 	var stripped_kinds: Array = kinds if not kinds.is_empty() else LEVER_KINDS.get(scenario_id, [])
 	return without_kinds(reference_policy(scenario_id), stripped_kinds)
+
+
+## 게이트가 따로 빼 볼 지렛대 부분집합: 지렛대마다 하나씩이고, 지렛대가 둘이면(rush_hour) 둘 다 뺀 것을 더합니다.
+static func lever_subsets(scenario_id: String) -> Array:
+	var levers: Array = LEVER_KINDS.get(scenario_id, [])
+	var subsets: Array = []
+	for kind: String in levers:
+		var lever: Array = PLACEMENT_KINDS if kind in PLACEMENT_KINDS else [kind]
+		if not subsets.has(lever):
+			subsets.append(lever)
+	if subsets.size() > 1:
+		subsets.append(levers)
+	return subsets
 
 
 ## tests/sweep_policies.gd --without <지렛대> --best 가 시드 0에서 찾은 가장 강한 무지렛대 정책(best_any).

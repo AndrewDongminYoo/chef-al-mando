@@ -371,7 +371,7 @@ C의 시도 4와 D의 시도 1·4는 작성 구성과 건수가 같고 도착 �
 
 게이트를 넣고 `.tres`를 바꾸기 전의 `check.sh m3`는 1,136개 검사 가운데 5개가 실패했습니다: `shared_stock`의 `uses its lever`와 `misses a target without its lever`(뺀 정책이 기준과 같음), `_compare_choices`의 `purchases` 변형 둘(작성 재고 31이 시드 0 필요량과 같아 `set_purchase vegetable 31`이 아무것도 바꾸지 않음), 그리고 `long_route`의 `misses a target without its lever ["rotate_station"]`입니다.
 마지막 것은 계획 밖의 발견입니다: 게이트 초안은 `LEVER_KINDS`의 종류마다 따로 뺀 정책을 검사했는데, `long_route`의 기준 정책은 `rotate_station`만 빼도 22건·13,700원으로 기준과 회계가 같습니다(회전은 해시만 바꿉니다; `move_station`만 빼면 10건·-1,500원, 둘 다 빼면 위 표의 15건·4,500원).
-명세 §4.3 표는 배치를 두 명령 종류로 이루어진 한 지렛대로 적으므로, 게이트는 `PLACEMENT_KINDS`(`move_station`·`rotate_station`)를 한 지렛대로 묶어 빼고 지렛대가 둘인 영업(`rush_hour`)만 지렛대별과 전체를 따로 검사합니다.
+명세 §4.3 표는 배치를 두 명령 종류로 이루어진 한 지렛대로 적으므로, `m3_policies.gd`의 `lever_subsets`가 `PLACEMENT_KINDS`(`move_station`·`rotate_station`)를 한 지렛대로 묶어 게이트가 뺄 부분집합을 만들고, 지렛대가 둘인 영업(`rush_hour`)만 지렛대별과 전체를 따로 검사합니다.
 `long_route`의 기준 정책과 값은 이 커밋에서 바뀌지 않았고, 회전이 회계를 바꾸지 않는다는 사실은 Task 8의 재조율이 볼 몫입니다.
 
 #### 발주 지렛대와 시작 slack
