@@ -228,9 +228,11 @@ scratchpad에만 두고 커밋하지 않은 탐침 스크립트로 시도별 추
 시도 1은 시도 2와 주문 구성(구이 9·국 5·샐러드 6)과 추첨 인지 발주가 같은데도 11건·2,550원이므로, 시도 2를 가르는 것은 주문 구성이 아니라 도착 순서입니다(시도 2는 4·5번째 주문이 샐러드 둘, 13–15번째가 구이 셋입니다).
 
 상한 스윕은 `prep_labor_capacity`를 6부터 11까지 1씩 바꾸며 `"$GODOT_BIN" --headless --path <워크트리> --script tests/sweep_policies.gd -- --scenario hot_queue --attempt 2 --purchases draw --items marinated_protein:3,prepped_vegetable:9,prepped_grain:9,soup_base:9 --best`를 돌렸습니다.
-`--keep`을 생략해 기준 정책의 구이 우선순위 2는 유지되고, `--items` 상한은 노동량 상한이 잘라내므로 값마다 같은 인자입니다.
+`--keep`을 생략해 기준 정책의 구이 우선순위 2는 유지됩니다.
 상한 12부터는 `set_prep marinated_protein 4`(노동량 12)가 받아들여져 `_test_hot_queue_focus`의 `insufficient_labor` 검사가 깨지므로 11에서 멈췄습니다.
+`--items`의 9는 노동량 1인 세 항목이 상한 9까지만 노동량 상한에 잘려 상한 10·11에서는 이 인자가 먼저 묶이므로, 그 두 값은 `--items marinated_protein:3,prepped_vegetable:11,prepped_grain:11,soup_base:11`로 다시 돌려 표에는 그 값을 적었습니다(9로 돌린 값은 394·500, 통과 0, 최댓값 같음).
 모든 실행의 `SWEEP_SUMMARY`는 `attempt 2, seed 53743680, purchases draw`이고 `SWEEP` 줄은 한 줄도 없었습니다.
+상한 6의 통과 무관 최댓값은 게이트 시도 2 행과 같은 9건·-450원이므로 `--purchases draw` 스윕과 게이트가 같은 정책 형태를 돌립니다.
 
 | 상한 | 조합 | 통과 | 통과 최댓값 | 통과 무관 최댓값                                                           |
 | ---: | ---: | ---: | ----------- | -------------------------------------------------------------------------- |
@@ -238,8 +240,8 @@ scratchpad에만 두고 커밋하지 않은 탐침 스크립트로 시도별 추
 |    7 |  155 |    0 | 없음        | `marinated_protein 1` · 노동량 3 · 9 · -450                                |
 |    8 |  220 |    0 | 없음        | `marinated_protein 1` · 노동량 3 · 9 · -450                                |
 |    9 |  300 |    0 | 없음        | `prepped_grain 4, prepped_vegetable 1, soup_base 4` · 노동량 9 · 10 · -550 |
-|   10 |  394 |    0 | 없음        | `prepped_grain 4, prepped_vegetable 1, soup_base 4` · 노동량 9 · 10 · -550 |
-|   11 |  500 |    0 | 없음        | `marinated_protein 1, prepped_grain 4, soup_base 4` · 노동량 11 · 10 · 50  |
+|   10 |  395 |    0 | 없음        | `prepped_grain 4, prepped_vegetable 1, soup_base 4` · 노동량 9 · 10 · -550 |
+|   11 |  504 |    0 | 없음        | `marinated_protein 1, prepped_grain 4, soup_base 4` · 노동량 11 · 10 · 50  |
 
 예산 스윕은 상한을 6으로 되돌리고 `starting_budget`을 9,750·10,250·10,750으로 바꿔 같은 명령을 돌렸습니다.
 
@@ -249,7 +251,7 @@ scratchpad에만 두고 커밋하지 않은 탐침 스크립트로 시도별 추
 | 10,250 |    6 |  104 |    0 | 없음        | `marinated_protein 1` · 노동량 3 · 9 · -450 |
 | 10,750 |    6 |  104 |    0 | 없음        | `marinated_protein 1` · 노동량 3 · 9 · -450 |
 
-예산 세 값의 결과가 상한 6·예산 9,250과 정확히 같은 이유는 예산이 조합을 잘라내지 않고(노동량 상한만 잘라냅니다) 손익은 매출에서 비용을 뺀 값이라 시작 현금과 무관하며, 예산이 결과를 바꾸는 유일한 경로인 발주 거부가 위와 같이 9,250에서도 일어나지 않기 때문입니다.
+예산 세 값의 결과가 상한 6·예산 9,250과 정확히 같은 이유는 `sim/`에서 `starting_budget`을 읽는 곳이 `preparation_plan.gd`의 발주 수락(`remaining_budget`)과 `service_sim.gd`의 `cash` 계산뿐이라(`grep -rn starting_budget sim/ content/`, 나머지는 `campaign_progress.gd`·`scenario_def.gd`의 범위 검증) 예산은 조합을 잘라내지 않고 손익도 바꾸지 않으며, 결과를 바꾸는 유일한 경로인 발주 거부가 위와 같이 9,250에서도 일어나지 않기 때문입니다.
 
 결론: 상한 11과 예산 +1,500(10,750)까지 시도 2에 통과 조합은 없습니다.
 상한 11의 통과 무관 최댓값이 10건·50원이고 목표는 12건·4,750원이므로 두 여유 수단 모두 이 시도를 목표 근처로도 끌어오지 못합니다.
