@@ -775,3 +775,97 @@ git commit -m "docs: record the authored forecast slack, the seed gate and conte
 - §12 3단계 리뷰(확정된 이름으로 문구 리소스, 생성기, 콘텐츠 검사).
 - §12 4단계 화면(메뉴 상세·리뷰 패널·메뉴 아이콘·혼합 주문 직원 문구).
 - 5인 플레이테스트(`docs/specs/playtest-price-validation.md`)는 운영자의 시작 문장을 기다립니다.
+
+## 2026-09-21 정정
+
+아래 항목은 Task 1~5 실행 중 이 계획의 서술과 실제로 머지된 코드가 갈린 지점입니다.
+이 절 위의 단계 서술은 고치지 않으며, 권위는 인용한 커밋의 코드와 테스트에 있습니다.
+
+- Task 1(커밋 `407168f`)은 계획대로였고, 예외로 `tests/test_service_seed.gd`가 `campaign.duplicate(true)`로 공유 `hot_queue` 시나리오를 변형했습니다(Array 원소는 깊이 복사되지 않음).
+  그래서 이 검사는 캠페인을 `CACHE_MODE_IGNORE_DEEP`로 읽으며, 그 결함 자체는 별도로 `f6d7f25`에서 고쳤습니다.
+  이 Task 뒤 `mise` checks는 309였습니다.
+- Task 2(커밋 `4a19fcf`·`f093155`)에서 브리프 Step 2 산문은 `--keep duties`를 생략하면 담당 없는 실행이 된다고 적었지만, 도구의 기본 `--keep`은 담당을 포함하므로 담당 없는 실행은 `duties`를 뺀 `--keep`을 명시해야 합니다.
+  리뷰에서 입력 검증(`--items`, `--scenario`)을 추가하고 문서화된 `--keep` 값에서 쓰이지 않는 `prep`을 지웠습니다.
+- Task 3(커밋 `99356d5`)은 첫 slack 시도가 막힌 뒤(계획 정정 `f565702`) 삽입됐습니다.
+  섞기 없이 슬롯만 바꾸며, `hot_queue` fixture에서 시드 104076537은 슬롯 2개를 바꾸고 수프의 연속 길이를 2로 올립니다(경계 `+ 1`이 유지됨).
+  `tests/test_schedule_generator.gd`는 취소된 Task 4가 준비해 둔 zero-slack `fixed` 사본 재작성도 함께 받았습니다.
+- Task 4(취소, 커밋 `a152e5c`)의 첫 실행(전체 섞기 포함)은 30행 중 29행이 실패해 BLOCKED로 끝났고, 자리바꿈으로 바꾼 뒤에도 시작 slack에서 24/30이었습니다(`hot_queue` 1/5, `shared_stock` 1/5, `long_route` 2/5, `split_duties` 1/5, `rush_hour` 1/5, `final_service` 0/5).
+  컨트롤러 탐침: `hot_queue` 시드 0은 정확히 12건·4,750원(만료 8건)으로 통과하고, 시도 2(교체 3슬롯, 화구 연속 3)는 우선순위 유무와 무관하게 프렙 조합 104가지 중 통과 0입니다.
+  원인은 `check.sh m3`의 "기준 정책 여분 ≤ 제공 1건·손익 2,000" 규칙이 모든 압력 영업을 목표에 정확히 맞춰 놓은 조율입니다.
+  운영자 결정은 멈추고 발견을 기록하는 것이었습니다: `forecast_slack`은 비운 채 두고 콘텐츠 버전은 6 그대로이며, 재조율 명세는 플레이테스트와 함께 별도로 정합니다.
+  되돌린 WIP(시작 slack이 있는 `.tres` 6개, 콘텐츠 7 작업, 검사 리터럴 변경)는 세션 scratchpad에만 있었고 git에는 없습니다.
+  브리프(별도 task-4-brief) 표는 `shared_stock` 수프 기준을 8로 적었으나 실제는 9이며, 위 Task 4 Step 4의 표는 이미 9로 고쳐 적혀 있습니다.
+- Task 5(커밋 `3a8438a`)는 측정만 했습니다.
+  `split_duties`: 시드 0에서 담당 없이 노동량 1짜리 미장 단위(해동 단백질 1, 손질 양송이 1, 손질 현미 1 가운데 아무거나) 하나만으로도 26건·12,350원에 닿아, 목표값으로는 어떤 `prep_labor_capacity` ≥ 1도 담당 유무를 가르지 못합니다(상한은 15로 유지, `m3_policies.gd` 불변).
+  `final_service`: 상한 21이 화구 우선순위 2를 되살리는 통과 정책을 만들고(통과 22가지, 최고 27·12,200, 상한 19가 경계), 연어 발주 9는 되살리지 못합니다.
+  브리프의 `split_duties` `--items`가 이 시나리오에 없는 `marinated_protein`을 적어 도구가 거부했으므로 실제 4개 항목으로 스윕을 돌렸고, 커밋된 `final_service` 기준 정책에는 우선순위가 없어 우선순위 유지 실행은 스윕 동안만 임시 fixture 편집으로 돌린 뒤 되돌렸습니다.
+- Task 7(브리핑의 메뉴별 인내 시간)은 실행하지 않았습니다: 운영자가 승인 시점에 §12 4단계 화면 계획으로 미뤘습니다.
+- 최종 전체-브랜치 리뷰로 미루는 항목(고치지 않음): `draw_aware_policy`가 `run_policy`도 다시 계산하는 `order_schedule()`을 한 번 더 계산합니다(계획이 정한 모양).
+  `--keep purchases`는 현재 콘텐츠에서 아무 효과가 없습니다.
+  숫자가 아닌 `--items` 상한은 이제 거부되지만 음수는 걸러지지 않습니다.
+  `SWEEP_SUMMARY`는 `--best` 없이도 항상 `best_any`를 담습니다.
+- forward-looking grep(`grep -rn '풀림 검사\|시드 1~5\|forecast_slack' docs/specs docs/plans/PLAN.md AGENTS.md README.md`)은 6줄을 남겼습니다.
+  `PLAN.md:531`(위험표 행)은 이 Task의 §12 편집으로 다뤘습니다(표 아래에 한 줄 추가).
+  `mise-forecast-reviews.md:54`(§4.1 필드 정의)는 스키마 자체를 서술하며 이미 존재하는 필드이므로 손대지 않았습니다.
+  `mise-forecast-reviews.md:111`(§5.1)은 다른 검사인 "시드 0 풀림 검사"(m3 게이트 튜닝)를 가리키며 이 계획의 §10 "풀림 검사"와 다른 대상이므로 손대지 않았습니다.
+  `mise-forecast-reviews.md:264`(§10 표의 풀림 검사 행)는 이번 §4.1 정정 문단의 마지막 문장이 이미 그 관계를 서술하므로 행 자체는 그대로 뒀습니다.
+  `mise-forecast-reviews.md:238`(§8 콘텐츠 버전 5)은 forecast_slack이 버전 5에 추가된다고 여전히 적고 있어, Task 4 취소 뒤에도 이 서술은 정정되지 않은 채로 남습니다.
+  이 Task의 지정 범위(§4.1·§10만)를 벗어나므로 고치지 않았고, 후속 문서 정정이 필요합니다.
+  `mise-forecast-reviews.md:291`(§12 구현 순서 1단계의 `forecast_slack` 나열)도 완료된 약속처럼 읽히지만, 이 목록은 명세의 구현 순서 개요이고 이 계획은 그 가운데 시드 게이트·생성기만 마쳤으므로 같은 이유로 손대지 않았습니다.
+
+### Task 6 회귀 결과 (2026-09-21)
+
+`test_m4_restart.py`는 같은 PCK로 한 번만 실행했습니다(콘텐츠 버전이 바뀌지 않아 두 PCK 검사는 없습니다).
+
+```log
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check-export.sh
+PASS: exported M3 campaign and first served order
+PASS: exported M1 content and first order
+PASS: exported M2 preparation and first order
+PASS: exported M2 extra menu prepared and served
+PASS: exported M4 storage core
+PASS: exported M4 resume and localization
+PASS: exported M5 campaign ending and licenses
+
+$ python3 tests/test_export_check.py
+Ran 10 tests in 0.839s
+
+OK
+
+$ python3 tests/test_ios_export.py
+Ran 2 tests in 0.095s
+
+OK
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m0
+PASS: m0 checks=25 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m1
+PASS: m1 checks=192 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2
+PASS: m2 checks=489 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3
+PASS: m3 checks=1108 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4-core
+PASS: m4-core checks=897 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4
+PASS: m4 checks=1201 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m5
+PASS: m5 checks=583 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh mise
+PASS: mise checks=314 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh ui-regressions
+PASS: ui-regressions checks=302 failures=0
+
+$ python3 tests/test_m4_restart.py
+Ran 10 tests in 1.858s
+
+OK
+```
