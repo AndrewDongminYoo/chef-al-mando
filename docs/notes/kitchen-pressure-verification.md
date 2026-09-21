@@ -535,6 +535,102 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 `tests/capture_product_polish.gd`는 렌더 창이 필요해(`--headless`는 "product capture requires a rendered window"로 멈춤) 이 세션에서 돌리지 않았고, 그 스크립트가 찾는 "fetching prep"·"fetching raw"는 채소 프렙 7이 처음 일곱 채소 주문에만 쓰이고 나머지가 원재료를 집으므로 둘 다 나옵니다.
 `.tres`의 `briefing`은 아직 "다섯 차례"라고 적혀 있으며(번역 키라 이 커밋은 손대지 않음) 실제 구성은 여섯 묶음과 마지막 한 쌍입니다.
 
+### 2026-09-21 재조율: `final_service` (수렴 실패, 측정만)
+
+[압력 영업 재조율 계획](../plans/pressure-rebalance-implementation.md) Task 7의 기록이며, 공통 절차 2–7이 수렴하지 않아 `.tres`와 `tests/fixtures/m3_policies.gd`는 바꾸지 않았고 이 절만 남깁니다.
+결론은 명세 §4.4의 마지막 갈래입니다: 이 영업은 slack을 두 메뉴까지 줄여도 시도 0–5를 모두 통과하는 프렙 조합이 상한 21에서도 없고, 한 메뉴만 남기면 이동이 불가능해 작성할 수 없으므로 §5의 구성 재설계 대상입니다.
+모든 스윕은 위 스윕 절의 `tests/sweep_policies.gd`로 `--scenario final_service --attempt N --purchases draw --items marinated_protein:6,prepped_vegetable:6,prepped_grain:4,prepped_mushroom:3,soup_base:2,thawed_protein:3 --best`를 돌렸고, 스윕 동안만 `m3_policies.gd`의 기준 정책에 `policy.priorities = {"grill": 2}`를 넣어 도구가 기본값으로 유지하게 했습니다(스윕 뒤 `git checkout --`으로 되돌렸고 `git status --short`가 비어 있음을 확인).
+상한은 스윕 동안만 21로 두고 19·20의 값은 통과 조합의 노동량으로 도출했습니다(위 지렛대 측정 절이 확인한 대로 상한은 `sim/preparation_plan.gd`의 수량 거부에만 쓰여 같은 조합의 회계가 상한과 무관합니다).
+시도별 교집합은 scratchpad의 파이썬 스크립트로 구했고, 추첨 내용은 `ScheduleGenerator.recipe_ids`를 시도별로 찍는 scratchpad 탐침으로 읽었으며 둘 다 커밋하지 않았습니다.
+한 시도의 스윕은 조합 7,838개에 약 8–9분이 걸려 세 바퀴에 열일곱 번을 돌렸습니다(상한 19에서 한 번, 21에서 열여섯 번).
+
+#### 1바퀴: 시작 slack 여덟 메뉴 각 1
+
+기준 건수는 여덟 메뉴 모두 4라 §4.4의 시작값은 `max(1, 4 / 5)` = 1이고, `forecast_slack`을 `menu_ids` 줄 앞에 여덟 메뉴 모두 1로 넣었습니다.
+이 slack의 `maximum_profit(32)`는 19,700원입니다.
+상한 19에 이전 기준 프렙(`marinated_protein 5, prepped_grain 3`)과 구이 우선순위 2를 둔 `--gate`는 여섯 시도 모두 `misses the targets`였습니다.
+
+| 시도 |       시드 | 추첨 인지 제공 | 추첨 인지 손익 | 무계획 제공 | 무계획 손익 | 판정 |
+| ---: | ---------: | -------------: | -------------: | ----------: | ----------: | ---- |
+|    0 |          0 |             23 |          6,900 |          18 |       1,500 | 미달 |
+|    1 | 1553386742 |             19 |          3,400 |          19 |       3,350 | 미달 |
+|    2 | 1536609123 |             25 |          8,750 |          19 |       2,200 | 미달 |
+|    3 | 1519831504 |             20 |          4,350 |          18 |       1,750 | 미달 |
+|    4 | 1637274837 |             21 |          4,600 |          19 |       1,800 | 미달 |
+|    5 | 1620497218 |             18 |          2,600 |          17 |       1,200 | 미달 |
+
+시도 0의 23건·6,900원은 위 지렛대 측정 절의 "기준 프렙에 구이 우선순위 2를 더한 정책" 값과 같습니다.
+상한 19의 시도 0 스윕(측정)은 조합 6,720 가운데 통과 2(`marinated_protein 4, prepped_mushroom 2, prepped_vegetable 2, thawed_protein 3` · 25 · 10,100과 `marinated_protein 4, prepped_grain 4, prepped_vegetable 2, thawed_protein 1` · 26 · 11,000)로 같은 절의 도출값 "상한 19부터 통과 조합이 생김"과 정확히 같았고, 그 뒤의 스윕은 모두 상한 21에서 돌렸습니다.
+상한 21 스윕은 시도 0에서 같은 절의 22가지(노동량 19가 둘, 20이 일곱, 21이 열셋)와 최고 `marinated_protein 5, prepped_vegetable 3, thawed_protein 2` · 27건 · 12,200원을 그대로 다시 찍었습니다.
+
+| 시도 | 온식 건수 | 통과 | 노동량별 통과                     | 통과 최고 또는 통과 무관 최댓값                                                                                                   |
+| ---: | --------: | ---: | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+|    0 |        20 |   22 | 19:2 · 20:7 · 21:13               | `marinated_protein 5, prepped_vegetable 3, thawed_protein 2` · 20 · 27 · 12,200                                                   |
+|    1 |        22 |    0 |                                   | `marinated_protein 3, prepped_mushroom 1, prepped_vegetable 5, soup_base 2` · 17 · 23 · 8,700                                     |
+|    2 |        20 |   46 | 14–18:각 1 · 19:8 · 20:16 · 21:17 | `marinated_protein 4, prepped_grain 2, prepped_mushroom 3, prepped_vegetable 1, soup_base 1, thawed_protein 2` · 21 · 26 · 11,150 |
+|    3 |        21 |    0 |                                   | `prepped_grain 4, prepped_vegetable 3, thawed_protein 2` · 9 · 24 · 9,650                                                         |
+|    4 |        19 |    2 | 19:1 · 20:1                       | `marinated_protein 4, prepped_grain 4, prepped_vegetable 2, thawed_protein 1` · 19 · 27 · 11,650                                  |
+|    5 |        21 |    0 |                                   | `marinated_protein 5, prepped_grain 3, prepped_vegetable 1, thawed_protein 1` · 20 · 24 · 9,600                                   |
+
+온식 건수는 `grill`·`grain_grill`·`soup`·`mushroom_soup`·`protein_bowl`(조리 역할 `hot`)의 합이며 작성 구성은 20입니다.
+통과가 있는 시도는 온식이 20 이하(0·2·4)이고 없는 시도는 21 이상(1·3·5)이라 갈림이 정확히 온식 건수에서 납니다: 온식 하나가 더해지면 어떤 프렙으로도 25건·10,000원에 닿지 않고, 이 사실은 위 `split_duties` 절의 "온식 담당 둘의 시간을 거의 다 씀"과 같은 산술입니다.
+§5의 나머지 여유 수단은 닿지 않습니다: 실패 문장에 `insufficient_budget`이 없어 예산과 작성 발주는 쓸 수 없고, 목표는 올리기만 하며, 상한은 21이 최대입니다.
+따라서 §4.4대로 slack을 줄였는데, 계획 공통 절차 7의 "가장 큰 값, 같으면 `menu_ids` 앞쪽" 규칙(여덟 값이 같아 `protein_bowl`부터 하나씩)은 원인에 닿지 않으므로 온식 다섯 메뉴의 slack을 한 번에 0으로 두었습니다(계획에서 갈라진 지점).
+온식 메뉴에 slack이 하나라도 남으면 냉식 기증으로 온식이 늘어날 수 있으므로, 온식 건수가 늘지 않는 slack 집합의 최대는 냉식 세 메뉴(`grain_salad`·`mushroom_salad`·`salad`)뿐입니다.
+
+#### 2바퀴: 냉식 세 메뉴 각 1
+
+`forecast_slack`을 `{"grain_salad": 1, "mushroom_salad": 1, "salad": 1}`로 두면 `maximum_profit(32)`는 17,900원이고, 시도 1–5의 추첨은 모두 냉식끼리의 자리바꿈 1–3개(시도 5는 `break_identity`의 인접 교환 `protein_bowl`·`grill`, 건수는 작성과 같음)이며 온식 건수는 모든 시도에서 20입니다.
+이전 기준 프렙과 구이 우선순위 2의 `--gate`는 여섯 시도 모두 미달이었고(23·6,900 / 23·6,950 / 21·6,200 / 23·6,600 / 23·6,950 / 23·8,200), 무계획은 18·1,500 / 18·1,900 / 17·1,450 / 17·1,450 / 17·1,000 / 16·-300입니다.
+
+| 시도 | 통과 | 노동량별 통과                      | 통과 최고                                                                                       |
+| ---: | ---: | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+|    0 |   22 | 19:2 · 20:7 · 21:13                | `marinated_protein 5, prepped_vegetable 3, thawed_protein 2` · 20 · 27 · 12,200                 |
+|    1 |   51 | 14:2 · 15:4 · 19:2 · 20:12 · 21:31 | `marinated_protein 5, prepped_grain 1, prepped_mushroom 2, thawed_protein 2` · 20 · 27 · 11,550 |
+|    2 |   17 | 18:1 · 19:4 · 20:5 · 21:7          | `marinated_protein 6, prepped_mushroom 2` · 20 · 27 · 10,800                                    |
+|    3 |   28 | 17:1 · 18:3 · 19:5 · 20:4 · 21:15  | `marinated_protein 5, prepped_grain 1, prepped_mushroom 3, thawed_protein 2` · 21 · 27 · 11,900 |
+|    4 |   21 | 19:2 · 20:6 · 21:13                | `marinated_protein 5, prepped_grain 1, prepped_mushroom 2, thawed_protein 3` · 21 · 27 · 11,550 |
+|    5 |   17 | 17:2 · 19:4 · 20:6 · 21:5          | `marinated_protein 6, soup_base 2` · 20 · 27 · 11,000                                           |
+
+시도마다 통과 조합은 17–51가지인데 여섯 시도의 교집합은 상한 19·20·21 모두 0입니다.
+가장 많이 겹치는 조합도 여섯 시도 가운데 넷까지입니다: `marinated_protein 4, prepped_grain 4, prepped_vegetable 2, thawed_protein 1`(노동량 19)은 시도 0·1·3·4를 통과하고 2·5에 미달하며, `marinated_protein 6, prepped_grain 1, thawed_protein 2`(21)는 0·1·2·4를 통과하고 3·5에 미달합니다.
+§4.4대로 다시 줄였고 이번에는 세 값이 같으므로 규칙대로 `menu_ids` 앞쪽인 `grain_salad`를 0으로 두었습니다.
+
+#### 3바퀴: 냉식 두 메뉴 각 1
+
+`forecast_slack`을 `{"mushroom_salad": 1, "salad": 1}`로 두면 `maximum_profit(32)`는 17,850원이고, 추첨은 `salad`와 `mushroom_salad`의 자리바꿈 1–2개뿐입니다: 시도 1은 슬롯 7(490 tick, 샐러드 → 양송이 샐러드)과 22(1690 tick, 반대), 시도 2와 5는 슬롯 15(1130 tick)와 22, 시도 3은 슬롯 22, 시도 4는 슬롯 7입니다.
+시도 2와 5는 같은 추첨이라 시도 5는 돌리지 않고 시도 2의 결과를 썼고, 시도 0은 시드 0 항등이라 2바퀴의 로그를 그대로 썼습니다(1바퀴와 2바퀴의 시도 0 `SWEEP` 줄이 `diff`로 같음).
+상한 19에 2바퀴의 최다 겹침 조합 `marinated_protein 4, prepped_grain 4, prepped_vegetable 2, thawed_protein 1`과 구이 우선순위 2를 둔 `--gate`는 시도 1·3·4가 미달이었습니다.
+
+| 시도 |       시드 | 추첨 인지 제공 | 추첨 인지 손익 | 무계획 제공 | 무계획 손익 | 판정 |
+| ---: | ---------: | -------------: | -------------: | ----------: | ----------: | ---- |
+|    0 |          0 |             26 |         11,000 |          18 |       1,500 | 통과 |
+|    1 | 1553386742 |             24 |          9,100 |          17 |         600 | 미달 |
+|    2 | 1536609123 |             26 |         11,700 |          19 |       2,400 | 통과 |
+|    3 | 1519831504 |             25 |          9,850 |          18 |       1,250 | 미달 |
+|    4 | 1637274837 |             24 |          9,150 |          17 |       1,000 | 미달 |
+|    5 | 1620497218 |             26 |         11,700 |          19 |       2,400 | 통과 |
+
+| 시도 | 통과 | 노동량별 통과             | 통과 최고                                                                                        |
+| ---: | ---: | ------------------------- | ------------------------------------------------------------------------------------------------ |
+|    1 |   14 | 18:1 · 19:3 · 20:3 · 21:7 | `marinated_protein 5, prepped_vegetable 4, thawed_protein 2` · 21 · 26 · 11,200                  |
+|    2 |   22 | 19:2 · 20:7 · 21:13       | `marinated_protein 4, prepped_grain 4, prepped_vegetable 2, thawed_protein 1` · 19 · 26 · 11,700 |
+|    3 |   14 | 20:4 · 21:10              | `marinated_protein 5, prepped_vegetable 3, thawed_protein 2` · 20 · 27 · 11,950                  |
+|    4 |   10 | 18:1 · 19:1 · 20:1 · 21:7 | `marinated_protein 4, prepped_grain 4, prepped_vegetable 4, thawed_protein 1` · 21 · 26 · 11,050 |
+
+여섯 시도의 교집합은 상한 19·20·21 모두 0이고, 서로 다른 다섯 추첨(0–4) 가운데 가장 많이 겹치는 조합도 셋까지입니다: `marinated_protein 5, prepped_vegetable 3, thawed_protein 2`(20)와 `marinated_protein 5, prepped_mushroom 2, prepped_vegetable 2, thawed_protein 2`(21)는 0·2·3을 통과하고 1·4에 미달하며, `marinated_protein 4, prepped_grain 4, prepped_vegetable 4, thawed_protein 1`(21)은 1·2·4를 통과하고 0·3에 미달합니다.
+갈림은 슬롯 7입니다: 490 tick의 샐러드 하나가 양송이 샐러드로 바뀐 시도 1·4를 함께 통과하는 조합과 바뀌지 않은 시도 0·2·3을 함께 통과하는 조합이 상한 21에서 하나도 겹치지 않습니다.
+여덟 메뉴가 80 tick 간격으로 이어지는 이 구성에서는 냉식 한 건의 자리바꿈 하나가 이후 모든 주문의 배정 순서를 바꾸므로, 프렙 수량 하나로 두 추첨을 함께 통과시킬 수 없습니다.
+
+#### 결론
+
+다음 §4.4 단계는 slack을 한 메뉴만 남기는 것인데, 한 메뉴에만 폭이 있으면 수신 메뉴가 없어 `ScheduleGenerator.recipe_ids`가 작성 순서를 그대로 돌려주고 §4.4가 그런 slack을 작성하지 말라고 하며 `tests/test_service_seed.gd`도 시도 1–5의 이동을 요구합니다.
+곧 slack이 전부 0이어야만 풀리는 경우이므로 공통 절차 7대로 멈췄습니다.
+값은 모두 이전 그대로입니다: `forecast_slack` 없음, `prep_labor_capacity` 18, `starting_budget` 15,400, 목표 25건·10,000원, 발주 현미 16·양송이 12·연어 8·채소 32, 기준 정책 `marinated_protein 5, prepped_grain 3`(우선순위 없음), 대체 A·B도 그대로입니다.
+따라서 `final_service`는 명세 §5의 3단계(구성) 대상이며, 위 측정이 가리키는 방향은 두 가지입니다: 온식 건수가 늘지 않는 slack만 두더라도 80 tick 간격의 단일 흐름은 자리바꿈 하나에 통째로 흔들리므로 `split_duties`처럼 묶음 사이에 회복 구간을 두는 구성이거나, 시도별 통과 집합이 노동량 19–21에 몰려 있으므로 상한을 넘는 재설계(별도 승인)입니다.
+무계획 미달 폭은 세 바퀴의 모든 시도에서 제공 6건 이상이라 목표 상향은 어느 단계에서도 필요하지 않았습니다.
+스윕 로그·교집합 스크립트·탐침은 세션 scratchpad에만 있고 커밋하지 않았습니다.
+
 ## 저장 호환성
 
 새 쓰기가 쓰는 콘텐츠 버전은 `persistence/campaign_store.gd`의 `VERSIONS`가 소유하고, 그 버전 이력은 [M4 모바일 명세](../specs/m4-mobile.md)가 소유합니다.
