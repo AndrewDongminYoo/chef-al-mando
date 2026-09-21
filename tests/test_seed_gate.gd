@@ -69,7 +69,7 @@ func _test_synthetic_failures(campaign: Resource) -> void:
 	expect(unsolvable.validate().is_empty(), "the unsolvable fixture is still valid content")
 	var verdict: Dictionary = SeedGate.evaluate(campaign, unsolvable, ATTEMPTS)
 	expect(not verdict.passed and verdict.failures.size() == ATTEMPTS.size()
-		and verdict.failures[0].begins_with("attempt 1:"),
+		and verdict.failures[0].begins_with("attempt 1:") and verdict.failures[0].contains("misses the targets"),
 		"a profit target equal to the forecast maximum fails the gate on every attempt")
 	var trivial: Resource = hot_queue.duplicate()
 	trivial.forecast_slack = slack
@@ -85,6 +85,11 @@ func _test_campaign_gate(campaign: Resource) -> void:
 	for scenario: Resource in campaign.scenarios:
 		var verdict: Dictionary = SeedGate.evaluate(campaign, scenario, ATTEMPTS)
 		expect(verdict.passed, "attempts 1-5 are solvable and pressured: %s %s" % [scenario.id, ", ".join(verdict.failures)])
+		for attempt: int in ATTEMPTS:
+			var seed_value: int = ScheduleGenerator.service_seed_for(scenario.id, attempt)
+			if scenario.forecast_slack.is_empty():
+				expect(ScheduleGenerator.recipe_ids(scenario, seed_value) == scenario.order_recipe_ids,
+					"an empty forecast slack reproduces the authored order on attempt %d: %s" % [attempt, scenario.id])
 		for row: Dictionary in verdict.rows:
 			print("SEED_GATE ", scenario.id, " ", JSON.stringify(row, "", true))
 

@@ -5,6 +5,7 @@ extends SceneTree
 
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+const KEEP_KINDS: Array[String] = ["duties", "priorities", "placement", "purchases"]
 
 
 func _init() -> void:
@@ -19,7 +20,12 @@ func _init() -> void:
 		push_error("unknown scenario: " + str(arguments.get("scenario", "")))
 		quit(2)
 		return
-	var attempt: int = int(arguments.get("attempt", "0"))
+	var attempt_text: String = arguments.get("attempt", "0")
+	if not attempt_text.is_valid_int() or int(attempt_text) < 0:
+		push_error("invalid --attempt: " + attempt_text)
+		quit(2)
+		return
+	var attempt: int = int(attempt_text)
 	var seed_value: int = ScheduleGenerator.service_seed_for(scenario.id, attempt)
 	var items: Array[String] = []
 	var caps: Array[int] = []
@@ -39,6 +45,11 @@ func _init() -> void:
 			items.append(item.id)
 			caps.append(scenario.prep_labor_capacity / item.labor_units)
 	var keep: PackedStringArray = arguments.get("keep", "duties,priorities,placement,purchases").split(",")
+	for token: String in keep:
+		if token not in KEEP_KINDS:
+			push_error("invalid --keep token: " + token)
+			quit(2)
+			return
 	var base: Dictionary = {"preparation": [], "priorities": {}}
 	var reference: Dictionary = Policies.reference_policy(scenario.id)
 	for command: Dictionary in reference.preparation:
