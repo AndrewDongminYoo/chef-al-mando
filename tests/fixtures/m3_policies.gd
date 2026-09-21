@@ -35,7 +35,7 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "prepped_grain", 5)
 			_add(policy, "set_prep", "soup_base", 6)
 		"long_route":
-			_add(policy, "set_prep", "marinated_protein", 4)
+			_add(policy, "set_prep", "marinated_protein", 5)
 			_moves(policy, "cold_01", "up", 1)
 			_moves(policy, "cold_01", "left", 3)
 			_moves(policy, "hot_01", "up", 1)
@@ -105,6 +105,14 @@ static func lever_free_policy(scenario_id: String) -> Dictionary:
 			policy = {"preparation": [], "priorities": {}}
 			_add(policy, "set_prep", "prepped_vegetable", 2)
 			_add(policy, "set_prep", "thawed_protein", 4)
+		## sweep: --scenario long_route --attempt 0 --without move_station,rotate_station --items marinated_protein:5,prepped_vegetable:6,prepped_grain:6,prepped_mushroom:6,soup_base:6,thawed_protein:6 --best → passed 0, best_any {"marinated_protein": 5} · 18 · 8,700.
+		## best_any는 지렛대를 뺀 기준 정책과 같은 프렙이라(without_lever_policy가 이미 검사) 통과 무관 순위의 다음 행
+		## {"marinated_protein": 4, "prepped_mushroom": 1, "thawed_protein": 2} · 17 · 7,700으로 고정합니다(같은 회계의 동률 행은 없음).
+		"long_route":
+			policy = {"preparation": [], "priorities": {}}
+			_add(policy, "set_prep", "marinated_protein", 4)
+			_add(policy, "set_prep", "prepped_mushroom", 1)
+			_add(policy, "set_prep", "thawed_protein", 2)
 	return policy
 
 
