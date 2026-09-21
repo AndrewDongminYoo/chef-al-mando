@@ -1255,6 +1255,8 @@ git commit -m "docs(spec): record the reconciled mise table and the 2a/2b split"
   계획 2b의 항목별 귀속이 이 문제도 함께 고칩니다.
 - PR 전 Codex 로컬 리뷰에서 `require_stock` 블록이 공유 미장 항목을 셀 때 `inventory`만 읽고 차감하지 않아, 같은 항목을 쓰는 메뉴 수만큼 중복으로 "판매 가능"으로 셌던 결함이 드러났습니다.
   `fix(prep): consume shared mise items in the sellable-menu check` 커밋에서 `available`을 읽고 채택한 미장 세트만큼 차감하도록 고쳤습니다.
+- 이 문서 "다음 계획"이 적은 스냅샷 필드 `prep_duration_ticks`는 계획 2b(`partial-prep-implementation.md`)에서 저장하지 않고 `missing_mise_ids`와 레시피에서 유도하기로 했습니다.
+  `_prep_recommendation` 역전과 `require_stock` 근사는 계획 2b가 닫았습니다.
 
 ### Task 6 회귀 결과 (2026-09-20)
 

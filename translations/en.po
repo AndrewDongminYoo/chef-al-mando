@@ -755,8 +755,8 @@ msgstr "Prep · %s: %d prepared, %d used, %d raw-prep orders\n→ Add %d within 
 msgid "프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요."
 msgstr "Prep · %s: %d prepared, %d used, %d left\n→ Prepare %d fewer next service."
 
-msgid "프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 메뉴에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요."
-msgstr "Prep · %s: all %d used · %d extra raw-prep orders\n→ Cannot prepare one more portion. It needs %d prep capacity, with %d left. Move one portion from another menu if available; otherwise, check work bottlenecks."
+msgid "프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 항목에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요."
+msgstr "Prep · %s: all %d used · %d extra raw-prep orders\n→ Cannot prepare one more portion. It needs %d prep capacity, with %d left. Move one portion from another item if available; otherwise, check work bottlenecks."
 
 msgid "발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요."
 msgstr "Purchases · %s: %d purchased, 0 left, related menus short for %.1f sec\n→ Add 1 within the budget."
