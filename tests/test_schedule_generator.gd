@@ -75,6 +75,8 @@ func run(_tree: SceneTree) -> void:
 	for recipe_id: String in one_sided.menu_ids:
 		expect(one_sided_counts.get(recipe_id, 0) == one_sided_baseline.get(recipe_id, 0),
 			"slack on a single menu cannot move anything because no other menu can give or take: " + recipe_id)
+	expect(one_sided_drawn == hot_queue.order_recipe_ids,
+		"a slack that allows no move returns the authored order, so changed slots never exceed the total slack")
 	var schedule: Array = slacked.with_service_seed(104076537).order_schedule()
 	expect(schedule.size() == hot_queue.order_count, "the seeded scenario schedules every order")
 	for index: int in schedule.size():

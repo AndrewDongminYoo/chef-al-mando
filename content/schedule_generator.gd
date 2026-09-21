@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## (시나리오, 시드) → 주문 메뉴 순서의 순수 함수.
-## 시드 0이거나 모든 메뉴의 slack 합이 0이면 작성된 순서를 그대로 돌려줍니다.
+## 시드 0이거나 모든 메뉴의 slack 합이 0이거나 이동이 하나도 불가능하면 작성된 순서를 그대로 돌려줍니다.
 ## 그 외에는 예보 범위 안에서 건수를 옮기되, 한 이동은 기증 메뉴가 든 슬롯 하나를 수신 메뉴로 바꾸는 것이고
 ## 슬롯을 섞지 않으므로 바뀐 슬롯 수가 slack 합을 넘지 않습니다(같은 메뉴가 더 길게 이어질 수는 있습니다).
 ## 시뮬레이션 상태, 시계, 저장 파일을 읽지 않습니다.
@@ -39,6 +39,7 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 	var rng := RandomNumberGenerator.new()
 	rng.seed = service_seed
 	var moves: int = rng.randi_range(1, total_slack)
+	var performed: int = 0
 	for _move: int in moves:
 		var donors: PackedStringArray = []
 		for recipe_id: String in scenario.menu_ids:
@@ -56,14 +57,19 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 		result[slots[rng.randi_range(0, slots.size() - 1)]] = receiver
 		counts[donor] -= 1
 		counts[receiver] += 1
+		performed += 1
+	# A slack that allows no move (every other menu already at its bound) returns the authored order
+	# untouched, so the changed-slot count never exceeds the total slack.
+	if performed == 0:
+		return authored.duplicate()
 	return break_identity(result, authored)
 
 
-## If no move is possible at all, the result equals the authored order. Moves can also cancel each
-## other (a slot goes donor→receiver and another slot receiver→donor); when that cancellation lands on
-## the same slot the array is authored again and reaches this fallback too, while a cancellation on
-## different slots leaves the counts equal to the baseline but the array changed. A seeded draw must
-## differ from the authored order, so swap the first adjacent pair of different recipes; only a
+## Reached only after at least one move. Moves can cancel each other (a slot goes donor→receiver and
+## another slot receiver→donor); when that cancellation lands on the same slot the array is authored
+## again, while a cancellation on different slots leaves the counts equal to the baseline but the
+## array changed. A draw that moved must differ from the authored order, so swap the first adjacent
+## pair of different recipes (two slots, never more than the two moves that cancelled); only a
 ## scenario whose every slot is the same recipe keeps the authored order.
 static func break_identity(result: PackedStringArray, authored: PackedStringArray) -> PackedStringArray:
 	if result != authored:
