@@ -243,10 +243,16 @@ func _test_session_seed(campaign: Resource) -> void:
 	forged = session.duplicate(true)
 	forged.service_seed = -1
 	expect(not ServiceSession.restore(campaign, forged, records).accepted, "a negative seed is rejected")
-	var modified: Resource = campaign.duplicate(true)
-	var slacked: Resource = modified.scenario_for("hot_queue")
+	# Array.duplicate(true) does not copy Resource elements, so a deep campaign copy still shares the
+	# cached hot_queue; duplicate the scenario itself and swap the copy into a shallow campaign copy.
+	var modified: Resource = campaign.duplicate()
+	modified.scenarios = campaign.scenarios.duplicate()
+	var slacked: Resource = hot_queue.duplicate()
 	var slack: Dictionary[String, int] = {"grill": 2, "soup": 1, "salad": 1}
 	slacked.forecast_slack = slack
+	modified.scenarios[campaign.scenarios.find(hot_queue)] = slacked
+	expect(modified.scenario_for("hot_queue") == slacked and campaign.scenario_for("hot_queue") == hot_queue,
+		"the slack-bearing copy replaces hot_queue only in the modified campaign")
 	var drawn_scenario: Resource = slacked.with_service_seed(104076537)
 	var drawn_plan := PreparationPlan.new(drawn_scenario)
 	var drawn_started := drawn_plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
