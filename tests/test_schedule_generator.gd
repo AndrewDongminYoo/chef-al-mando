@@ -12,7 +12,10 @@ func run(_tree: SceneTree) -> void:
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	expect(ScheduleGenerator.recipe_ids(hot_queue, 0) == hot_queue.order_recipe_ids, "seed 0 returns the authored order")
-	expect(ScheduleGenerator.recipe_ids(hot_queue, 104076537) == hot_queue.order_recipe_ids, "zero slack returns the authored order for any seed")
+	var fixed: Resource = hot_queue.duplicate()
+	var no_slack: Dictionary[String, int] = {}
+	fixed.forecast_slack = no_slack
+	expect(ScheduleGenerator.recipe_ids(fixed, 104076537) == hot_queue.order_recipe_ids, "zero slack returns the authored order for any seed")
 	var slacked: Resource = hot_queue.duplicate()
 	var slack: Dictionary[String, int] = {"grill": 2, "soup": 1, "salad": 1}
 	slacked.forecast_slack = slack
@@ -28,6 +31,20 @@ func run(_tree: SceneTree) -> void:
 		expect(counts.get(recipe_id, 0) >= ranges[recipe_id]["min"] and counts.get(recipe_id, 0) <= ranges[recipe_id]["max"], "drawn count stays inside the forecast range: " + recipe_id)
 	expect(_differs(counts, slacked.baseline_counts()), "a seed with available slack moves at least one order")
 	expect(drawn != ScheduleGenerator.recipe_ids(slacked, 53743680), "different seeds draw different orders")
+	var changed: int = 0
+	for index: int in drawn.size():
+		if drawn[index] != hot_queue.order_recipe_ids[index]:
+			changed += 1
+	var total_slack: int = 0
+	for recipe_id: String in slacked.menu_ids:
+		total_slack += ranges[recipe_id]["max"] - ranges[recipe_id]["baseline"]
+	expect(changed >= 1 and changed <= total_slack,
+		"a seeded draw changes between one slot and the total slack (changed %d of %d)" % [changed, total_slack])
+	var authored_runs: Dictionary = _longest_runs(hot_queue.order_recipe_ids)
+	var drawn_runs: Dictionary = _longest_runs(drawn)
+	for recipe_id: String in slacked.menu_ids:
+		expect(drawn_runs.get(recipe_id, 0) <= authored_runs.get(recipe_id, 0) + 1,
+			"slot replacement keeps the authored wave structure within one extra consecutive order: " + recipe_id)
 	var identical: int = 0
 	for sweep_seed: int in range(1, 51):
 		if ScheduleGenerator.recipe_ids(slacked, sweep_seed) == hot_queue.order_recipe_ids:
@@ -72,3 +89,14 @@ func _differs(actual: Dictionary, expected: Dictionary) -> bool:
 		if actual.get(recipe_id, 0) != expected[recipe_id]:
 			return true
 	return false
+
+
+func _longest_runs(recipe_ids: PackedStringArray) -> Dictionary:
+	var longest: Dictionary = {}
+	var current: String = ""
+	var length: int = 0
+	for recipe_id: String in recipe_ids:
+		length = length + 1 if recipe_id == current else 1
+		current = recipe_id
+		longest[recipe_id] = maxi(longest.get(recipe_id, 0), length)
+	return longest
