@@ -150,7 +150,7 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 이후의 스윕은 세션마다 다시 작성하지 않고 커밋된 `tests/sweep_policies.gd`로 돌립니다.
 `"$GODOT_BIN" --headless --path <워크트리> --script tests/sweep_policies.gd -- --scenario <영업 ID> [--attempt N] [--items id:상한,...] [--keep duties|priorities|placement,...] [--best]` 형태로 실행하며, 프렙 수량(`set_prep`)은 `--keep`과 무관하게 항상 스윕 대상이라 이 목록에 없고 `--items`로만 순회하며, `--items`를 생략하면 그 영업의 미장 전부를 상한 `prep_labor_capacity / labor_units`로 순회합니다.
 `--keep`은 기준 정책에서 그대로 둘 프렙 외 명령 종류이고, 생략하면 담당·우선순위·배치를 전부 유지합니다.
-스크립트는 `purchases` 토큰도 받지만 기준 정책에는 발주 명령이 없어 발주는 항상 작성값이며, 이 토큰은 기준 정책에 `set_purchase`가 추가될 때에만 의미가 생깁니다.
+`--keep`의 `purchases` 토큰은 지금은 기준 정책에 발주 명령이 없어 항상 작성값을 남기며, 이 토큰은 기준 정책에 `set_purchase`가 추가될 때에만 의미가 생깁니다(시도별로 발주를 바꾸는 것은 아래 `--purchases draw`의 몫입니다).
 출력은 두 목표를 모두 통과한 조합마다 수량·노동량·제공·손익·진행중 작업을 담은 `SWEEP` 한 줄을 찍고, 끝에 시나리오·시도·시드·조합 수·통과 수·최댓값을 담은 `SWEEP_SUMMARY` 한 줄을 찍으며, `--best`를 주면 통과 여부와 무관한 사전순 최댓값도 그 줄에 함께 찍습니다.
 같은 인자로 다시 돌리면 같은 조합 수와 같은 `best`가 나옵니다.
 `--purchases draw`는 그 시도의 `draw_aware_policy`가 만드는 발주 명령을 기준 정책의 발주 대신 고정하고, `--without <종류,…>`는 `--keep`이 남긴 기준 명령에서 `set_purchase`·`set_duty`·`move_station`·`rotate_station`·`priorities`를 뺀 뒤 스윕하며, `--gate`는 다른 인자를 무시하고 시도 0~5의 `SEED_GATE_ROW`와 `SEED_GATE_VERDICT`만 찍습니다.
