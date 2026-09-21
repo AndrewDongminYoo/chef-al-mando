@@ -48,6 +48,33 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 	return policy
 
 
+## §10 풀림 검사의 "실제 추첨을 아는 기준 정책": 시드 0 기준 정책 앞에, 원재료마다 작성 발주와 그 시드의
+## 구성이 필요로 하는 양 가운데 큰 값을 set_purchase로 맞춥니다. 시드 0에서는 작성된 purchases와 같습니다.
+static func draw_aware_policy(scenario: Definitions, seed_value: int) -> Dictionary:
+	var seeded: Definitions = scenario if seed_value == 0 else scenario.with_service_seed(seed_value)
+	var needs: Dictionary[String, int] = {}
+	for arrival: Dictionary in seeded.order_schedule():
+		var recipe := scenario.recipe_for(arrival.recipe_id)
+		for ingredient_id: String in recipe.ingredients:
+			needs[ingredient_id] = needs.get(ingredient_id, 0) + recipe.ingredients[ingredient_id]
+	var policy: Dictionary = {"preparation": [], "priorities": {}}
+	for ingredient: Definitions.IngredientDef in scenario.ingredients:
+		if not ingredient.purchasable:
+			continue
+		var quantity: int = maxi(scenario.purchases.get(ingredient.id, 0), needs.get(ingredient.id, 0))
+		if quantity > 0:
+			_add(policy, "set_purchase", ingredient.id, quantity)
+	var reference := reference_policy(scenario.id)
+	policy.preparation.append_array(reference.preparation)
+	policy.priorities = reference.priorities.duplicate(true)
+	return policy
+
+
+static func passes_targets(scenario: Definitions, run: Dictionary) -> bool:
+	return run.accepted and run.snapshot.accounting.served >= scenario.minimum_served \
+		and run.snapshot.accounting.profit >= scenario.minimum_profit
+
+
 static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 	var alternatives: Array[Dictionary] = []
 	var policy: Dictionary = {"preparation": [], "priorities": {}}
@@ -117,8 +144,9 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 	return alternatives
 
 
-static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: int = 1) -> Dictionary:
-	var plan := PreparationPlan.new(scenario)
+static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: int = 1, seed_value: int = 0) -> Dictionary:
+	var seeded: Definitions = scenario if seed_value == 0 else scenario.with_service_seed(seed_value)
+	var plan := PreparationPlan.new(seeded)
 	var sequence: int = 0
 	for choice: Dictionary in policy.get("preparation", []):
 		sequence += 1
@@ -136,7 +164,7 @@ static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: in
 	driver.set_speed(speed)
 	driver.set_paused(false)
 	sequence = 0
-	for arrival: Dictionary in scenario.order_schedule():
+	for arrival: Dictionary in seeded.order_schedule():
 		_drive_to(driver, sim, arrival.arrival_tick, speed)
 		if policy.get("priorities", {}).has(arrival.recipe_id):
 			sequence += 1
