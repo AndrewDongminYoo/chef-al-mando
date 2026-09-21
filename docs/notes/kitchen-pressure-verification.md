@@ -320,6 +320,36 @@ C의 시도 4와 D의 시도 1·4는 작성 구성과 건수가 같고 도착 �
 결론: C는 시도 3·4, D는 시도 1–5에서 통과 0이므로 두 메뉴에 폭이 있는 네 slack(A·B·C·D) 어느 것도 상한 11 이하에서 시도 1–5를 모두 통과시키지 못하며, 가장 작은 실현 가능한 (slack, 상한) 쌍은 없습니다.
 따라서 재설계는 구성 값(`order_recipe_ids`·`order_arrival_ticks`)을 순서 변동에 견디도록 바꾸는 것이어야 하고, 그 재설계는 승인 대상입니다.
 
+#### 우선순위 지도와 실패 원인
+
+위 스윕은 모두 우선순위를 기준 정책의 `{"grill": 2}`로 고정했는데 우선순위는 `hot_queue`의 지렛대(§4.3)이므로, 재설계 판단 전에 우선순위 지도 전체를 scratchpad 스크립트로 쟀습니다.
+스크립트는 커밋하지 않았고 `"$GODOT_BIN" --headless --path <워크트리> --script <scratchpad>/priority_probe.gd`와 `... --script <scratchpad>/mechanism_probe.gd`로 돌렸으며, 캠페인을 읽어 `hot_queue`를 `duplicate()`한 뒤 `forecast_slack`과 `prep_labor_capacity`를 코드에서 넣고 `Policies.run_policy(scenario, policy, 1, seed)`를 직접 호출하므로 `.tres`는 건드리지 않았습니다(`git status --short`는 이 절 편집 전에 비어 있었습니다).
+주문의 우선순위 기본값은 1입니다(`sim/service_sim.gd`의 `OrderState.priority = 1`, 도착 시 `_menu_priorities.get(recipe_id, 1)`), `set_priority`는 0–2만 받으며, `run_policy`는 정책의 `priorities`에 있는 메뉴마다 그 주문의 도착 tick + 1에 `set_priority`를 넣습니다.
+지도는 세 메뉴 × {0, 1, 2}의 27가지이고 `{1, 1, 1}`이 "우선순위 없음"과 같으며, 프렙 집합은 기준 프렙 `marinated_protein 1, prepped_vegetable 3`과 상한 안에서 노동량을 나눈 7가지(상한 6: `marinated_protein 1, prepped_grain 1, soup_base 1, prepped_vegetable 1` / `marinated_protein 2` / `soup_base 3, prepped_grain 3` / `marinated_protein 1, soup_base 3` / `marinated_protein 1, prepped_grain 3` / `prepped_vegetable 6` / `soup_base 2, prepped_grain 2, prepped_vegetable 2`, 상한 11: `marinated_protein 1, prepped_grain 4, soup_base 4` / `marinated_protein 2, soup_base 5` / `marinated_protein 3, prepped_vegetable 2` / `prepped_grain 4, soup_base 4, prepped_vegetable 3` / `marinated_protein 1, prepped_grain 2, soup_base 2, prepped_vegetable 4` / `marinated_protein 2, prepped_grain 2, soup_base 3` / `soup_base 5, prepped_grain 5`)로, 해당 상한 11 스윕이 통과 행을 하나도 찍지 않아 상위 8행을 가져올 수 없었기 때문입니다.
+발주는 그 시도의 추첨 인지 발주로 고정했고, 경우마다 27 × 8 = 216쌍이 전부 수락됐습니다.
+
+| 경우                   | 시도 | 상한 |  쌍 | 통과 | 최고 (지도 grill·soup·salad / 프렙 / 제공 / 손익)                        |
+| ---------------------- | ---: | ---: | --: | ---: | ------------------------------------------------------------------------ |
+| 시작 slack `{2, 1, 1}` |    2 |    6 | 216 |    0 | 0·1·0 / `marinated_protein 1, prepped_vegetable 3` / 12 / 650            |
+| 시작 slack `{2, 1, 1}` |    2 |   11 | 216 |    0 | 0·0·1 / `prepped_grain 5, soup_base 5` / 12 / 1,250                      |
+| slack B `{0, 1, 1}`    |    3 |    6 | 216 |    0 | 1·0·0 / `marinated_protein 1, prepped_vegetable 3` / 11 / 4,000          |
+| slack B `{0, 1, 1}`    |    3 |   11 | 216 |    0 | 1·0·0 / `marinated_protein 1, prepped_vegetable 3` / 11 / 4,000          |
+| slack C `{1, 0, 1}`    |    3 |   11 | 216 |    0 | 1·0·0 / `marinated_protein 1, prepped_vegetable 3` / 11 / 3,850          |
+| slack C `{1, 0, 1}`    |    4 |   11 | 216 |    0 | 1·0·0 / `marinated_protein 1, prepped_grain 4, soup_base 4` / 12 / 4,150 |
+
+어느 경우에도 통과 쌍이 없으므로 시도별 검사는 돌릴 대상이 없었습니다(수치는 `priority-probe.log`).
+시도 2에서 12건은 우선순위로 닿지만 그 12건은 국·샐러드로 채워져 손익이 650·1,250에 그치고, 시도 3은 어떤 지도로도 11건이 최대입니다.
+
+실패 원인은 시드 0 기준 실행과 시작 slack 시도 2 기준 실행(둘 다 상한 6, 추첨 인지 정책)의 최종 스냅샷으로 읽었습니다(수치는 `mechanism-probe.log`).
+시드 0은 구이 7 제공·3 만료, 국 0 제공·5 만료, 샐러드 5 제공으로 12건·매출 13,000·손익 4,750이고, 시도 2는 구이 3 제공·6 만료, 국 1 제공·4 만료, 샐러드 5 제공·1 만료로 9건·매출 7,900·손익 -450입니다.
+대기 사유 합계(`metrics.orders`)는 시드 0이 `no_responsible_employee` 3,327·`station_in_use` 143·`moving` 1,325·`working` 4,150, 시도 2가 3,288·392·1,295·3,855이고 `missing_ingredients`는 둘 다 0이며, 화구 `hot_01`의 예약 tick은 시드 0 2,705, 시도 2 2,495(영업 3,000 tick)입니다.
+도착 tick은 추첨과 무관하게 고정이라 두 온식(구이·국, `cook_role = "hot"`) 주문이 같은 tick에 오는 것은 두 실행 모두 10과 700뿐이며, 시드 0의 작성 순서는 그 밖의 모든 쌍에서 온식 하나에 냉식(샐러드) 하나를 붙입니다.
+시도 2가 무너지는 지점은 700 파동입니다: 시드 0에서는 700에 같이 온 국 6·구이 7 가운데 구이가 1140에 제공되고 국이 만료되는데, 시도 2에서는 같은 700의 국 6이 1135에 제공되고 구이 7이 1200에 만료됩니다.
+두 실행의 차이는 그 앞 상태뿐입니다: 시드 0은 400의 구이 5가 855까지 화구를 쓰고 있어 700에 온식이 바로 들어갈 수 없지만, 시도 2는 270·400이 둘 다 샐러드여서 구이 3이 끝난 585부터 화구가 비어 있고, 700 도착 시점의 두 주문은 우선순위가 모두 기본값 1이며 구이의 우선순위 2 명령은 701에야 적용되므로(`run_policy`의 `apply_tick = tick + 1`) 빈 화구 앞의 첫 배정을 우선순위가 가르지 못하고 준비가 짧은 국(60 대 90 tick)이 먼저 화구에 들어갑니다.
+이어서 구이 9(960)가 1460에, 국 10·11과 1390 파동의 샐러드 12까지 만료되고(두 직원이 모두 묶여 `no_responsible_employee`), 1520·1650·1780에 연달아 온 구이 13–15는 한 화구에서 조리 240 tick씩 720 tick이 필요해 인내 500 tick 안에 하나도 끝나지 않습니다(시드 0의 같은 자리 구이·국·구이도 셋 다 만료라 이 구간은 순서와 무관한 손실입니다).
+손익 산술도 여유가 없습니다: 시드 0의 통과는 구이 7 × 1,500 + 샐러드 5 × 500 = 13,000에서 발주 6,250·인건비 2,000을 뺀 4,750으로 정확히 목표이고, 시도 2는 추첨 인지 발주가 채소 16으로 6,350이라 같은 조합이라도 4,650으로 미달이며, 4,750에는 매출 13,100 이상, 곧 구이 7에 국 하나를 더하거나 구이 8이 필요한데 그것은 화구 하나가 순서 바뀐 열에서 끝낼 수 있는 온식 작업량을 넘습니다.
+따라서 순서가 바뀐 추첨이 실패하는 이유는 화구 하나의 온식 처리량이 목표에 딱 맞게 잡혀 있어(시드 0 여유 0) 온식 두 건이 같은 파동에 오거나 온식이 연달아 오는 순서마다 한 건씩 잃기 때문이고, 우선순위 지도는 도착 tick 다음 tick에 적용되므로 빈 화구를 잡는 첫 배정을 바꾸지 못합니다.
+
 ## 저장 호환성
 
 새 쓰기가 쓰는 콘텐츠 버전은 `persistence/campaign_store.gd`의 `VERSIONS`가 소유하고, 그 버전 이력은 [M4 모바일 명세](../specs/m4-mobile.md)가 소유합니다.
