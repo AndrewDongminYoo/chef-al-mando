@@ -95,7 +95,7 @@ work_position = Vector2i(9, 5)
 [resource]
 script = ExtResource("16_tmbfc")
 display_name = "네 사람의 주방"
-briefing = "냉식대와 화구가 둘씩 있고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
+briefing = "냉식대와 화구가 둘씩 있고 주문이 여섯 차례에 걸쳐 몰려오며 묶음마다 온식 한 건이 뒤따릅니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
 operation_problem = "담당 분리"
 minimum_served = 26
 minimum_profit = 12000

@@ -668,8 +668,8 @@ msgstr "Four-person kitchen"
 msgid "담당 분리"
 msgstr "Split duties"
 
-msgid "냉식대와 화구가 둘씩 있고 주문이 다섯 차례에 걸쳐 몰려옵니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
-msgstr "The kitchen has two cold stations and two hot stations, and orders arrive in five rushes. Split four employee duties and prep between the fixed storage and pass stations to serve every order."
+msgid "냉식대와 화구가 둘씩 있고 주문이 여섯 차례에 걸쳐 몰려오며 묶음마다 온식 한 건이 뒤따릅니다. 고정된 재료 보관대와 출고대 사이에서 네 직원의 담당과 프렙을 나눠 모든 주문을 처리하세요."
+msgstr "The kitchen has two cold stations and two hot stations, and orders arrive in six rushes with one hot order following each. Split four employee duties and prep between the fixed storage and pass stations to serve every order."
 
 msgid "몰려오는 주문"
 msgstr "Order rush"
