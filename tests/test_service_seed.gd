@@ -195,15 +195,19 @@ func _test_scenario_fields(campaign: Resource) -> void:
 		expect(scenario.service_seed == 0, "authored service seed is zero: " + scenario.id)
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var counts: Dictionary = hot_queue.baseline_counts()
-	expect(counts.get("grill") == 10 and counts.get("soup") == 5 and counts.get("salad") == 5, "baseline counts come from the authored order")
-	var ranges: Dictionary = hot_queue.forecast_ranges()
-	expect(ranges.grill == {"baseline": 10, "min": 10, "max": 10}, "zero slack collapses the range to the baseline")
+	expect(counts.get("grill") == 8 and counts.get("soup") == 4 and counts.get("salad") == 8, "baseline counts come from the authored order")
+	# hot_queue.tres는 2026-09-22 재조율부터 작성 slack을 가지므로 slack 0 fixture는 복사본에 만듭니다.
+	var fixed: Resource = hot_queue.duplicate()
+	var no_slack: Dictionary[String, int] = {}
+	fixed.forecast_slack = no_slack
+	var ranges: Dictionary = fixed.forecast_ranges()
+	expect(ranges.grill == {"baseline": 8, "min": 8, "max": 8}, "zero slack collapses the range to the baseline")
 	var slacked: Resource = hot_queue.duplicate()
 	var slack: Dictionary[String, int] = {"grill": 2, "soup": 1, "salad": 1}
 	slacked.forecast_slack = slack
 	expect(slacked.validate().is_empty(), "slack on menu items validates")
 	ranges = slacked.forecast_ranges()
-	expect(ranges.grill == {"baseline": 10, "min": 8, "max": 12} and ranges.soup == {"baseline": 5, "min": 4, "max": 6}, "slack widens the range around the baseline")
+	expect(ranges.grill == {"baseline": 8, "min": 6, "max": 10} and ranges.soup == {"baseline": 4, "min": 3, "max": 5}, "slack widens the range around the baseline")
 	var wide: Resource = hot_queue.duplicate()
 	var wide_slack: Dictionary[String, int] = {"soup": 9}
 	wide.forecast_slack = wide_slack
@@ -222,7 +226,7 @@ func _test_scenario_fields(campaign: Resource) -> void:
 	var seeded: Resource = hot_queue.with_service_seed(7)
 	expect(seeded.service_seed == 7 and hot_queue.service_seed == 0, "with_service_seed returns a seeded copy and leaves the source untouched")
 	expect(seeded.id == hot_queue.id and seeded.order_recipe_ids == hot_queue.order_recipe_ids, "the seeded copy keeps the authored content")
-	expect(slacked.maximum_profit(20) == hot_queue.maximum_profit(20) + 2 * _margin(hot_queue, "grill") + _margin(hot_queue, "soup") - 3 * _margin(hot_queue, "salad"), "maximum profit uses the forecast upper bounds")
+	expect(slacked.maximum_profit(20) == fixed.maximum_profit(20) + 2 * _margin(hot_queue, "grill") + _margin(hot_queue, "soup") - 3 * _margin(hot_queue, "salad"), "maximum profit uses the forecast upper bounds")
 
 
 func _test_session_seed(campaign: Resource) -> void:

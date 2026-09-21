@@ -42,10 +42,11 @@ func run(_tree: SceneTree) -> void:
 		"a seeded draw changes between one slot and the total slack (changed %d of %d)" % [changed, total_slack])
 	var authored_runs: Dictionary = _longest_runs(hot_queue.order_recipe_ids)
 	var drawn_runs: Dictionary = _longest_runs(drawn)
-	expect(authored_runs.get("soup", 0) == 1 and authored_runs.get("grill", 0) == 1 and authored_runs.get("salad", 0) == 1,
-		"the authored hot_queue order never repeats a menu in adjacent slots")
-	expect(drawn_runs.get("soup", 0) == 2 and drawn_runs.get("grill", 0) == 1 and drawn_runs.get("salad", 0) == 1,
-		"seed 104076537 raises soup's longest run from 1 to 2 and leaves the others at 1")
+	# 2026-09-22 재조율 뒤의 작성 순서(salad·grill 묶음 → soup → grill → salad, 네 묶음)는 묶음 경계에서만 샐러드가 두 번 이어집니다.
+	expect(authored_runs.get("soup", 0) == 1 and authored_runs.get("grill", 0) == 1 and authored_runs.get("salad", 0) == 2,
+		"the authored hot_queue order repeats a menu only where a wave's last salad meets the next wave's first")
+	expect(drawn_runs.get("soup", 0) == 1 and drawn_runs.get("grill", 0) == 1 and drawn_runs.get("salad", 0) == 3,
+		"seed 104076537 raises salad's longest run from 2 to 3 and leaves the others at 1")
 	var identical: int = 0
 	for sweep_seed: int in range(1, 51):
 		if ScheduleGenerator.recipe_ids(slacked, sweep_seed) == hot_queue.order_recipe_ids:

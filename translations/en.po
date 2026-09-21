@@ -632,8 +632,8 @@ msgstr "Hot-station queue"
 msgid "온식 우선순위"
 msgstr "Hot-order priority"
 
-msgid "주문이 네 차례에 걸쳐 몰려옵니다. 재운 연어만 많이 준비하면 짧은 주문이 밀립니다. 재운 연어와 손질 토마토를 나눠 준비하고 연어 구이 우선순위를 높여 온식 병목을 넘기세요."
-msgstr "Orders arrive in four rushes. Marinating only salmon leaves the short orders waiting. Split prep between marinated salmon and cut tomatoes, and raise the grilled salmon priority to clear the hot-station bottleneck."
+msgid "주문이 네 차례에 걸쳐 몰려옵니다. 차례마다 앞선 연어 구이가 화구를 쓰는 동안 토마토 수프와 다음 구이가 화구 앞에 줄을 서고, 수프가 먼저 오르면 구이가 식습니다. 재운 연어와 손질 토마토를 준비하고 연어 구이 우선순위를 높여 화구를 구이에 먼저 주세요."
+msgstr "Orders arrive in four rushes. In each rush, while the earlier grilled salmon holds the hot station, a tomato soup and the next grilled salmon queue in front of it, and if the soup goes on first the salmon goes cold. Prepare marinated salmon and cut tomatoes, and raise the grilled salmon priority so the hot station goes to the grills first."
 
 msgid "메뉴별 기본 우선순위 · 0~2\n큰 값부터 배정 · 새 주문에 적용\n영업 중 주문별 변경 가능"
 msgstr "Default menu priorities · 0–2\nHigher values go first for new orders.\nChange individual orders during service."

@@ -95,11 +95,11 @@ static func lever_subsets(scenario_id: String) -> Array:
 static func lever_free_policy(scenario_id: String) -> Dictionary:
 	var policy: Dictionary = without_lever_policy(scenario_id)
 	match scenario_id:
-		## sweep: --scenario hot_queue --attempt 0 --without priorities --best → passed 0, best_any {"marinated_protein": 1, "prepped_vegetable": 1} · 9 · -950
+		## sweep: --scenario hot_queue --attempt 0 --without priorities --best → passed 0, best_any {"prepped_grain": 3, "soup_base": 3} · 12 · 1,400
 		"hot_queue":
 			policy = {"preparation": [], "priorities": {}}
-			_add(policy, "set_prep", "marinated_protein", 1)
-			_add(policy, "set_prep", "prepped_vegetable", 1)
+			_add(policy, "set_prep", "prepped_grain", 3)
+			_add(policy, "set_prep", "soup_base", 3)
 		## sweep: --scenario shared_stock --attempt 0 --without set_purchase --best → passed 0, best_any {"prepped_grain": 6, "soup_base": 5} · 15 · 3,700
 		"shared_stock":
 			policy = {"preparation": [], "priorities": {}}
