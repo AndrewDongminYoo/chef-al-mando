@@ -148,8 +148,9 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 `split_duties`는 담당을 두지 않은 `thawed_protein 1`만으로도 26건·12,350원이 나와 담당 분리가 필수 조건이 아니게 됐고, 기준과 대체 둘의 회계가 같은 세 방향 동률은 2026-09-20 표와 마찬가지로 해시 차이로만 구분됩니다.
 
 이후의 스윕은 세션마다 다시 작성하지 않고 커밋된 `tests/sweep_policies.gd`로 돌립니다.
-`"$GODOT_BIN" --headless --path <워크트리> --script tests/sweep_policies.gd -- --scenario <영업 ID> [--attempt N] [--items id:상한,...] [--keep duties|priorities|placement|purchases,...] [--best]` 형태로 실행하며, 프렙 수량(`set_prep`)은 `--keep`과 무관하게 항상 스윕 대상이라 이 목록에 없고 `--items`로만 순회하며, `--items`를 생략하면 그 영업의 미장 전부를 상한 `prep_labor_capacity / labor_units`로 순회합니다.
-`--keep`은 기준 정책에서 그대로 둘 프렙 외 명령 종류이고, 생략하면 담당·우선순위·배치·발주를 전부 유지합니다.
+`"$GODOT_BIN" --headless --path <워크트리> --script tests/sweep_policies.gd -- --scenario <영업 ID> [--attempt N] [--items id:상한,...] [--keep duties|priorities|placement,...] [--best]` 형태로 실행하며, 프렙 수량(`set_prep`)은 `--keep`과 무관하게 항상 스윕 대상이라 이 목록에 없고 `--items`로만 순회하며, `--items`를 생략하면 그 영업의 미장 전부를 상한 `prep_labor_capacity / labor_units`로 순회합니다.
+`--keep`은 기준 정책에서 그대로 둘 프렙 외 명령 종류이고, 생략하면 담당·우선순위·배치를 전부 유지합니다.
+스크립트는 `purchases` 토큰도 받지만 기준 정책에는 발주 명령이 없어 발주는 항상 작성값이며, 이 토큰은 기준 정책에 `set_purchase`가 추가될 때에만 의미가 생깁니다.
 출력은 두 목표를 모두 통과한 조합마다 수량·노동량·제공·손익·진행중 작업을 담은 `SWEEP` 한 줄을 찍고, 끝에 시나리오·시도·시드·조합 수·통과 수·최댓값을 담은 `SWEEP_SUMMARY` 한 줄을 찍으며, `--best`를 주면 통과 여부와 무관한 사전순 최댓값도 그 줄에 함께 찍습니다.
 같은 인자로 다시 돌리면 같은 조합 수와 같은 `best`가 나옵니다.
 
@@ -157,7 +158,7 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 
 [예보 콘텐츠 계획](../plans/forecast-content-implementation.md) Task 5의 측정이며, 운영자 답은 `split_duties`는 준비 노동량 상한 스윕 허용, `final_service`는 목표를 올리지 않고 여유 측정입니다.
 `forecast_slack`이 비어 있어(같은 계획의 Task 4 취소) 시도 1–5의 시드는 모두 작성 순서와 같으므로 아래는 시도 0(시드 0)만 측정했습니다.
-모든 스윕은 위 `tests/sweep_policies.gd`로 `--attempt 0 --best`를 붙여 돌렸고, 발주는 `--keep`에 `purchases`를 넣지 않았으므로 작성값입니다.
+모든 스윕은 위 `tests/sweep_policies.gd`로 `--attempt 0 --best`를 붙여 돌렸고, 발주는 도구의 인자가 아니라 항상 작성값입니다.
 두 영업 모두 목표값·상한·발주는 바꾸지 않았고, 이 절이 남기는 것은 표와 결론뿐입니다.
 
 `split_duties`의 미장은 `prepped_vegetable`·`prepped_grain`·`prepped_mushroom`·`thawed_protein` 넷이고 `marinated_protein`은 이 영업의 재료 목록에 없어 도구가 `--items marinated_protein:2`를 거부하므로, `--items prepped_vegetable:7,prepped_grain:6,prepped_mushroom:6,thawed_protein:3`으로 돌렸습니다.

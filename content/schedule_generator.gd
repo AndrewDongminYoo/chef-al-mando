@@ -3,7 +3,7 @@ extends RefCounted
 ## (시나리오, 시드) → 주문 메뉴 순서의 순수 함수.
 ## 시드 0이거나 모든 메뉴의 slack 합이 0이면 작성된 순서를 그대로 돌려줍니다.
 ## 그 외에는 예보 범위 안에서 건수를 옮기되, 한 이동은 기증 메뉴가 든 슬롯 하나를 수신 메뉴로 바꾸는 것이고
-## 슬롯을 섞지 않으므로 작성된 파동 구조가 유지됩니다.
+## 슬롯을 섞지 않으므로 바뀐 슬롯 수가 slack 합을 넘지 않습니다(같은 메뉴가 더 길게 이어질 수는 있습니다).
 ## 시뮬레이션 상태, 시계, 저장 파일을 읽지 않습니다.
 
 const FNV_OFFSET: int = 2166136261
@@ -59,9 +59,12 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 	return break_identity(result, authored)
 
 
-## If no move is possible at all, the result equals the authored order. A seeded draw must differ
-## from the authored order, so swap the first adjacent pair of different recipes; only a scenario
-## whose every slot is the same recipe keeps the authored order.
+## If no move is possible at all, the result equals the authored order. Moves can also cancel each
+## other (a slot goes donor→receiver and another slot receiver→donor); when that cancellation lands on
+## the same slot the array is authored again and reaches this fallback too, while a cancellation on
+## different slots leaves the counts equal to the baseline but the array changed. A seeded draw must
+## differ from the authored order, so swap the first adjacent pair of different recipes; only a
+## scenario whose every slot is the same recipe keeps the authored order.
 static func break_identity(result: PackedStringArray, authored: PackedStringArray) -> PackedStringArray:
 	if result != authored:
 		return result
