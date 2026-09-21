@@ -638,7 +638,7 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 상한은 스윕 동안 15로 두었고 12–14의 값은 통과 조합의 노동량으로 도출했습니다(위 지렛대 측정 절이 확인한 도출 규칙).
 한 시도의 스윕은 조합 16,473개에 12–13분이 걸렸고, 여섯 번 돌렸습니다(시도별 다섯 번과 지렛대 스윕 한 번).
 시도별 교집합은 scratchpad의 파이썬 스크립트로 구했고(`SWEEP` 줄의 `quantities`를 시도별 집합으로 모아 교집합을 만들고 여섯 시도 손익 최솟값 순으로 정렬), 추첨 내용은 `ScheduleGenerator.recipe_ids`를 시도별로 찍는 scratchpad 탐침으로 읽었으며 둘 다 커밋하지 않았습니다.
-실패 문장에 `insufficient_budget`은 어느 단계에서도 없었으므로 §5의 예산·작성 발주 수단은 쓰지 않았습니다.
+실패 문장에 `insufficient_budget`은 어느 단계에서도 없었고(게이트는 기준 정책만 봅니다), 여섯 스윕의 `combinations`가 모두 16,473으로 위 `--items` 상한과 상한 15에서 노동량이 허용하는 조합 수와 정확히 같아 예산 때문에 거부된 조합도 없었으며, 시작 현금은 손익에 들어가지 않으므로 §5의 예산·작성 발주 수단은 쓰지 않았습니다.
 
 #### 1바퀴: 시작 slack 네 메뉴 각 1
 
@@ -707,7 +707,7 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 
 `... --scenario long_route --attempt 0 --without move_station,rotate_station --items marinated_protein:5,prepped_vegetable:6,prepped_grain:6,prepped_mushroom:6,soup_base:6,thawed_protein:6 --best`는 조합 16,473 가운데 통과 0이고, 통과 무관 최댓값은 `marinated_protein 5` · 노동량 15 · 18건 · 8,700원입니다.
 이 최댓값은 새 기준 정책에서 배치만 뺀 정책(`without_lever_policy`)과 같은 프렙이라 그대로 고정하면 계획 Task 10의 "스윕에서 고정한 정책은 지렛대를 뺀 기준 정책과 다르다" 검사가 실패하므로, 같은 계획의 지시대로 통과 무관 순위의 다음 행으로 고정했습니다.
-그 순위는 배치 없는 16,473 조합 전부를 제공·손익 사전순으로 정렬한 scratchpad 탐침으로 읽었고(커밋하지 않음), 최댓값과 회계가 같은 동률 행은 없으며 다음 행은 `marinated_protein 4, prepped_mushroom 1, thawed_protein 2`와 `marinated_protein 4, soup_base 1, thawed_protein 2`(둘 다 노동량 15 · 17건 · 7,700원)입니다.
+그 순위는 배치 없는 16,473 조합 전부를 도구의 `_better` 순서(제공, 그다음 손익)로 정렬한 scratchpad 탐침으로 읽었고(커밋하지 않음; 도구는 통과한 조합에만 `SWEEP` 줄을 찍는데 통과가 0이라 다음 행을 도구 출력에서 읽을 수 없습니다), 최댓값과 회계가 같은 동률 행은 없으며 다음 행은 `marinated_protein 4, prepped_mushroom 1, thawed_protein 2`와 `marinated_protein 4, soup_base 1, thawed_protein 2`(둘 다 노동량 15 · 17건 · 7,700원)입니다.
 앞의 것이 `lever_free_policy("long_route")`에 고정됐고, `M3_LEVER long_route` 줄은 17건·7,700원을 찍습니다.
 기준 프렙이 5로 바뀐 뒤에도 회전만 뺀 정책은 22건·13,700원으로 기준과 회계가 같고(이동만 빼면 12건·800원, 둘 다 빼면 위 18건·8,700원), 위 `shared_stock` 절이 적은 대로 두 명령 종류는 한 지렛대로 묶여 검사됩니다.
 
@@ -720,7 +720,7 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 | 대체 B | 기준 + 직원 3 온식 담당                           | 같음(기준을 따르므로 프렙 5 + 직원 3 온식 담당) · 15/15 | 24 · 16,800 |
 
 세 정책의 해시는 쌍별로 다르고 1배·4배 해시가 같으며, 대체 A는 그대로 통과해 프렙을 바꾸지 않았습니다.
-`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,130개 검사를 실패 없이 통과했고(위 `split_duties` 절의 수와 같으며 이 영업의 기준 정책 명령 수는 7개 그대로), `... check.sh mise`는 365개를 통과했습니다.
+`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,130개 검사를 실패 없이 통과했고(위 `split_duties` 절의 수와 같으며 이 영업의 기준 정책 명령 수는 14개 그대로: 프렙 1, 이동 12, 회전 1이고 `_moves`는 칸 수만큼 `move_station`을 더합니다), `... check.sh mise`는 365개를 통과했습니다.
 스윕 로그·교집합 스크립트·탐침은 세션 scratchpad에만 있고 커밋하지 않았습니다.
 
 ### 2026-09-21 재조율: `rush_hour` (수렴 실패, 측정만)
