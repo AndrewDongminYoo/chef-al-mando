@@ -9,6 +9,10 @@ const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 
 func _init() -> void:
 	var arguments := _arguments()
+	if not arguments.has("scenario"):
+		push_error("missing --scenario")
+		quit(2)
+		return
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	var scenario: Resource = campaign.scenario_for(arguments.get("scenario", ""))
 	if scenario == null:
@@ -22,6 +26,12 @@ func _init() -> void:
 	if arguments.has("items"):
 		for entry: String in arguments["items"].split(","):
 			var parts := entry.split(":")
+			var ingredient: Resource = scenario.ingredient_for(parts[0])
+			if parts.size() != 2 or not parts[1].is_valid_int() or int(parts[1]) < 0 \
+				or ingredient == null or not ingredient.is_mise():
+				push_error("invalid --items entry: " + entry)
+				quit(2)
+				return
 			items.append(parts[0])
 			caps.append(int(parts[1]))
 	else:
