@@ -7,6 +7,7 @@ const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 const StoreTests := preload("res://tests/test_campaign_store.gd")
+const FIXED_FORECAST: Array[String] = ["first_shift", "lunch_prep"]
 
 
 func run(tree: SceneTree) -> void:
@@ -178,7 +179,19 @@ func _boot(tree: SceneTree, scene_path: String, file_path: String) -> Control:
 
 func _test_scenario_fields(campaign: Resource) -> void:
 	for scenario: Resource in campaign.scenarios:
-		expect(scenario.forecast_slack.is_empty(), "authored slack is empty in this PR: " + scenario.id)
+		if scenario.id in FIXED_FORECAST:
+			expect(scenario.forecast_slack.is_empty(), "the first two services keep a fixed forecast: " + scenario.id)
+		elif not scenario.forecast_slack.is_empty():
+			var total: int = 0
+			for recipe_id: String in scenario.menu_ids:
+				var slack: int = scenario.forecast_slack.get(recipe_id, 0)
+				total += slack
+				expect(slack >= 0 and slack <= maxi(1, scenario.baseline_counts()[recipe_id] / 5),
+					"authored slack stays within a fifth of the baseline: %s %s" % [scenario.id, recipe_id])
+			expect(total > 0, "authored slack is not all zeros: " + scenario.id)
+			for attempt: int in [1, 2, 3, 4, 5]:
+				expect(ScheduleGenerator.recipe_ids(scenario, ScheduleGenerator.service_seed_for(scenario.id, attempt)) != scenario.order_recipe_ids,
+					"authored slack moves at least one order on attempt %d: %s" % [attempt, scenario.id])
 		expect(scenario.service_seed == 0, "authored service seed is zero: " + scenario.id)
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var counts: Dictionary = hot_queue.baseline_counts()
@@ -344,7 +357,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	var six_field_session := ServiceSession.capture("first_shift", session_started.selection, session_sim, 1, 0, 0)
 	var five_field_session := six_field_session.duplicate(true)
 	five_field_session.erase("service_seed")
-	var legacy_session_document := {"schema_version": 3, "content_version": 6, "sim_version": 1, "records": {}, "active_session": five_field_session}
+	var legacy_session_document := {"schema_version": 3, "content_version": 7, "sim_version": 1, "records": {}, "active_session": five_field_session}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(legacy_session_document))
 	file.close()
@@ -362,7 +375,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	file.close()
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records", "a schema 4 document whose session lacks service_seed is rejected as corrupt")
-	var seeded_session_document := {"schema_version": 4, "content_version": 6, "sim_version": 1, "records": {}, "active_session": six_field_session, "attempts": {}}
+	var seeded_session_document := {"schema_version": 4, "content_version": 7, "sim_version": 1, "records": {}, "active_session": six_field_session, "attempts": {}}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(seeded_session_document))
 	file.close()

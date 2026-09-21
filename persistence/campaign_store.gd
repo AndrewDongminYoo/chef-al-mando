@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 4, "content_version": 6, "sim_version": 1}
+const VERSIONS := {"schema_version": 4, "content_version": 7, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
@@ -168,7 +168,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and int(version) in READABLE_SCHEMA_VERSIONS:
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5, 6]:
 			content_updated = true
 			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue
@@ -231,9 +231,10 @@ func _read(target: String) -> Dictionary:
 
 
 func _content_update_restarts_session(source_content_version: int, _active_session: Dictionary) -> bool:
-	# Content 5 keyed prep quantities by mise item and content 6 added missing_mise_ids to every order
-	# snapshot with mixed consumption, so no earlier session can restore.
-	return source_content_version < 6
+	# Content 5 keyed prep quantities by mise item, content 6 added missing_mise_ids with mixed
+	# consumption, and content 7 authored forecast_slack so a seeded session's schedule no longer
+	# matches its snapshot; no earlier session can restore.
+	return source_content_version < 7
 
 
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:
