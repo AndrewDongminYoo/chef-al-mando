@@ -95,6 +95,11 @@ static func lever_subsets(scenario_id: String) -> Array:
 static func lever_free_policy(scenario_id: String) -> Dictionary:
 	var policy: Dictionary = without_lever_policy(scenario_id)
 	match scenario_id:
+		## sweep: --scenario hot_queue --attempt 0 --without priorities --best → passed 0, best_any {"marinated_protein": 1, "prepped_vegetable": 1} · 9 · -950
+		"hot_queue":
+			policy = {"preparation": [], "priorities": {}}
+			_add(policy, "set_prep", "marinated_protein", 1)
+			_add(policy, "set_prep", "prepped_vegetable", 1)
 		## sweep: --scenario shared_stock --attempt 0 --without set_purchase --best → passed 0, best_any {"prepped_grain": 6, "soup_base": 5} · 15 · 3,700
 		"shared_stock":
 			policy = {"preparation": [], "priorities": {}}
@@ -113,6 +118,12 @@ static func lever_free_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "marinated_protein", 4)
 			_add(policy, "set_prep", "prepped_mushroom", 1)
 			_add(policy, "set_prep", "thawed_protein", 2)
+		## rush_hour은 지렛대가 set_prep·priorities 둘이라 이 스윕 도구(프렙만 순회)가 닿지 않아, Task 9의
+		## placement·duty·purchase 탐침(rh_lever_free_probe.gd, 시드 0·작성 발주, 85가지)에서 고정합니다:
+		## move_station cold_01 left 2회 → 23 · 6,500(목표 23건·8,500원 미달). docs/notes/kitchen-pressure-verification.md의 rush_hour 절 참고.
+		"rush_hour":
+			policy = {"preparation": [], "priorities": {}}
+			_moves(policy, "cold_01", "left", 2)
 	return policy
 
 
