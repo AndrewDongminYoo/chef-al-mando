@@ -43,13 +43,11 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "rotate_station", "hot_02", null)
 			_moves(policy, "hot_02", "up", 2)
 		"split_duties":
+			_add(policy, "set_duty", "employee_01", "cold")
 			_add(policy, "set_duty", "employee_02", "cold")
 			_add(policy, "set_duty", "employee_03", "hot")
 			_add(policy, "set_duty", "employee_04", "hot")
-			_add(policy, "set_prep", "prepped_vegetable", 6)
-			_add(policy, "set_prep", "prepped_grain", 3)
-			_add(policy, "set_prep", "prepped_mushroom", 4)
-			_add(policy, "set_prep", "thawed_protein", 2)
+			_add(policy, "set_prep", "prepped_vegetable", 7)
 		"rush_hour":
 			_add(policy, "set_prep", "prepped_vegetable", 4)
 			_add(policy, "set_prep", "prepped_grain", 3)
@@ -102,6 +100,11 @@ static func lever_free_policy(scenario_id: String) -> Dictionary:
 			policy = {"preparation": [], "priorities": {}}
 			_add(policy, "set_prep", "prepped_grain", 6)
 			_add(policy, "set_prep", "soup_base", 5)
+		## sweep: --scenario split_duties --attempt 0 --without set_duty --items prepped_vegetable:7,prepped_grain:7,prepped_mushroom:7,thawed_protein:7 --best → passed 0, best_any {"prepped_vegetable": 2, "thawed_protein": 4} · 25 · 11,350
+		"split_duties":
+			policy = {"preparation": [], "priorities": {}}
+			_add(policy, "set_prep", "prepped_vegetable", 2)
+			_add(policy, "set_prep", "thawed_protein", 4)
 	return policy
 
 
@@ -163,10 +166,10 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 			_add(policy, "rotate_station", "hot_02", null)
 			_moves(policy, "hot_02", "up", 2)
 		"split_duties":
-			_add(policy, "set_prep", "prepped_vegetable", 3)
-			_add(policy, "set_prep", "prepped_grain", 4)
-			_add(policy, "set_prep", "thawed_protein", 1)
-			_add(policy, "set_prep", "prepped_mushroom", 5)
+			_add(policy, "set_duty", "employee_01", "cold")
+			_add(policy, "set_duty", "employee_02", "cold")
+			_add(policy, "set_duty", "employee_03", "hot")
+			_add(policy, "set_duty", "employee_04", "all")
 		"rush_hour":
 			_add(policy, "set_prep", "marinated_protein", 1)
 			_add(policy, "set_prep", "prepped_vegetable", 5)
@@ -194,7 +197,11 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 			policy = reference_policy(scenario_id)
 			_add(policy, "set_duty", "employee_03", "hot")
 		"split_duties":
-			_add(policy, "set_prep", "prepped_vegetable", 6)
+			_add(policy, "set_duty", "employee_01", "cold")
+			_add(policy, "set_duty", "employee_02", "cold")
+			_add(policy, "set_duty", "employee_03", "hot")
+			_add(policy, "set_duty", "employee_04", "hot")
+			_add(policy, "set_prep", "prepped_grain", 3)
 			_add(policy, "set_prep", "prepped_mushroom", 4)
 		"rush_hour":
 			policy.priorities = {"mushroom_soup": 0}
