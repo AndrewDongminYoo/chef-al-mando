@@ -153,6 +153,51 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 출력은 두 목표를 모두 통과한 조합마다 수량·노동량·제공·손익·진행중 작업을 담은 `SWEEP` 한 줄을 찍고, 끝에 시나리오·시도·시드·조합 수·통과 수·최댓값을 담은 `SWEEP_SUMMARY` 한 줄을 찍으며, `--best`를 주면 통과 여부와 무관한 사전순 최댓값도 그 줄에 함께 찍습니다.
 같은 인자로 다시 돌리면 같은 조합 수와 같은 `best`가 나옵니다.
 
+### 2026-09-21 지렛대 측정과 목표
+
+[예보 콘텐츠 계획](../plans/forecast-content-implementation.md) Task 5의 측정이며, 운영자 답은 `split_duties`는 준비 노동량 상한 스윕 허용, `final_service`는 목표를 올리지 않고 여유 측정입니다.
+`forecast_slack`이 비어 있어(같은 계획의 Task 4 취소) 시도 1–5의 시드는 모두 작성 순서와 같으므로 아래는 시도 0(시드 0)만 측정했습니다.
+모든 스윕은 위 `tests/sweep_policies.gd`로 `--attempt 0 --best`를 붙여 돌렸고, 발주는 `--keep`에 `purchases`를 넣지 않았으므로 작성값입니다.
+두 영업 모두 목표값·상한·발주는 바꾸지 않았고, 이 절이 남기는 것은 표와 결론뿐입니다.
+
+`split_duties`의 미장은 `prepped_vegetable`·`prepped_grain`·`prepped_mushroom`·`thawed_protein` 넷이고 `marinated_protein`은 이 영업의 재료 목록에 없어 도구가 `--items marinated_protein:2`를 거부하므로, `--items prepped_vegetable:7,prepped_grain:6,prepped_mushroom:6,thawed_protein:3`으로 돌렸습니다.
+담당 유지는 `--keep duties,priorities,placement`, 담당 없음은 `--keep priorities,placement`이며 기준 정책에 우선순위·배치 명령이 없어 후자는 프렙만 남습니다.
+상한 15와 9는 `.tres`의 `prep_labor_capacity`를 바꿔 측정했고, 14–10은 상한 15의 통과 조합을 노동량별로 세어 도출했습니다.
+도출이 성립하는 이유는 상한이 `sim/preparation_plan.gd`의 수량 거부에만 쓰이고 영업 시뮬레이션은 읽지 않아(`sim/service_analysis.gd`는 영업 뒤 조언에만 씀) 같은 조합의 회계가 상한과 무관하기 때문이며, 상한 9의 측정값이 도출값과 정확히 같았습니다.
+
+| 상한 | 담당 유지 조합 | 담당 유지 통과 | 담당 없음 조합 | 담당 없음 통과 | 근거 |
+| ---: | -------------: | -------------: | -------------: | -------------: | ---- |
+|   15 |          1,373 |            554 |          1,373 |            225 | 측정 |
+|   14 |                |            517 |                |            221 | 도출 |
+|   13 |                |            471 |                |            215 | 도출 |
+|   12 |                |            418 |                |            206 | 도출 |
+|   11 |                |            351 |                |            191 | 도출 |
+|   10 |                |            273 |                |            177 | 도출 |
+|    9 |            554 |            195 |            554 |            160 | 측정 |
+
+두 조건의 `best`는 상한 15와 9에서 모두 위 2026-09-21 정정 절의 최대치(제공·손익)와 같고, 담당 유지는 `prepped_mushroom 3, thawed_protein 2`(노동량 5), 담당 없음은 `thawed_protein 1`(노동량 1)이 그 값을 냅니다.
+Step 2-A의 결론은 그 절과 같이 목표값으로는 담당 유무를 가를 수 없다는 것입니다.
+Step 2-B의 결론은 상한을 9까지 내려도 담당 없음의 통과가 0이 되는 값이 없다는 것입니다: 담당 없음의 통과 조합 가운데 노동량 1이 셋(`thawed_protein 1`, `prepped_mushroom 1`, `prepped_grain 1`)이고 셋 다 최대치이므로 상한을 1까지 내려도 남고, 노동량 0(프렙 없음)은 통과하지 않아 무계획 결과와 일치합니다.
+따라서 `prep_labor_capacity`는 15 그대로이고 `m3_policies.gd`도 바뀌지 않았습니다.
+이 영업에서 지렛대는 담당이 아니라 "미장 한 단위라도 있는가"이며, 이를 가르려면 상한이 아닌 다른 값이 필요합니다(별도 승인 대상).
+
+`final_service`는 `--items marinated_protein:6,prepped_vegetable:6,prepped_grain:4,prepped_mushroom:3,soup_base:2,thawed_protein:3`으로 돌렸습니다.
+커밋된 기준 정책은 위 정정 절대로 우선순위가 없으므로 `--keep priorities,placement`는 빈 사전을 유지해 `--keep placement`와 같은 결과를 내며, "구이 우선순위 2 유지" 조건은 스윕 동안만 `tests/fixtures/m3_policies.gd`의 `final_service` 기준 정책에 `policy.priorities = {"grill": 2}` 한 줄을 넣어 돌리고 되돌렸습니다.
+상한 21과 연어 발주 9의 탐침도 `.tres`를 스윕 동안만 바꾸고 `git checkout --`으로 되돌렸으며, 되돌린 뒤 `git status --short`가 비어 있음을 확인했습니다.
+
+| 조건                                 | 상한 | 연어 발주 |  조합 | 통과 | 통과 최댓값                                                                            | 통과 무관 최댓값                                                                               |
+| ------------------------------------ | ---: | --------: | ----: | ---: | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `--keep placement` (우선순위 없음)   |   18 |         8 | 6,160 |    1 | `marinated_protein 5, prepped_grain 3` · 25 · 10,300                                   | 같음                                                                                           |
+| `--keep priorities,placement` (동일) |   18 |         8 | 6,160 |    1 | 같음                                                                                   | 같음                                                                                           |
+| 구이 우선순위 2 주입                 |   18 |         8 | 6,160 |    0 | 없음                                                                                   | `marinated_protein 5, prepped_mushroom 2` · 25 · 8,900                                         |
+| 구이 우선순위 2 주입                 |   21 |         8 | 7,838 |   22 | `marinated_protein 5, prepped_vegetable 3, thawed_protein 2` · 노동량 20 · 27 · 12,200 | 같음                                                                                           |
+| 구이 우선순위 2 주입                 |   18 |         9 | 6,160 |    0 | 없음                                                                                   | `marinated_protein 3, prepped_mushroom 2, prepped_vegetable 6, thawed_protein 1` · 24 · 10,000 |
+
+상한 21의 통과 22가지는 노동량 19가 둘, 20이 일곱, 21이 열셋이므로 같은 도출로 상한 19부터 구이 우선순위 2를 둔 통과 조합이 생깁니다.
+발주는 스윕 인자가 아니어서 단일 실행으로도 확인했습니다: 기준 프렙에 구이 우선순위 2와 `set_purchase protein`을 더한 정책은 8에서 23건·6,900원, 9에서 21건·4,400원으로 둘 다 미달이고 9가 더 나쁩니다.
+구이 우선순위 지렛대를 되살리는 값은 상한 18 → 21(또는 19)뿐이며 연어 발주 8 → 9는 되살리지 못합니다.
+값은 바꾸지 않았고 상한 변경은 별도 승인 대상입니다.
+
 ## 저장 호환성
 
 새 쓰기는 콘텐츠 버전 4를 사용합니다.
