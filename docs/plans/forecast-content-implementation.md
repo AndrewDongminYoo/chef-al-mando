@@ -15,11 +15,11 @@
 - §4.1 그대로: `forecast_slack`의 키는 판매 메뉴 ID, 값은 기준 건수에서 위아래로 허용하는 폭이고 없는 메뉴는 0이다. 총 주문 수와 도착 tick은 바뀌지 않는다. `first_shift`·`lunch_prep`의 slack은 0이고 변동은 `hot_queue`부터 시작한다.
 - §10 풀림 검사 그대로: 시드마다 실제 추첨을 아는 기준 정책이 두 목표를 통과하고 무계획은 미달한다. 이 계획에서 "시드 1–5"는 시도 인덱스 1–5가 만드는 시드 `ScheduleGenerator.service_seed_for(scenario_id, n)`이며 플레이어가 두 번째부터 여섯 번째 시작에서 실제로 받는 값이다. "무계획 미달"은 `check.sh m3`와 같이 캠페인 세 번째 영업(`hot_queue`)부터 검사한다.
 - 추첨 인지 정책은 시드 0 기준 정책(프렙·담당·배치·우선순위)에 원재료별 `max(작성 purchases, 추첨된 구성의 필요량)`을 `set_purchase`로 맞춘 것이다(작성 발주에 둔 여유는 유지하고 추첨이 더 필요로 하는 만큼만 늘림; `shared_stock`은 작성 발주가 기준 구성의 필요량보다 크다). 발주가 예산을 넘어 거부되면 그 시드는 실패다. 시드 0에서는 이 발주가 작성된 `purchases`와 같아야 하며 Task 1이 이를 검사한다.
-- `PLAN.md` §12: 게이트에 실패한 시나리오는 `forecast_slack`을 줄이며 `minimum_served`·`minimum_profit`을 낮추지 않는다. slack 폭과 목표 상향은 같은 여유를 나눠 쓰므로 **현재 목표에서 slack을 먼저 확정한 뒤**(Task 3) 남은 여유로 목표를 정한다(Task 4). 두 Task의 순서를 바꾸지 않는다.
-- 목표는 낮추지 않는다. `split_duties`는 담당 없는 정책이 시드 0에서 이미 최대치(26건·12,350원)에 닿으므로 목표값으로는 담당 유무를 가를 수 없다는 것이 측정된 사실이며(2026-09-21 절), Task 4는 이를 전제로 시드 1~5까지 측정한 뒤 승인된 규칙대로만 움직인다. 승인되지 않은 콘텐츠 값(`prep_labor_capacity`, `purchases`, `order_count`, 레시피)은 바꾸지 않는다.
+- `PLAN.md` §12: 게이트에 실패한 시나리오는 `forecast_slack`을 줄이며 `minimum_served`·`minimum_profit`을 낮추지 않는다. slack 폭과 목표 상향은 같은 여유를 나눠 쓰므로 **현재 목표에서 slack을 먼저 확정한 뒤**(Task 4) 남은 여유로 목표를 정한다(Task 5). 두 Task의 순서를 바꾸지 않는다.
+- 목표는 낮추지 않는다. `split_duties`는 담당 없는 정책이 시드 0에서 이미 최대치(26건·12,350원)에 닿으므로 목표값으로는 담당 유무를 가를 수 없다는 것이 측정된 사실이며(2026-09-21 절), Task 5는 이를 전제로 시드 1~5까지 측정한 뒤 승인된 규칙대로만 움직인다. 승인되지 않은 콘텐츠 값(`prep_labor_capacity`, `purchases`, `order_count`, 레시피)은 바꾸지 않는다.
 - 콘텐츠 버전은 7, 저장 스키마는 4 그대로다. 버전 6 이하 문서는 읽기만으로 바꾸지 않고 다음 정상 저장에서 7로 갱신하며, 진행 중 영업은 모든 시나리오에서 재시작한다(§8과 `docs/specs/m4-mobile.md`의 버전 이력 관례; `service_seed != 0`인 세션만 골라 재시작하는 안은 두 PCK 검사가 시드 0 writer만 쓰므로 검증할 수 없어 택하지 않는다). `sim_version`은 건드리지 않는다.
 - 3전략·무계획 격차 게이트(`check.sh m3`)는 시드 0에서 계속 통과해야 하고, 시드 게이트(`check.sh mise`의 `test_seed_gate.gd`)는 시도 1~5에서 통과해야 한다. 스윕 도구의 출력과 결정 근거는 `docs/notes/kitchen-pressure-verification.md`에 남긴다.
-- 범위 밖: §12 3단계 리뷰, 4단계 화면(메뉴 상세·리뷰 패널·메뉴 아이콘·혼합 주문 직원 문구). 브리핑은 §4.4 예보 범위를 이미 보이고, "메뉴별 손님 인내 시간(초)" 한 줄(§7)은 모든 레시피의 `patience_ticks`가 500이라 정보가 없으므로 운영자가 승인 시점에 포함 여부를 정한다(Task 6은 조건부).
+- 범위 밖: §12 3단계 리뷰, 4단계 화면(메뉴 상세·리뷰 패널·메뉴 아이콘·혼합 주문 직원 문구). 브리핑은 §4.4 예보 범위를 이미 보이고, "메뉴별 손님 인내 시간(초)" 한 줄(§7)은 모든 레시피의 `patience_ticks`가 500이라 정보가 없으므로 운영자가 승인 시점에 포함 여부를 정한다(Task 7은 조건부).
 - 세션에 들어가는 사전은 `dict["key"] = value`로만 쓴다. fixture의 typed export에는 typed 지역 변수만 `set()`한다. 새 검사는 잘못된 입력에서 먼저 실패하는 것을 확인한 뒤 통과시킨다(§10). Godot 호출은 `--headless`, suite와 스윕은 한 번에 하나만 실행한다(16 GB Mac mini).
 - 문서와 사용자 문구는 한국어, 코드 식별자와 커밋 메시지는 영어다. 커밋에 `Co-Author`나 `Claude-Session` 세션 URL을 붙이지 않는다. 머지는 운영자가 한다.
 - 검사 명령: `export GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot` 뒤에 `bash scripts/check.sh mise`, `bash scripts/check.sh m3`, `bash scripts/check.sh m4`, `bash scripts/check.sh ui-regressions`, `bash scripts/check-export.sh`. 스윕: `"$GODOT_BIN" --headless --path <worktree> --script tests/sweep_policies.gd -- <인자>`.
@@ -30,15 +30,15 @@
 
 | 파일                                                                                                                     | 책임                                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `tests/fixtures/m3_policies.gd`                                                                                          | `run_policy`의 시드 인자, `draw_aware_policy()`, `passes_targets()`(Task 1); 재조정된 정책(Task 4) |
+| `tests/fixtures/m3_policies.gd`                                                                                          | `run_policy`의 시드 인자, `draw_aware_policy()`, `passes_targets()`(Task 1); 재조정된 정책(Task 5) |
 | `tests/test_seed_gate.gd` (신규), `tests/test_mise.gd`                                                                   | 풀림 게이트 함수와 검사(실제 콘텐츠 + 합성 실패 fixture 2종), mise suite 등록(Task 1)              |
 | `tests/sweep_policies.gd` (신규)                                                                                         | 시나리오·시드·항목 상한·고정 명령을 인자로 받는 프렙 수량 전수 스윕(Task 2)                        |
-| `content/campaign/scenarios/*.tres`                                                                                      | `forecast_slack`(Task 3), 승인된 규칙에 따른 목표값(Task 4)                                        |
-| `persistence/campaign_store.gd`, `tests/test_m4_store.gd`, `tests/test_menu_priorities.gd`, `tests/test_service_seed.gd` | 콘텐츠 버전 7과 재시작, 리터럴 6 → 7, 작성된 slack 검사(Task 3)                                    |
-| `docs/notes/kitchen-pressure-verification.md`                                                                            | 시드 게이트 절(시도별 회계 표), 지렛대 측정과 목표 결정 절(Task 3·4)                               |
-| `docs/specs/mise-forecast-reviews.md`, `docs/specs/m4-mobile.md`, `docs/plans/PLAN.md`                                   | §4.1 작성값 정정, §10 행 현행화, 버전 7 이력(Task 5)                                               |
-| `presentation/campaign_screen.gd`, `translations/en.po`                                                                  | 조건부 Task 6: 브리핑 인내 시간 한 줄                                                              |
-| `docs/plans/forecast-content-implementation.md`                                                                          | 이 문서: 실행 중 갈린 지점의 정정 절과 회귀 결과(Task 5)                                           |
+| `content/campaign/scenarios/*.tres`                                                                                      | `forecast_slack`(Task 4), 승인된 규칙에 따른 목표값(Task 5)                                        |
+| `persistence/campaign_store.gd`, `tests/test_m4_store.gd`, `tests/test_menu_priorities.gd`, `tests/test_service_seed.gd` | 콘텐츠 버전 7과 재시작, 리터럴 6 → 7, 작성된 slack 검사(Task 4)                                    |
+| `docs/notes/kitchen-pressure-verification.md`                                                                            | 시드 게이트 절(시도별 회계 표), 지렛대 측정과 목표 결정 절(Task 4·5)                               |
+| `docs/specs/mise-forecast-reviews.md`, `docs/specs/m4-mobile.md`, `docs/plans/PLAN.md`                                   | §4.1 작성값 정정, §10 행 현행화, 버전 7 이력(Task 6)                                               |
+| `presentation/campaign_screen.gd`, `translations/en.po`                                                                  | 조건부 Task 7: 브리핑 인내 시간 한 줄                                                              |
+| `docs/plans/forecast-content-implementation.md`                                                                          | 이 문서: 실행 중 갈린 지점의 정정 절과 회귀 결과(Task 6)                                           |
 
 ---
 
@@ -401,7 +401,131 @@ git commit -m "test(m3): commit the prep-quantity sweep as a reusable headless s
 
 ---
 
-### Task 3: `forecast_slack` 작성, 콘텐츠 버전 7, 시드 게이트 통과
+### Task 3: 생성기 자리바꿈 (명세 §4.2 3단계 정정, 운영자 결정 2026-09-21)
+
+**배경:** Task 4의 첫 실행이 BLOCKED로 끝났습니다. 생성기는 §4.2대로 slack이 하나라도 있으면 건수 이동과 무관하게 전체 슬롯을 섞는데, 작성된 일정은 화구·냉식대 부하를 교대로 배치한 파동 구조라 섞이면 구이가 연속으로 몰립니다. `hot_queue`에 `{salad: 1}`만 두면(이동 불가, 순수 섞기만 발생) 시도 1~5가 전부 실패했고, 프렙 수량 104가지 조합 전부, 우선순위를 빼도 통과 조합이 0이었습니다. 여섯 시나리오의 30개 시도 행 중 29개가 실패했습니다. `PLAN.md` §12의 "폭을 줄인다"는 완화는 폭이 0이 아닌 한 섞기를 막지 못합니다. 운영자는 "자리바꿈만, 섞기 없음"을 골랐습니다.
+
+**Files:**
+
+- Modify: `content/schedule_generator.gd` (`recipe_ids`, 파일 머리 주석)
+- Modify: `tests/test_schedule_generator.gd`
+- Modify: `docs/specs/mise-forecast-reviews.md` §4.2 (정정 단락)
+
+**Interfaces:**
+
+- Consumes: `forecast_ranges()`, `menu_ids`, `order_recipe_ids`, `break_identity()`.
+- Produces: `ScheduleGenerator.recipe_ids(scenario, seed)`가 시드 0이나 slack 합 0이면 작성 순서를, 그 외에는 **작성 순서에서 이동 횟수만큼의 슬롯만 바뀐 배열**을 돌려줍니다. 한 이동은 기증 메뉴가 든 슬롯 하나를 RNG로 골라 수신 메뉴로 바꾸는 것입니다. 이동이 하나도 불가능할 때만 결과가 작성 순서와 같아지며 그때 `break_identity`가 서로 다른 메뉴의 첫 인접 쌍을 맞바꿉니다. RNG 소비 순서: 이동 횟수 → (기증 → 수신 → 슬롯) × 이동 횟수. 같은 시드는 같은 배열입니다.
+
+- [ ] **Step 1: 실패하는 검사 작성**
+
+`tests/test_schedule_generator.gd`의 `expect(drawn != ScheduleGenerator.recipe_ids(slacked, 53743680), ...)` 뒤에 추가합니다.
+
+```gdscript
+	var changed: int = 0
+	for index: int in drawn.size():
+		if drawn[index] != hot_queue.order_recipe_ids[index]:
+			changed += 1
+	var total_slack: int = 0
+	for recipe_id: String in slacked.menu_ids:
+		total_slack += ranges[recipe_id]["max"] - ranges[recipe_id]["baseline"]
+	expect(changed >= 1 and changed <= total_slack,
+		"a seeded draw changes between one slot and the total slack (changed %d of %d)" % [changed, total_slack])
+	var authored_runs: Dictionary = _longest_runs(hot_queue.order_recipe_ids)
+	var drawn_runs: Dictionary = _longest_runs(drawn)
+	for recipe_id: String in slacked.menu_ids:
+		expect(drawn_runs.get(recipe_id, 0) <= authored_runs.get(recipe_id, 0) + 1,
+			"slot replacement keeps the authored wave structure within one extra consecutive order: " + recipe_id)
+```
+
+파일 끝에 도우미를 추가합니다.
+
+```gdscript
+func _longest_runs(recipe_ids: PackedStringArray) -> Dictionary:
+	var longest: Dictionary = {}
+	var current: String = ""
+	var length: int = 0
+	for recipe_id: String in recipe_ids:
+		length = length + 1 if recipe_id == current else 1
+		current = recipe_id
+		longest[recipe_id] = maxi(longest.get(recipe_id, 0), length)
+	return longest
+```
+
+`hot_queue`는 `grill, soup, grill, salad, …` 교대라 작성 연속 길이가 모두 1이고, 이동 4회 이하의 자리바꿈은 한 메뉴의 연속을 최대 2까지만 만듭니다(두 이동이 인접 슬롯을 같은 수신 메뉴로 바꾸면 3도 가능하지만 시드 104076537의 결과가 그런지는 실행이 정합니다; 그 경우 `+ 1`을 `+ 2`로 고치고 이 문서 정정 절에 적습니다). 기존 검사 가운데 "no seed in 1..50 reproduces the authored order"와 `one_sided`(이동 불가 → 건수 불변)는 새 규칙에서도 그대로 성립합니다.
+
+- [ ] **Step 2: 실패 확인**
+
+Run: `bash scripts/check.sh mise`
+Expected: FAIL. 전체 섞기는 `changed`가 `total_slack`을 훨씬 넘고 연속 길이도 넘습니다. (작업 트리에 Task 4의 미커밋 slack이 있으면 `test_seed_gate.gd`의 여섯 캠페인 줄도 실패합니다; 그것은 이 Task의 RED가 아니라 Task 4의 상태입니다.)
+
+- [ ] **Step 3: 생성기**
+
+`content/schedule_generator.gd`의 `recipe_ids`를 바꿉니다. 이동 결정 루프는 그대로 두고 결과를 만드는 방식만 바뀝니다.
+
+```gdscript
+static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArray:
+	var authored: PackedStringArray = scenario.order_recipe_ids
+	var ranges: Dictionary = scenario.forecast_ranges()
+	var counts: Dictionary[String, int] = {}
+	var total_slack: int = 0
+	for recipe_id: String in scenario.menu_ids:
+		counts[recipe_id] = ranges[recipe_id]["baseline"]
+		total_slack += ranges[recipe_id]["max"] - ranges[recipe_id]["baseline"]
+	if service_seed == 0 or total_slack == 0:
+		return authored.duplicate()
+	var result: PackedStringArray = authored.duplicate()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = service_seed
+	var moves: int = rng.randi_range(1, total_slack)
+	for _move: int in moves:
+		var donors: PackedStringArray = []
+		for recipe_id: String in scenario.menu_ids:
+			if counts[recipe_id] > ranges[recipe_id]["min"] and not _receivers(scenario, counts, ranges, recipe_id).is_empty():
+				donors.append(recipe_id)
+		if donors.is_empty():
+			break
+		var donor: String = donors[rng.randi_range(0, donors.size() - 1)]
+		var receivers := _receivers(scenario, counts, ranges, donor)
+		var receiver: String = receivers[rng.randi_range(0, receivers.size() - 1)]
+		var slots: PackedInt32Array = []
+		for index: int in result.size():
+			if result[index] == donor:
+				slots.append(index)
+		result[slots[rng.randi_range(0, slots.size() - 1)]] = receiver
+		counts[donor] -= 1
+		counts[receiver] += 1
+	return break_identity(result, authored)
+```
+
+`counts[donor] > min ≥ 0`이므로 `slots`는 비지 않습니다. 파일 머리 주석을 새 규칙으로 바꿉니다: "시드 0이거나 모든 메뉴의 slack 합이 0이면 작성된 순서를 그대로 돌려줍니다. 그 외에는 예보 범위 안에서 건수를 옮기되, 한 이동은 기증 메뉴가 든 슬롯 하나를 수신 메뉴로 바꾸는 것이고 슬롯을 섞지 않으므로 작성된 파동 구조가 유지됩니다." `break_identity`의 주석 첫 문장("A shuffle can land on the authored order …")은 "이동이 하나도 불가능하면 결과가 작성 순서와 같다"로 고칩니다.
+
+- [ ] **Step 4: 통과 확인**
+
+Run: `bash scripts/check.sh mise` → `test_schedule_generator.gd`의 검사가 모두 통과합니다. 작업 트리에 Task 4의 미커밋 시작 slack이 있으면 `SEED_GATE` 줄을 읽어 `hot_queue`의 시도 1~5가 통과하는지 봅니다(직전에 0/104였던 사례). 다른 시나리오가 아직 실패하면 그 문장을 보고서에 적고 Task 4에 넘깁니다. 이 Task의 통과 조건은 생성기 검사이며, 시드 게이트는 Task 4가 닫습니다.
+Run: `bash scripts/check.sh m3` → PASS(시드 0 경로는 바뀌지 않음).
+
+- [ ] **Step 5: 명세 정정**
+
+`docs/specs/mise-forecast-reviews.md` §4.2의 마지막 단락("섞은 결과가 우연히 …") 뒤에 단락을 추가합니다.
+
+```markdown
+**2026-09-21 정정:** 3단계의 전체 섞기는 작성된 파동 구조(화구·냉식대 부하의 교대)를 무너뜨려 `hot_queue`에서 어떤 프렙 조합도 목표에 닿지 못했으므로(계획 3 `../plans/forecast-content-implementation.md` Task 3), 자리바꿈으로 바꿉니다.
+한 이동은 기증 메뉴가 든 슬롯 하나를 같은 RNG로 골라 수신 메뉴로 바꾸는 것이고 슬롯을 섞지 않습니다.
+따라서 건수가 기준과 같은 시드는 없고(이동이 가능하면 최소 한 번 이동), 이동이 하나도 불가능한 시나리오만 작성 순서와 같아지며 그때 서로 다른 메뉴가 인접한 첫 두 슬롯을 맞바꿔 구분합니다.
+```
+
+- [ ] **Step 6: Commit**
+
+Task 4의 미커밋 파일(`content/campaign/scenarios/*.tres`, `persistence/campaign_store.gd`, `tests/test_m4_store.gd`, `tests/test_menu_priorities.gd`, `tests/test_service_seed.gd`)은 이 커밋에 넣지 않습니다. `git add`에 아래 세 파일만 적습니다.
+
+```bash
+git add content/schedule_generator.gd tests/test_schedule_generator.gd docs/specs/mise-forecast-reviews.md
+git commit -m "feat(content): replace slots instead of shuffling the seeded schedule"
+```
+
+---
+
+### Task 4: `forecast_slack` 작성, 콘텐츠 버전 7, 시드 게이트 통과
 
 **Files:**
 
@@ -436,7 +560,7 @@ git commit -m "test(m3): commit the prep-quantity sweep as a reusable headless s
 
 이 검사는 Step 3 뒤에 통과하며, 상한 규칙 `max(1, 기준 / 5)`가 §4.4의 예시("단백질 구이 8–12, 곡물 수프 4–6, 채소 샐러드 4–6" = `hot_queue` 기준 10·5·5에 2·1·1)와 같습니다.
 
-`tests/test_m4_store.gd`의 버전 5 검사 블록(216-231행) 뒤에 버전 6 검사를 추가합니다(계획 2b Task 4와 같은 꼴, 세션은 현재 코드로 만든 `lunch_prep` 세션).
+`tests/test_m4_store.gd`의 버전 5 검사 블록(216-231행) 뒤에 버전 6 검사를 추가합니다(계획 2b Task 5와 같은 꼴, 세션은 현재 코드로 만든 `lunch_prep` 세션).
 
 ```gdscript
 	var version_six_target := directory + "/content_version_six.json"
@@ -457,7 +581,7 @@ git commit -m "test(m3): commit the prep-quantity sweep as a reusable headless s
 		"a migrated version 6 record writes content version 7")
 ```
 
-같은 파일의 `content_version == 6` 기대(46·171·186·214·230행)를 `== 7`로, 현재 세션을 담는 문서 리터럴(53·468·505·553행)의 6을 7로 바꿉니다. `tests/test_menu_priorities.gd:111`, `tests/test_service_seed.gd:341`·`:359`의 6도 7로 바꿉니다. 버전 5 검사 블록의 입력 리터럴 5와 그 아래 `== 7` 기대는 그대로 두되 문구의 "content version 6"은 "content version 7"로 맞춥니다(계획 2b Task 4에서 같은 이유로 문구를 바꾼 선례).
+같은 파일의 `content_version == 6` 기대(46·171·186·214·230행)를 `== 7`로, 현재 세션을 담는 문서 리터럴(53·468·505·553행)의 6을 7로 바꿉니다. `tests/test_menu_priorities.gd:111`, `tests/test_service_seed.gd:341`·`:359`의 6도 7로 바꿉니다. 버전 5 검사 블록의 입력 리터럴 5와 그 아래 `== 7` 기대는 그대로 두되 문구의 "content version 6"은 "content version 7"로 맞춥니다(계획 2b Task 5에서 같은 이유로 문구를 바꾼 선례).
 
 - [ ] **Step 2: 실패 확인**
 
@@ -489,7 +613,7 @@ func _content_update_restarts_session(source_content_version: int, _active_sessi
 | 시나리오        | 기준 건수(메뉴 순서)                                                                                      | 시작 slack               |
 | --------------- | --------------------------------------------------------------------------------------------------------- | ------------------------ |
 | `hot_queue`     | grill 10, soup 5, salad 5                                                                                 | grill 2, soup 1, salad 1 |
-| `shared_stock`  | salad 5, soup 8, grain_salad 4, mushroom_salad 4                                                          | 1, 1, 1, 1               |
+| `shared_stock`  | salad 5, soup 9, grain_salad 4, mushroom_salad 4                                                          | 1, 1, 1, 1               |
 | `long_route`    | grill 6, mushroom_soup 6, protein_bowl 6, grain_salad 6                                                   | 1, 1, 1, 1               |
 | `split_duties`  | salad 7, mushroom_salad 7, grain_grill 6, protein_bowl 6                                                  | 1, 1, 1, 1               |
 | `rush_hour`     | salad 4, soup 4, grill 4, grain_salad 4, mushroom_salad 4, mushroom_soup 4, grain_grill 3, protein_bowl 3 | 1 × 8                    |
@@ -514,7 +638,7 @@ Run: `bash scripts/check.sh mise` → 실제 콘텐츠의 게이트 결과를 `S
 
 Run: `bash scripts/check.sh mise` → PASS. `bash scripts/check.sh m4` → PASS. `bash scripts/check.sh m3` → PASS. `bash scripts/check.sh ui-regressions` → PASS(브리핑이 범위를 보이는 검사 포함).
 Run: `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot python3 tests/test_m4_restart.py` → 10 OK.
-두 PCK: 콘텐츠 6 PCK를 `ab239fa`에서 만들고(계획 2b Task 4의 명령에서 `c600e27`·`content5`·`content6`을 `ab239fa`·`content6`·`content7`로 바꿈) `M4_EXPECT_RESTART=1`로 실행 → 9 OK / 1 skip. 강제 실패 확인은 `< 6`으로 되돌려 두 reader 검사가 실패하는 것을 본 뒤 `< 7`로 되돌립니다.
+두 PCK: 콘텐츠 6 PCK를 `ab239fa`에서 만들고(계획 2b Task 5의 명령에서 `c600e27`·`content5`·`content6`을 `ab239fa`·`content6`·`content7`로 바꿈) `M4_EXPECT_RESTART=1`로 실행 → 9 OK / 1 skip. 강제 실패 확인은 `< 6`으로 되돌려 두 reader 검사가 실패하는 것을 본 뒤 `< 7`로 되돌립니다.
 
 - [ ] **Step 7: Commit**
 
@@ -529,7 +653,7 @@ git commit -m "feat(persistence): bump content to version 7 and restart every ea
 
 ---
 
-### Task 4: 지렛대 필요성 측정과 압력 영업 목표
+### Task 5: 지렛대 필요성 측정과 압력 영업 목표
 
 **Files:**
 
@@ -539,12 +663,12 @@ git commit -m "feat(persistence): bump content to version 7 and restart every ea
 
 **Interfaces:**
 
-- Consumes: Task 3의 확정 slack, Task 2의 스윕.
+- Consumes: Task 4의 확정 slack, Task 2의 스윕.
 - Produces: 두 시나리오의 측정 표와, 승인된 규칙이 허용하는 범위의 목표값. 목표가 바뀌면 `check.sh m3`(시드 0 관계식: 기준 여분 ≤ 제공 1·손익 2,000, 무계획 ≥ 2건 또는 1,500 미달, 대체 둘 통과)와 시드 게이트가 모두 통과해야 합니다.
 
 승인 시점의 답이 이 Task의 규칙입니다. 아래는 승인 질문에 대응하는 세 갈래이며, 답에 맞는 갈래만 실행합니다.
 
-**운영자 답(2026-09-21):** `split_duties`는 "준비 노동량 상한 스윕 허용"(Step 2-A 뒤 Step 2-B 실행), `final_service`는 "올리지 않고 여유 측정"(Step 2-C의 "여유 측정" 갈래), 브리핑 인내 시간은 "4단계 화면 계획으로 미룸"(Task 6 실행 안 함).
+**운영자 답(2026-09-21):** `split_duties`는 "준비 노동량 상한 스윕 허용"(Step 2-A 뒤 Step 2-B 실행), `final_service`는 "올리지 않고 여유 측정"(Step 2-C의 "여유 측정" 갈래), 브리핑 인내 시간은 "4단계 화면 계획으로 미룸"(Task 7 실행 안 함).
 
 - [ ] **Step 1: 측정(모든 갈래 공통)**
 
@@ -556,7 +680,7 @@ git commit -m "feat(persistence): bump content to version 7 and restart every ea
 
 - [ ] **Step 2-A: `split_duties` — 목표값으로 가를 수 있는지**
 
-담당 없는 조건의 여섯 시드 `best`가 모두 담당 유지 조건의 `best` 이상이면 목표값은 담당 유무를 가르지 못합니다(시드 0은 이미 그렇습니다: 둘 다 26·12,350). 이 경우 목표를 바꾸지 않고 표와 결론만 기록하고, 승인 답이 "상한 스윕 허용"이면 Step 2-B로, 아니면 Task 5로 갑니다.
+담당 없는 조건의 여섯 시드 `best`가 모두 담당 유지 조건의 `best` 이상이면 목표값은 담당 유무를 가르지 못합니다(시드 0은 이미 그렇습니다: 둘 다 26·12,350). 이 경우 목표를 바꾸지 않고 표와 결론만 기록하고, 승인 답이 "상한 스윕 허용"이면 Step 2-B로, 아니면 Task 6로 갑니다.
 담당 없는 조건이 어느 시드에서든 목표에 미달하고 담당 유지 조건은 여섯 시드 모두 통과하면, 지렛대는 시드 변동으로 이미 필요해진 것이므로 목표를 바꾸지 않고 그 시드와 수치를 기록합니다.
 
 - [ ] **Step 2-B: `split_duties` — 준비 노동량 상한 스윕(승인된 경우에만)**
@@ -583,7 +707,7 @@ git commit -m "feat(content): set pressure-service targets from the lever measur
 
 ---
 
-### Task 5: 명세·지침·기록 정정과 전체 회귀
+### Task 6: 명세·지침·기록 정정과 전체 회귀
 
 **Files:**
 
@@ -619,7 +743,7 @@ git commit -m "feat(content): set pressure-service targets from the lever measur
 
 - [ ] **Step 2: 전체 회귀**
 
-Run(순서대로): `bash scripts/check-export.sh`, `python3 tests/test_export_check.py`, `python3 tests/test_ios_export.py`, `bash scripts/check.sh m0`, `m1`, `m2`, `m3`, `m4-core`, `m4`, `m5`, `mise`, `ui-regressions` → 모두 PASS. 이 문서 끝에 "## 2026-09-XX 정정"(갈린 지점, Task 4의 갈래와 결과, 게이트가 줄인 slack)과 "### Task 5 회귀 결과"(`log` 블록)를 추가합니다. 두 PCK 결과는 Task 3의 값을 인용합니다.
+Run(순서대로): `bash scripts/check-export.sh`, `python3 tests/test_export_check.py`, `python3 tests/test_ios_export.py`, `bash scripts/check.sh m0`, `m1`, `m2`, `m3`, `m4-core`, `m4`, `m5`, `mise`, `ui-regressions` → 모두 PASS. 이 문서 끝에 "## 2026-09-XX 정정"(갈린 지점, Task 5의 갈래와 결과, 게이트가 줄인 slack)과 "### Task 6 회귀 결과"(`log` 블록)를 추가합니다. 두 PCK 결과는 Task 4의 값을 인용합니다.
 
 - [ ] **Step 3: Commit**
 
@@ -630,7 +754,7 @@ git commit -m "docs: record the authored forecast slack, the seed gate and conte
 
 ---
 
-### Task 6 (조건부): 브리핑의 메뉴별 손님 인내 시간
+### Task 7 (조건부): 브리핑의 메뉴별 손님 인내 시간
 
 승인 답이 "포함"일 때만 실행합니다. `presentation/campaign_screen.gd:487-496`의 메뉴 줄에 인내 시간을 붙입니다: `menu_lines.append(tr("%s %d–%d건 · 인내 %d초") % [menu_name, min, max, recipe.patience_ticks / 10])`(고정 건수 분기도 같은 꼴, tick 10 = 1초는 브리핑의 "영업 300초" = `closing_tick` 3000과 같은 환산). 기존 msgid `"%s %d건"`·`"%s %d–%d건"`은 사라지므로 `translations/en.po`에서 새 msgid로 바꾸고, `tests/test_ui_regressions.gd`의 브리핑 검사가 "건"을 찾는 방식이면 그대로 통과하는지 확인합니다. 커밋: `feat(ui): show each menu's patience in the briefing`.
 
