@@ -153,6 +153,9 @@ M3_PRESSURE final_service goals={"profit": 10000, "served": 25} no_plan.accounti
 스크립트는 `purchases` 토큰도 받지만 기준 정책에는 발주 명령이 없어 발주는 항상 작성값이며, 이 토큰은 기준 정책에 `set_purchase`가 추가될 때에만 의미가 생깁니다.
 출력은 두 목표를 모두 통과한 조합마다 수량·노동량·제공·손익·진행중 작업을 담은 `SWEEP` 한 줄을 찍고, 끝에 시나리오·시도·시드·조합 수·통과 수·최댓값을 담은 `SWEEP_SUMMARY` 한 줄을 찍으며, `--best`를 주면 통과 여부와 무관한 사전순 최댓값도 그 줄에 함께 찍습니다.
 같은 인자로 다시 돌리면 같은 조합 수와 같은 `best`가 나옵니다.
+`--purchases draw`는 그 시도의 `draw_aware_policy`가 만드는 발주 명령을 기준 정책의 발주 대신 고정하고, `--without <종류,…>`는 `--keep`이 남긴 기준 명령에서 `set_purchase`·`set_duty`·`move_station`·`rotate_station`·`priorities`를 뺀 뒤 스윕하며, `--gate`는 다른 인자를 무시하고 시도 0~5의 `SEED_GATE_ROW`와 `SEED_GATE_VERDICT`만 찍습니다.
+도구의 판정은 시도 0을 포함하므로 `test_seed_gate.gd`(시도 1–5)보다 엄격하며, 시도 0에서만 실패하면 그것은 `check.sh m3`의 시드 0 규칙이 다루는 문제입니다.
+`--keep`에서 `duties`를 빼는 것과 `--without set_duty`는 같은 결과를 내며, `--keep`은 하위 호환으로 남깁니다.
 
 ### 2026-09-21 지렛대 측정과 목표
 

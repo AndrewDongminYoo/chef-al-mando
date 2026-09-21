@@ -2,6 +2,7 @@ extends "res://tests/harness.gd"
 
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+const SeedGate := preload("res://tests/fixtures/seed_gate.gd")
 const ATTEMPTS: Array[int] = [1, 2, 3, 4, 5]
 
 
@@ -21,9 +22,14 @@ func _test_draw_aware_policy(campaign: Resource) -> void:
 		for command: Dictionary in policy.preparation:
 			if command.kind == "set_purchase":
 				purchases[command.target_id] = command.value
-		expect(purchases == scenario.purchases, "seed 0 draw-aware purchases equal the authored purchases: " + scenario.id)
-		expect(policy.preparation.slice(purchases.size()) == Policies.reference_policy(scenario.id).preparation
-			and policy.priorities == Policies.reference_policy(scenario.id).priorities,
+		var reference: Dictionary = Policies.reference_policy(scenario.id)
+		var expected: Dictionary = scenario.purchases.duplicate()
+		for command: Dictionary in reference.preparation:
+			if command.kind == "set_purchase":
+				expected[command.target_id] = command.value
+		expect(purchases == expected, "seed 0 draw-aware purchases equal the authored purchases overlaid by the reference purchase commands: " + scenario.id)
+		var behind: Dictionary = Policies.without_kinds(reference, ["set_purchase"])
+		expect(policy.preparation.slice(purchases.size()) == behind.preparation and policy.priorities == reference.priorities,
 			"the draw-aware policy is the reference policy behind its purchases: " + scenario.id)
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var slacked: Resource = hot_queue.duplicate()
@@ -77,8 +83,18 @@ func _test_synthetic_failures(campaign: Resource) -> void:
 	trivial.minimum_profit = -trivial.starting_budget
 	verdict = SeedGate.evaluate(campaign, trivial, ATTEMPTS)
 	expect(not verdict.passed and verdict.failures.size() == ATTEMPTS.size()
-		and verdict.failures[0].contains("no plan passes"),
+		and verdict.failures[0].contains("no plan misses by less than"),
 		"targets the no-plan service reaches fail the gate on every attempt")
+	var narrow: Resource = hot_queue.duplicate()
+	var no_plan: Dictionary = Policies.run_policy(hot_queue)
+	narrow.minimum_served = no_plan.snapshot.accounting.served + 1
+	narrow.minimum_profit = no_plan.snapshot.accounting.profit
+	expect(narrow.validate().is_empty(), "the narrow fixture is still valid content")
+	var seed_zero: Array[int] = [0]
+	verdict = SeedGate.evaluate(campaign, narrow, seed_zero)
+	expect(not verdict.passed and verdict.failures.size() == 1
+		and verdict.failures[0].begins_with("attempt 0:") and verdict.failures[0].contains("no plan misses by less than"),
+		"targets the no-plan service misses by one order fail the widened gate")
 
 
 func _test_campaign_gate(campaign: Resource) -> void:
@@ -92,32 +108,3 @@ func _test_campaign_gate(campaign: Resource) -> void:
 					"an empty forecast slack reproduces the authored order on attempt %d: %s" % [attempt, scenario.id])
 		for row: Dictionary in verdict.rows:
 			print("SEED_GATE ", scenario.id, " ", JSON.stringify(row, "", true))
-
-
-class SeedGate:
-	## 시도 인덱스마다 그 시드의 추첨 인지 정책이 두 목표를 통과하고, 캠페인 세 번째 영업부터는 무계획이
-	## 미달해야 합니다. 실패 문장은 "attempt N: <이유>" 꼴입니다.
-	static func evaluate(campaign: Resource, scenario: Resource, attempts: Array[int]) -> Dictionary:
-		var failures: Array[String] = []
-		var rows: Array[Dictionary] = []
-		var pressured: bool = campaign.scenarios.find(campaign.scenario_for(scenario.id)) >= 2
-		for attempt: int in attempts:
-			var seed_value: int = ScheduleGenerator.service_seed_for(scenario.id, attempt)
-			var run: Dictionary = Policies.run_policy(scenario, Policies.draw_aware_policy(scenario, seed_value), 1, seed_value)
-			var row: Dictionary = {"attempt": attempt, "seed": seed_value, "served": -1, "profit": 0, "no_plan_served": -1, "no_plan_profit": 0}
-			if not run.accepted:
-				failures.append("attempt %d: draw-aware policy rejected (%s)" % [attempt, run.reason])
-			else:
-				row["served"] = run.snapshot.accounting.served
-				row["profit"] = run.snapshot.accounting.profit
-				if not Policies.passes_targets(scenario, run):
-					failures.append("attempt %d: draw-aware policy misses the targets (%d served, %d profit)" % [attempt, row["served"], row["profit"]])
-			if pressured:
-				var no_plan: Dictionary = Policies.run_policy(scenario, {}, 1, seed_value)
-				if no_plan.accepted:
-					row["no_plan_served"] = no_plan.snapshot.accounting.served
-					row["no_plan_profit"] = no_plan.snapshot.accounting.profit
-					if Policies.passes_targets(scenario, no_plan):
-						failures.append("attempt %d: no plan passes (%d served, %d profit)" % [attempt, row["no_plan_served"], row["no_plan_profit"]])
-			rows.append(row)
-		return {"passed": failures.is_empty(), "failures": failures, "rows": rows}

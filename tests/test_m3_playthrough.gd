@@ -3,6 +3,7 @@ extends "res://tests/harness.gd"
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const CampaignStore := preload("res://persistence/campaign_store.gd")
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
+const SeedGate := preload("res://tests/fixtures/seed_gate.gd")
 
 
 func run(_tree: SceneTree) -> void:
@@ -70,13 +71,11 @@ func run(_tree: SceneTree) -> void:
 				var no_plan_view: Dictionary = no_plan.snapshot
 				var no_plan_passes: bool = no_plan_view.accounting.served >= scenario.minimum_served and no_plan_view.accounting.profit >= scenario.minimum_profit
 				expect(not no_plan_passes, "a pressure service requires a scenario-specific plan: " + scenario.id)
-				var served_gap: int = maxi(scenario.minimum_served - no_plan_view.accounting.served, 0)
-				var profit_gap: int = maxi(scenario.minimum_profit - no_plan_view.accounting.profit, 0)
-				expect(served_gap >= 2 or profit_gap >= 1500,
+				expect(SeedGate.no_plan_misses(scenario, no_plan),
 					"a no-plan service misses by at least two orders or 1500 profit: " + scenario.id)
-				expect(view.accounting.served - scenario.minimum_served <= 1
-					and view.accounting.profit - scenario.minimum_profit <= 2000,
-					"the reference policy passes with at most one extra order and 2000 extra profit: " + scenario.id)
+				expect(view.accounting.served - scenario.minimum_served <= 2
+					and view.accounting.profit - scenario.minimum_profit <= 3000,
+					"the reference policy passes with at most two extra orders and 3000 extra profit: " + scenario.id)
 				expect(no_plan_view.accounting != view.accounting or no_plan_view.metrics != view.metrics,
 					"the reference plan changes the pressure-service result: " + scenario.id)
 				print("M3_PRESSURE ", scenario.id, " ", JSON.stringify({

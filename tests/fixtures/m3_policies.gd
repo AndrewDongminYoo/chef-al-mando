@@ -48,8 +48,19 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 	return policy
 
 
-## §10 풀림 검사의 "실제 추첨을 아는 기준 정책": 시드 0 기준 정책 앞에, 원재료마다 작성 발주와 그 시드의
-## 구성이 필요로 하는 양 가운데 큰 값을 set_purchase로 맞춥니다. 시드 0에서는 작성된 purchases와 같습니다.
+## 정책에서 주어진 명령 종류만 뺀 사본. "priorities"는 priorities 사전을 비웁니다.
+static func without_kinds(policy: Dictionary, kinds: Array) -> Dictionary:
+	var stripped: Dictionary = {"preparation": [], "priorities": {}}
+	for command: Dictionary in policy.get("preparation", []):
+		if command.kind not in kinds:
+			stripped.preparation.append(command.duplicate(true))
+	if "priorities" not in kinds:
+		stripped.priorities = policy.get("priorities", {}).duplicate(true)
+	return stripped
+
+
+## §4.2의 "추첨 인지 기준 정책": 시드 0 기준 정책 앞에, 원재료마다 작성 발주(기준 정책에 set_purchase가 있으면
+## 그 값)와 그 시드의 구성이 필요로 하는 양 가운데 큰 값을 set_purchase로 맞춥니다. 시드 0에서는 기준 정책의 발주와 같습니다.
 static func draw_aware_policy(scenario: Definitions, seed_value: int) -> Dictionary:
 	var seeded: Definitions = scenario if seed_value == 0 else scenario.with_service_seed(seed_value)
 	var needs: Dictionary[String, int] = {}
@@ -57,15 +68,19 @@ static func draw_aware_policy(scenario: Definitions, seed_value: int) -> Diction
 		var recipe := scenario.recipe_for(arrival.recipe_id)
 		for ingredient_id: String in recipe.ingredients:
 			needs[ingredient_id] = needs.get(ingredient_id, 0) + recipe.ingredients[ingredient_id]
+	var reference := reference_policy(scenario.id)
+	var authored: Dictionary = scenario.purchases.duplicate()
+	for command: Dictionary in reference.preparation:
+		if command.kind == "set_purchase":
+			authored[command.target_id] = command.value
 	var policy: Dictionary = {"preparation": [], "priorities": {}}
 	for ingredient: Definitions.IngredientDef in scenario.ingredients:
 		if not ingredient.purchasable:
 			continue
-		var quantity: int = maxi(scenario.purchases.get(ingredient.id, 0), needs.get(ingredient.id, 0))
+		var quantity: int = maxi(authored.get(ingredient.id, 0), needs.get(ingredient.id, 0))
 		if quantity > 0:
 			_add(policy, "set_purchase", ingredient.id, quantity)
-	var reference := reference_policy(scenario.id)
-	policy.preparation.append_array(reference.preparation)
+	policy.preparation.append_array(without_kinds(reference, ["set_purchase"]).preparation)
 	policy.priorities = reference.priorities.duplicate(true)
 	return policy
 
