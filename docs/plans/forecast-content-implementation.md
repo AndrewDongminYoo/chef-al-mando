@@ -525,7 +525,9 @@ git commit -m "feat(content): replace slots instead of shuffling the seeded sche
 
 ---
 
-### Task 4: `forecast_slack` 작성, 콘텐츠 버전 7, 시드 게이트 통과
+### Task 4: `forecast_slack` 작성, 콘텐츠 버전 7, 시드 게이트 통과 — **취소 (운영자 결정 2026-09-21)**
+
+**취소 사유:** Task 3의 자리바꿈 생성기로도 시작 slack(메뉴별 1–2)에서 시도 1–5의 게이트가 여섯 압력 영업 30행 가운데 24행 실패했습니다(`hot_queue` 1/5, `shared_stock` 1/5, `long_route` 2/5, `split_duties` 1/5, `rush_hour` 1/5, `final_service` 0/5). 원인은 조율 방식입니다: `check.sh m3`의 "기준 정책 여분 ≤ 제공 1건·손익 2,000" 규칙이 압력 영업을 목표에 정확히 맞춰 놓아(`hot_queue` 시드 0은 수프 5건 전부와 구이 3건이 만료된 채 12건·4,750원으로 통과), ±1건의 구성 변화도 흡수할 여유가 없습니다. `hot_queue` 시도 2(교체 3슬롯, 구이 3연속)는 프렙 조합 104가지 전부에서 우선순위 유무와 무관하게 최고 9건이라 어떤 정책으로도 풀리지 않습니다. `PLAN.md` §12의 "폭을 줄인다"는 완화는 0까지 줄여야만 통과하므로 §4.1의 취지(변동)와 양립하지 않습니다. 운영자는 "여기서 멈추고 발견 기록"을 골랐습니다: `forecast_slack`은 비운 채로 두고 콘텐츠 버전은 6 그대로이며, 변동을 살리는 **압력 영업 재조율 명세**(m3 게이트 규칙 완화, 노동량·예산 여유, 시드별 정책)는 플레이테스트와 함께 별도로 결정합니다. 첫 실행이 남긴 시작 slack·콘텐츠 7 작업은 되돌렸고 그 diff는 세션 scratchpad에만 있었습니다. 아래 단계 서술은 기록으로 남기며 실행하지 않습니다.
 
 **Files:**
 
@@ -670,6 +672,8 @@ git commit -m "feat(persistence): bump content to version 7 and restart every ea
 
 **운영자 답(2026-09-21):** `split_duties`는 "준비 노동량 상한 스윕 허용"(Step 2-A 뒤 Step 2-B 실행), `final_service`는 "올리지 않고 여유 측정"(Step 2-C의 "여유 측정" 갈래), 브리핑 인내 시간은 "4단계 화면 계획으로 미룸"(Task 7 실행 안 함).
 
+**Task 4 취소에 따른 범위 조정(2026-09-21):** slack이 비어 있으므로 시도 1–5의 시드는 모두 작성 순서를 돌려줍니다. 아래 "시도 0–5"는 **시도 0만** 실행하며, 표의 시드 열은 0 하나입니다. Step 2-A의 "시드 변동으로 담당이 필요해지는지"는 측정할 수 없으므로 곧바로 Step 2-B를 실행합니다.
+
 - [ ] **Step 1: 측정(모든 갈래 공통)**
 
 시도 0~5(시드 0 포함 여섯 시드)마다 다음을 스윕합니다. 한 번에 하나의 Godot 프로세스만.
@@ -712,43 +716,38 @@ git commit -m "feat(content): set pressure-service targets from the lever measur
 **Files:**
 
 - Modify: `docs/specs/mise-forecast-reviews.md` (§4.1 마지막 항목 뒤, §10 표의 "풀림 검사" 행)
-- Modify: `docs/specs/m4-mobile.md` (버전 6 이력 뒤 두 줄)
+- Modify: `docs/notes/kitchen-pressure-verification.md` (`## 저장 호환성` 절 한 문장)
 - Modify: `docs/plans/PLAN.md` (§12 위험 표의 행에 "시드 1~5 게이트 구현됨" 정정 한 줄이 필요한지 읽고 결정)
 - Modify: `docs/plans/forecast-content-implementation.md` (이 문서: 정정 절과 회귀 결과)
 
 - [ ] **Step 1: 명세 정정**
 
+**Task 4 취소에 따른 조정(2026-09-21):** 아래 단락은 작성된 slack이 아니라 그 발견을 기록합니다. §8의 콘텐츠 버전 7 항목과 `docs/specs/m4-mobile.md`의 버전 7 두 줄은 쓰지 않습니다(버전은 6 그대로).
+
 §4.1의 "첫 두 영업의 slack은 0으로 둡니다(제안)" 항목 뒤에 단락을 추가합니다.
 
 ```markdown
-**2026-09-XX 정정:** 계획 3(`../plans/forecast-content-implementation.md`)이 `hot_queue`부터 여섯 영업의 `forecast_slack`을 작성했습니다.
-시작 규칙은 메뉴마다 `max(1, 기준 건수 / 5)`이고, 시도 1~5의 풀림 게이트에 실패한 시나리오는 §12의 규칙대로 폭을 줄였으며 확정값의 권위는 각 시나리오 `.tres`입니다.
-게이트의 "실제 추첨을 아는 기준 정책"은 시드 0 기준 정책에 추첨된 구성의 원재료 필요량을 발주로 맞춘 것입니다.
+**2026-09-21 정정:** 계획 3(`../plans/forecast-content-implementation.md`)은 시도 1~5의 풀림 게이트(`tests/test_seed_gate.gd`)와 자리바꿈 생성기(§4.2 정정)를 넣었지만 `forecast_slack`은 작성하지 않았습니다.
+메뉴별 `max(1, 기준 건수 / 5)`의 폭에서 여섯 압력 영업의 시도 30행 가운데 24행이 실패했고, `hot_queue` 시도 2는 프렙 조합 104가지 전부에서 최고 9건(목표 12)이라 어떤 정책으로도 풀리지 않았습니다.
+원인은 `check.sh m3`의 "기준 정책 여분 ≤ 제공 1건·손익 2,000" 규칙이 압력 영업을 목표에 정확히 맞춰 놓아 ±1건의 구성 변화도 흡수하지 못하는 조율이며, §12의 "폭을 줄인다"는 완화는 0에서만 통과합니다.
+변동을 살리려면 압력 영업의 재조율(그 규칙의 완화, 노동량·예산 여유, 시드별 기준 정책)이 먼저 필요하고, 그것은 [플레이테스트 명세](playtest-price-validation.md)와 함께 정하는 별도 명세입니다.
+게이트의 "실제 추첨을 아는 기준 정책"은 시드 0 기준 정책에 원재료별 `max(작성 발주, 추첨된 구성의 필요량)`을 발주로 맞춘 것이며, 모든 slack이 비어 있는 동안은 시드 0 결과와 같은 값으로 통과합니다.
 ```
 
 §10 표의 "새 `check.sh mise` 풀림 검사" 행 앞의 문장("아래 검사는 아직 구현되지 않았으므로 …")이 이제 이 행과 생성기 검사 행에는 맞지 않으므로, 그 문장을 "아래 검사 가운데 회계·리뷰 검사는 아직 구현되지 않았습니다"로 좁힙니다(생성기·풀림 검사는 구현됨을 표 아래 한 줄로 적습니다).
 
-§8 첫 항목들 뒤에 항목을 추가합니다.
+`docs/plans/PLAN.md` §12 위험 표의 "예보 폭이 넓어 풀리지 않는 시드" 행 뒤(또는 표 아래)에 한 줄을 더합니다: 2026-09-21 측정에서 현재 조율은 어떤 0이 아닌 폭도 풀리지 않았으며 재조율 명세가 선행한다는 문장(수치는 명세 §4.1 정정 단락이 소유하므로 다시 적지 않음).
 
-```markdown
-- **콘텐츠 버전 7.** `forecast_slack`이 작성되어 시드가 있는 세션의 일정이 스냅샷과 달라지므로 버전 6 이하의 진행 중 영업은 모든 시나리오에서 다시 시작하고, 완료·최고 기록과 준비 기본값은 보존합니다.
-```
-
-`docs/specs/m4-mobile.md`의 버전 6 두 줄 뒤에:
-
-```markdown
-2026-09-XX 승인된 수요 예보 폭은 새 쓰기의 `content_version`을 7로 올립니다.
-콘텐츠 버전 6은 완료·최고 기록을 그대로 유지하고 시드가 있는 영업의 일정이 달라졌으므로 모든 시나리오의 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 7으로 갱신합니다.
-```
+`docs/notes/kitchen-pressure-verification.md`의 `## 저장 호환성` 절이 콘텐츠 버전 4를 현재 버전처럼 말하면, 현재 버전은 `persistence/campaign_store.gd`의 `VERSIONS`가, 이력은 `docs/specs/m4-mobile.md`가 소유한다는 한 문장으로 바꿉니다(숫자를 적지 않음).
 
 - [ ] **Step 2: 전체 회귀**
 
-Run(순서대로): `bash scripts/check-export.sh`, `python3 tests/test_export_check.py`, `python3 tests/test_ios_export.py`, `bash scripts/check.sh m0`, `m1`, `m2`, `m3`, `m4-core`, `m4`, `m5`, `mise`, `ui-regressions` → 모두 PASS. 이 문서 끝에 "## 2026-09-XX 정정"(갈린 지점, Task 5의 갈래와 결과, 게이트가 줄인 slack)과 "### Task 6 회귀 결과"(`log` 블록)를 추가합니다. 두 PCK 결과는 Task 4의 값을 인용합니다.
+Run(순서대로): `bash scripts/check-export.sh`, `python3 tests/test_export_check.py`, `python3 tests/test_ios_export.py`, `bash scripts/check.sh m0`, `m1`, `m2`, `m3`, `m4-core`, `m4`, `m5`, `mise`, `ui-regressions` → 모두 PASS. 이 문서 끝에 "## 2026-09-21 정정"(갈린 지점: Task 2 브리프의 `--keep` 문구 오류, `shared_stock` 수프 기준 9, Task 4 첫 실행의 BLOCKED와 취소, Task 3 삽입, Task 5의 갈래와 결과)과 "### Task 6 회귀 결과"(`log` 블록)를 추가합니다. `test_m4_restart.py`는 같은 PCK로 한 번 실행합니다(콘텐츠 버전이 바뀌지 않았으므로 두 PCK 검사는 없음).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/specs/mise-forecast-reviews.md docs/specs/m4-mobile.md docs/plans/PLAN.md docs/plans/forecast-content-implementation.md
+git add docs/specs/mise-forecast-reviews.md docs/plans/PLAN.md docs/notes/kitchen-pressure-verification.md docs/plans/forecast-content-implementation.md
 git commit -m "docs: record the authored forecast slack, the seed gate and content version 7"
 ```
 
@@ -762,12 +761,14 @@ git commit -m "docs: record the authored forecast slack, the seed gate and conte
 
 ## 완료 조건
 
-- `tests/test_seed_gate.gd`가 실제 캠페인 8종의 시도 1~5를 통과하고, 두 합성 fixture에서는 실패를 보고합니다.
-- `hot_queue`부터 여섯 시나리오의 `forecast_slack`이 비어 있지 않고 `first_shift`·`lunch_prep`은 비어 있으며, 확정값과 시도별 회계가 `kitchen-pressure-verification.md`에 있습니다.
+(2026-09-21 Task 4 취소 반영)
+
+- `tests/test_seed_gate.gd`가 실제 캠페인 8종의 시도 1~5를 통과하고(모든 slack이 비어 있어 시드 0과 같은 값), 두 합성 fixture에서는 실패를 보고합니다.
+- 생성기는 자리바꿈만 하며(`tests/test_schedule_generator.gd`의 변경 슬롯 수·연속 길이 검사), 명세 §4.2에 정정이 있습니다.
+- 모든 캠페인 `.tres`의 `forecast_slack`은 비어 있고, 그 이유(현재 조율에서는 0이 아닌 폭이 풀리지 않음)와 수치가 명세 §4.1 정정 단락과 이 문서의 정정 절에 있으며 콘텐츠 버전은 6 그대로입니다.
 - `tests/sweep_policies.gd`가 커밋돼 있고 2026-09-21 절의 `split_duties` 수치를 재현합니다.
-- `split_duties`·`final_service`의 지렛대 측정 표가 있고, 승인된 갈래대로 목표·상한이 정해졌거나 "바꾸지 않음"의 근거가 적혀 있습니다.
-- 콘텐츠 6 이하 문서는 기록을 보존한 채 진행 중 영업을 재시작하고 다음 저장에서 7이 됩니다.
-- 모든 suite, `check-export.sh`, `test_m4_restart.py`(같은 PCK와 6→7 두 PCK)가 PASS입니다.
+- `split_duties`·`final_service`의 지렛대 측정 표가 있고, 승인된 갈래대로 `split_duties`의 상한이 정해졌거나 "바꾸지 않음"의 근거가, `final_service`는 여유 측정 표가 적혀 있습니다.
+- 모든 suite, `check-export.sh`, `test_m4_restart.py`(같은 PCK)가 PASS입니다.
 
 ## 다음 계획
 
