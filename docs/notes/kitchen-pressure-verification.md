@@ -536,10 +536,11 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 `tests/capture_product_polish.gd`는 렌더 창이 필요해(`--headless`는 "product capture requires a rendered window"로 멈춤) 이 세션에서 돌리지 않았고, 그 스크립트가 찾는 "fetching prep"·"fetching raw"는 채소 프렙 7이 처음 일곱 채소 주문에만 쓰이고 나머지가 원재료를 집으므로 둘 다 나옵니다.
 `.tres`의 `briefing`은 아직 "다섯 차례"라고 적혀 있으며(번역 키라 이 커밋은 손대지 않음) 실제 구성은 여섯 묶음과 마지막 한 쌍입니다.
 
-### 2026-09-21 재조율: `final_service` (수렴 실패, 측정만)
+### 2026-09-21 재조율: `final_service` (1차 수렴 실패 → 2026-09-22 2차 상한 22에서 수렴)
 
-[압력 영업 재조율 계획](../plans/pressure-rebalance-implementation.md) Task 7의 기록이며, 공통 절차 2–7이 수렴하지 않아 `.tres`와 `tests/fixtures/m3_policies.gd`는 바꾸지 않았고 이 절만 남깁니다.
-결론은 명세 §4.4의 마지막 갈래입니다: 이 영업은 slack을 두 메뉴까지 줄여도 시도 0–5를 모두 통과하는 프렙 조합이 상한 21에서도 없고, 한 메뉴만 남기면 이동이 불가능해 작성할 수 없으므로 §5의 구성 재설계 대상입니다.
+[압력 영업 재조율 계획](../plans/pressure-rebalance-implementation.md) Task 7의 기록이며, 1차(2026-09-21)에서는 공통 절차 2–7이 수렴하지 않아 `.tres`와 `tests/fixtures/m3_policies.gd`를 바꾸지 않았고 측정만 남겼습니다.
+1차의 결론은 명세 §4.4의 마지막 갈래였습니다: 이 영업은 slack을 두 메뉴까지 줄여도 시도 0–5를 모두 통과하는 프렙 조합이 상한 21에서도 없고, 한 메뉴만 남기면 이동이 불가능해 작성할 수 없으므로 §5의 구성 재설계 대상이라는 것입니다.
+아래 "2026-09-22 2차" 소절이 이 결론을 대체합니다: 상한 22와 냉식 두 메뉴 slack으로 수렴했고 `.tres`·`m3_policies.gd`를 바꿨으며, 1차의 표는 상한 21 이하의 기록으로 그대로 둡니다.
 모든 스윕은 위 스윕 절의 `tests/sweep_policies.gd`로 `--scenario final_service --attempt N --purchases draw --items marinated_protein:6,prepped_vegetable:6,prepped_grain:4,prepped_mushroom:3,soup_base:2,thawed_protein:3 --best`를 돌렸고, 스윕 동안만 `m3_policies.gd`의 기준 정책에 `policy.priorities = {"grill": 2}`를 넣어 도구가 기본값으로 유지하게 했습니다(스윕 뒤 `git checkout --`으로 되돌렸고 `git status --short`가 비어 있음을 확인).
 상한은 스윕 동안만 21로 두고 19·20의 값은 통과 조합의 노동량으로 도출했습니다(위 지렛대 측정 절이 확인한 대로 상한은 `sim/preparation_plan.gd`의 수량 거부에만 쓰여 같은 조합의 회계가 상한과 무관합니다).
 시도별 교집합은 scratchpad의 파이썬 스크립트로 구했고, 추첨 내용은 `ScheduleGenerator.recipe_ids`를 시도별로 찍는 scratchpad 탐침으로 읽었으며 둘 다 커밋하지 않았습니다.
@@ -631,6 +632,7 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 따라서 `final_service`는 명세 §5의 3단계(구성) 대상이며, 위 측정이 가리키는 방향은 두 가지입니다: 온식 건수가 늘지 않는 slack만 두더라도 80 tick 간격의 단일 흐름은 자리바꿈 하나에 통째로 흔들리므로 `split_duties`처럼 묶음 사이에 회복 구간을 두는 구성이거나, 시도별 통과 집합이 노동량 19–21에 몰려 있으므로 상한을 넘는 재설계(별도 승인)입니다.
 무계획 미달 폭은 세 바퀴의 모든 시도에서 제공 6건 이상이라 목표 상향은 어느 단계에서도 필요하지 않았습니다.
 스윕 로그·교집합 스크립트·탐침은 세션 scratchpad에만 있고 커밋하지 않았습니다.
+이 결론은 아래 2026-09-22 2차 소절이 대체합니다: 상한 22와 냉식 두 메뉴 slack으로 수렴했고 `.tres`·`m3_policies.gd`를 바꿨습니다.
 
 #### 2026-09-22 2차: 상한 22–24와 구성
 
@@ -654,6 +656,9 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 
 시도 3(온식 21)은 상한 22부터 통과가 생기지만 시도 1(온식 22)은 상한 24에서도 0이고, 그 통과 무관 최댓값이 `marinated_protein` 상한 6에 걸려 있어 `--items marinated_protein:8,prepped_vegetable:3,prepped_grain:3,prepped_mushroom:3,soup_base:2,thawed_protein:3`(4,823가지)으로 다시 돌려도 0에 같은 최댓값이었습니다.
 교집합은 시도를 더할수록 줄어들므로 한 시도의 0이 곧 여섯 시도의 0이라 시도 5는 돌리지 않았고, 이 slack은 상한 24로도 풀리지 않습니다.
+여기서 1차 2바퀴의 냉식 세 메뉴 slack으로 바로 내려갔으므로, §4.4의 규칙이 지나는 중간 단계(일곱 메뉴 각 1부터 온식 메뉴에 폭이 남는 네 메뉴 slack까지)는 상한 22–24에서 재지 않았습니다.
+이 건너뜀의 근거는 시도 1의 온식 22 결과(상한 24에서 통과 0) 하나뿐이고, 온식 21인 시도 3은 상한 22·24에서 통과하므로 온식 건수가 최대 21까지만 늘어나는 slack(온식 메뉴 하나에만 폭이 남는 꼴)이 상한 22에서 풀릴 가능성은 남아 있습니다.
+곧 상한 22에서 지금보다 넓은 `final_service` slack은 탐색하지 않은 영역이며, 운영자가 처음 수렴하는 상한을 고정하라고 했으므로 기록만 하고 재지 않았습니다.
 
 ##### 냉식 세 메뉴 각 1
 
@@ -684,9 +689,9 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 |    4 |           26 | 18:1 · 19:1 · 20:1 · 21:7 · 22:16 | `marinated_protein 5, prepped_grain 4, prepped_vegetable 2, soup_base 1` · 22 · 27 · 11,550         |
 |    5 |           46 | 19:2 · 20:7 · 21:13 · 22:24       | `marinated_protein 5, prepped_mushroom 2, prepped_vegetable 2, thawed_protein 3` · 22 · 28 · 13,100 |
 
-여섯 로그를 `fs_intersect.py`로 다시 교집합하면 상한 21은 0(최다 겹침 4/6: `marinated_protein 4, prepped_grain 4, prepped_vegetable 4, thawed_protein 1`이 1·2·4·5, `marinated_protein 5, prepped_vegetable 3, thawed_protein 2`가 0·2·3·5)이고 상한 22는 탐침이 찾은 노동량 22의 셋과 정확히 같습니다: `marinated_protein 6, prepped_grain 1, prepped_mushroom 2, prepped_vegetable 1`, `marinated_protein 6, prepped_mushroom 2, prepped_vegetable 1, thawed_protein 1`, `marinated_protein 6, prepped_grain 1, prepped_mushroom 2, thawed_protein 1`.
+여섯 로그를 `fs_intersect.py`로 다시 교집합하면 상한 21은 0(최다 겹침 4/6은 넷으로 `marinated_protein 4, prepped_grain 4, prepped_vegetable 4, thawed_protein 1`이 1·2·4·5, `marinated_protein 5, prepped_vegetable 3, thawed_protein 2`와 `marinated_protein 5, prepped_mushroom 2, prepped_vegetable 2, thawed_protein 2`와 `marinated_protein 5, prepped_vegetable 3, soup_base 1, thawed_protein 2`가 0·2·3·5)이고 상한 22는 탐침이 찾은 노동량 22의 셋과 정확히 같습니다: `marinated_protein 6, prepped_grain 1, prepped_mushroom 2, prepped_vegetable 1`, `marinated_protein 6, prepped_mushroom 2, prepped_vegetable 1, thawed_protein 1`, `marinated_protein 6, prepped_grain 1, prepped_mushroom 2, thawed_protein 1`.
 셋은 시도 0–5에서 모두 26건·10,600원 / 27건·10,900원 / 26건·10,600원 / 26건·10,350원 / 27건·10,950원 / 26건·10,600원으로 같아 계획 공통 절차 4의 "여섯 시도 손익 최솟값이 가장 큰 조합"으로는 갈리지 않았고, 이전 기준 프렙의 `prepped_grain`을 남기며 `--items` 순서에서 앞선 `prepped_vegetable`을 `thawed_protein`보다 앞세운 첫 조합을 기준 프렙으로 두었습니다(계획에서 갈라진 지점).
-열여덟 조합이 모두 `marinated_protein` 상한 6에 걸려 있어 7·8도 탐침으로 여섯 시도에 대었습니다: 7 단독(노동량 21)은 여섯 시도 모두 미달, 7에 단품 하나를 더한 22는 다섯 가지 모두 한 시도 이상 미달(`prepped_vegetable`·`prepped_grain`·`thawed_protein`은 시도 0·4, `prepped_mushroom`은 시도 3, `soup_base`는 여섯 모두), 노동량 23의 셋(`prepped_mushroom 2`, `prepped_mushroom 1` + 단품)도 미달, 노동량 24의 넷 가운데 `prepped_mushroom 2`와 단품 하나를 더한 셋만 통과하되 최솟값이 26건·10,050원으로 22의 셋보다 낮고, 8은 연어 덮밥에 남는 연어가 없어 거부됩니다.
+열여덟 조합이 모두 `marinated_protein` 상한 6에 걸려 있어 7·8도 탐침으로 여섯 시도에 대었습니다: 7 단독(노동량 21)은 여섯 시도 모두 미달, 7에 단품 하나를 더한 22는 다섯 가지 모두 한 시도 이상 미달(`prepped_vegetable`·`prepped_grain`·`thawed_protein`은 시도 0·4, `prepped_mushroom`은 시도 3, `soup_base`는 여섯 모두), 탐침한 노동량 23의 셋(`prepped_mushroom 2`, `prepped_mushroom 1` + 단품)도 미달, 탐침한 노동량 24의 넷 가운데 `prepped_mushroom 2`와 단품 하나를 더한 셋만 통과하되(23·24는 전수가 아니라 이 일곱 가지만 대었음) 최솟값이 26건·10,050원으로 22의 셋보다 낮고, 8은 연어 덮밥에 남는 연어가 없어 거부됩니다.
 따라서 상한 6은 더 싼 답을 가리지 않았고 22가 첫 상한입니다.
 기준 정책이 통하는 방식은 온식 덜어내기입니다: 시드 0의 주문별 결과(탐침 `--detail`)에서 매 파동 다섯째 온식인 현미 볶음밥 네 건이 모두 마감에 만료되고, 재운 연어 6이 연어 8 가운데 6을 써 연어 덮밥 셋째·넷째(1290·1930 tick)가 재료 없이 기다리다 만료되며, 나머지 26건은 도착 뒤 235–470 tick 안에 나갑니다.
 이전 기준 `marinated_protein 5`도 구이 넷에 다섯을 재워 덮밥 하나를 같은 방식으로 굶겼으므로 새 기준은 그 정도를 하나 더한 것이고, 덮밥에 연어를 되돌려 주는 정책은 아래 대체 B 측정대로 22건까지 떨어집니다.
