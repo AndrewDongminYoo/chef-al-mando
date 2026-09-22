@@ -172,7 +172,9 @@ func _compare_choices(campaign: Resource) -> void:
 		if kind == "prep":
 			expect(changed.metrics.orders.working < baseline.metrics.orders.working, "preparation removes measured service work")
 		if kind == "purchases":
-			expect(changed.accounting.served > baseline.accounting.served, "the reference purchase serves orders the authored stock cannot")
+			expect(changed.accounting.served > baseline.accounting.served
+				and changed.accounting.purchased_cost == baseline.accounting.purchased_cost + 11 * 100,
+				"the reference purchase serves orders the authored stock cannot, at its unit price")
 		print("M3_COMPARISON ", kind, " ", JSON.stringify({"scenario": scenario.id,
 			"before": {"accounting": baseline.accounting, "metrics": baseline.metrics},
 			"after": {"accounting": changed.accounting, "metrics": changed.metrics}}, "", true))
