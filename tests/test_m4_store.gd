@@ -317,9 +317,10 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	_test_raised_targets(campaign, directory)
 
 
-## Content 7 raised hot_queue from 12 served / 4,750 profit (content 2-6) to 14 / 5,600 and changed its
-## composition, which lowers maximum_profit(served); a content 2-6 completion earned under the old
-## targets must survive with the legacy marker, and an old best profit above the new cap is clamped.
+## Content 7 raised hot_queue from 12 served / 5,000 profit (content 2) and 12 / 4,750 (content 3-6)
+## to 14 / 5,600 and changed its composition, which lowers maximum_profit(served); a content 2-6
+## completion earned under the old targets must survive with the legacy marker, and an old best
+## profit above the new cap is clamped.
 func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var cap: int = hot_queue.maximum_profit(12)
@@ -380,6 +381,13 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	loaded = CampaignStore.new(campaign, current_target).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records",
 		"a content 7 file cannot claim a hot queue completion at the content 6 targets without the marker")
+	var premarked_target := directory + "/content_version_six_premarked_hot_queue.json"
+	_write(premarked_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": marked_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, premarked_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records
+		and loaded.active_session == null,
+		"a content 6 hot queue record that already carries the legacy marker loads with the marker kept and the record unchanged")
 
 
 func _write(target: String, text: String) -> void:

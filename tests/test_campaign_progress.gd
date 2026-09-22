@@ -74,7 +74,8 @@ func run(_tree: SceneTree) -> void:
 	expect(not unmarked_completion.errors.is_empty(),
 		"a current completion below the current targets requires migration provenance")
 	# The legacy floor is the lowest target any shipped content version had: hot_queue shipped at
-	# 14 / 1,500 (content 1) and 12 / 4,750 (content 2-6) before content 7 raised it to 14 / 5,600.
+	# 14 / 1,500 (content 1), 12 / 5,000 (content 2) and 12 / 4,750 (content 3-6) before content 7
+	# raised it to 14 / 5,600.
 	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1500})
 		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 11, "best_profit": 1500})
 		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1499}),

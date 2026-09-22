@@ -4,7 +4,8 @@ const CampaignDef := preload("res://content/campaign_def.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 ## The lowest targets any shipped content version had, per field: a completion earned under an
 ## earlier content version keeps its legacy_completed marker only while it clears this floor.
-## hot_queue shipped at 14 / 1,500 (content 1), 12 / 4,750 (content 2-6) and 14 / 5,600 (content 7);
+## hot_queue shipped at 14 / 1,500 (content 1), 12 / 5,000 (content 2), 12 / 4,750 (content 3-6) and
+## 14 / 5,600 (content 7);
 ## every other service only ever rose from its content 1 values.
 const LEGACY_COMPLETION_TARGETS := {
 	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
