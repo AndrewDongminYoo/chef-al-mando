@@ -93,7 +93,7 @@ Task 5~9는 영업마다 아래 절차를 따릅니다.
    slack을 줄이면 `maximum_profit(order_count)`가 작아지므로, 줄인 뒤 먼저 `minimum_profit <= maximum_profit(order_count)`를 확인하고 넘으면 목표를 그 값 아래로 되돌린 뒤 다시 잽니다(넘긴 채 두면 `scenario_def.gd`의 `validate()`가 손익 목표 오류를 내고 `test_m3_content.gd`가 원인과 먼 문장으로 실패합니다).
    slack이 전부 0이 되어야만 풀리면 멈추고 보고합니다(그 영업은 §5의 구성 재설계 대상).
 8. 지렛대를 확인합니다(Task 4가 게이트를 넣은 뒤이며 `final_service`는 제외).
-   `... --scenario <id> --attempt 0 --without <지렛대 종류> --best`를 돌려 `passed`가 0이어야 하고, `best_any`의 수량으로 `m3_policies.gd`의 `lever_free_policy(<id>)`를 갱신합니다(`--without`이 뺀 종류 밖의 기준 명령은 그대로 두고 프렙만 `best_any`로).
+   `... --scenario <id> --attempt 0 --without <지렛대 종류> --best`를 돌려 ~~`passed`가 0이어야 하고~~(계획의 결함, 아래 2026-09-22 정정 절의 Task 9 항목), `best_any`의 수량으로 `m3_policies.gd`의 `lever_free_policy(<id>)`를 갱신합니다(`--without`이 뺀 종류 밖의 기준 명령은 그대로 두고 프렙만 `best_any`로).
    `passed`가 0이 아니면 그 영업의 Task가 적은 지렛대 회복 수단을 씁니다.
 9. 대체 정책 둘을 맞춥니다: 시드 0에서 두 목표를 통과하고 기준·대체 세 해시가 쌍별로 다르며 1배·4배 해시가 같아야 합니다.
    미달하는 대체 정책만 프렙 수량을 바꿉니다(2026-09-21 정정 절의 방식).
@@ -408,7 +408,7 @@ Run: `... --scenario hot_queue --attempt 2 --purchases draw --items marinated_pr
 
 Run: `git -C <worktree> checkout -- content/campaign/scenarios/hot_queue.tres`
 Run: `git -C <worktree> status --short` → 비어 있어야 합니다(note 파일 편집 전에 확인).
-note에 새 절을 씁니다: 명령, 표, 결론("상한 N 또는 예산 M부터 시도 2에 통과 조합이 생긴다" 또는 "상한 9·예산 +1,500까지 통과 없음").
+note에 새 절을 씁니다: 명령, 표, 결론("상한 N 또는 예산 M부터 시도 2에 통과 조합이 생긴다" 또는 "~~상한 9~~·예산 +1,500까지 통과 없음"; 상한은 Step 2의 11이 맞으며 아래 2026-09-22 정정 절의 Task 2 항목 참조).
 
 **중단 분기:** 상한 11과 예산 +1,500 어느 값에서도 시도 2의 `passed`가 0이면, 이 Task까지 커밋하고 멈춰 운영자에게 보고합니다.
 그 경우 §5의 여유 수단은 가장 어려운 영업에서 작동하지 않으므로 `hot_queue`는 구성(§5의 3단계) 재설계 대상이고, 그 재설계는 승인 대상입니다.
@@ -855,7 +855,7 @@ git commit -m "feat(content): give long_route prep headroom for its forecast dra
 
 프렙은 스윕 도구가 항상 순회하므로 `--without`에 `set_prep`은 없고, "프렙 없음"은 `--items`의 상한을 모두 0으로 두어 만듭니다.
 세 스윕을 돌립니다.
-Run: `... --scenario rush_hour --attempt 0 --without priorities --best`(프렙만) → `passed` 0이어야 하며, 2026-09-21 절에서는 우선순위 없는 통과가 150이었으므로 목표 상향이 필요할 가능성이 큽니다: 우선순위 없는 `best_any`가 목표 아래에 오도록 `minimum_profit`(또는 `minimum_served`)을 올리되 기준 정책은 시도 0~5를 통과해야 합니다.
+Run: `... --scenario rush_hour --attempt 0 --without priorities --best`(프렙만) → ~~`passed` 0이어야 하며~~(계획의 결함, 아래 2026-09-22 정정 절의 Task 9 항목), 2026-09-21 절에서는 우선순위 없는 통과가 150이었으므로 목표 상향이 필요할 가능성이 큽니다: 우선순위 없는 `best_any`가 목표 아래에 오도록 `minimum_profit`(또는 `minimum_served`)을 올리되 기준 정책은 시도 0~5를 통과해야 합니다.
 Run: `... --scenario rush_hour --attempt 0 --items marinated_protein:0,prepped_vegetable:0,prepped_grain:0,prepped_mushroom:0,soup_base:0,thawed_protein:0 --best`(우선순위만, 프렙 0, 조합 1) → `passed` 0.
 Run: `... --scenario rush_hour --attempt 0 --without priorities --items <위와 같은 0 상한> --best`(무계획과 같음, 조합 1) → `passed` 0.
 `lever_free_policy("rush_hour")`는 세 스윕 가운데 `best_any`가 가장 큰 것(제공, 손익 사전순)으로 고정합니다.
@@ -1001,3 +1001,133 @@ git commit -m "docs: point the blueprint, mise spec and agent rules at the rebal
 
 - 플레이테스트(`docs/specs/playtest-price-validation.md`)는 이 PR이 머지된 뒤 운영자의 시작 문장으로 시작합니다.
 - 브리핑의 메뉴별 인내 시간 표시와 메뉴 아이콘은 4단계 화면 계획으로 미뤄져 있습니다.
+
+## 2026-09-22 정정
+
+아래 항목은 Task 1–11 실행 중 이 계획의 서술과 실제 커밋이 갈린 지점과 그때의 판정입니다.
+이 절 위의 단계 서술은 고치지 않으며(지금 틀린 세 구절만 취소선과 이 절로의 포인터를 달았습니다), 권위는 인용한 커밋의 코드·`.tres`·테스트와 `docs/notes/kitchen-pressure-verification.md`(아래 "note")의 영업별 "2026-09-21 재조율" 절에 있습니다.
+커밋 SHA는 `feat/pressure-rebalance`의 것이며 `git log --oneline 567fe9a..HEAD`로 확인했습니다.
+`567fe9a`는 계획 작성 시점의 `origin/main`이고 그 뒤 `origin/main`은 움직였으므로, 이 절과 Task 10 Step 3의 명령은 리터럴 SHA로만 읽습니다.
+
+### 실행 순서
+
+계획의 Task 번호 순서가 아니라 다음 순서로 실행했습니다: 1, 2(확장 셋), 3, 4, 6, 7(수렴 실패), 8, 9(수렴 실패), 10a(계획에 없음), 5, 7b, 9b(수렴 실패), 9c, 10, 11.
+`hot_queue`(Task 5)는 Task 2의 중단 분기가 걸려 운영자 결정까지 미뤄졌고 Task 3–9 뒤에 실행했습니다.
+note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통일하고 측정일은 본문에 적었습니다.
+
+### 운영자 판정 (2026-09-21·22)
+
+1. 계획 승인, subagent 주도 실행(2026-09-21).
+2. §4.3은 두 층으로(승인 질문 3번): 기준 의존성과 스윕이 고정한 최강 무지렛대 정책(`Policies.lever_free_policy`).
+   `rush_hour`는 지렛대별(`set_prep`·`priorities`·둘 다)로 검사하고, 배치(`move_station`·`rotate_station`)는 `Policies.lever_subsets`의 한 부분집합입니다(회전만 뺀 `long_route` 기준 정책은 통과하므로, Task 4).
+3. `shared_stock`의 작성 `purchases`는 시드 0 필요량 아래로 줄여 기준 정책이 `set_purchase`로 채우도록 합니다(Task 4).
+4. `hot_queue`의 구성 재설계 허용(2026-09-22, Task 5).
+5. `final_service`는 상한 22–24를 먼저 재고 그 다음 구성(2026-09-22, Task 7b).
+6. `rush_hour`의 구성 재설계 허용(2026-09-22, Task 9b) — 이후 컨트롤러 판정으로 원래 구성에서 수렴(Task 9c).
+7. 부하가 낮을 때는 Godot 프로세스 둘까지(2026-09-22; Global Constraints의 "한 번에 하나"를 완화한 진행 규칙이며 문서 규칙은 바꾸지 않았습니다).
+
+### Task별 갈린 지점과 컨트롤러 판정
+
+- 사전 판정: 한 Task 안에서 올린 목표는 다시 내릴 수 있되 `567fe9a`의 값 아래로는 내리지 않습니다.
+- Task 1(커밋 `b1bd756`, note 정정 `058dede`): 계획대로였고, note의 `--keep purchases` 문장은 `--purchases draw`와 모순되지 않게 `--keep`으로 범위를 좁혔습니다.
+- Task 2(커밋 `123c9bd`, 확장 `0f9d91a`·`04459d6`·`5c93a31`·`981c15b`): 상한의 상한은 Step 2대로 11이며(`marinated_protein 4`가 노동량 12라 `_test_hot_queue_focus`가 깨짐) Step 4의 "상한 9"는 오기입니다(취소선).
+  중단 분기가 건너뛰는 §4.4의 slack 축소를 멈추기 전에 쟀고("가장 큰 값, `menu_ids` 순서" 사다리는 계획의 규칙이라 두 메뉴 slack 둘도 쟀음), 우선순위 지도와 실패 원인 탐침을 운영자 질문 전에 돌렸습니다.
+  수치는 note "탐침: `hot_queue` 시도 2의 여유" 절.
+- Task 3(커밋 `621adb3`): 첫 slack 커밋보다 앞서 버전 7을 올렸습니다(명세 §7의 문장과 다르며 명세의 2026-09-22 정정 절 4).
+  Step 2의 "`check.sh mise` → PASS" 예측은 틀렸습니다: `tests/test_service_seed.gd`의 현재 버전 리터럴 둘을 같은 Step에서 7로 올려 상향 전에는 미래 버전 검사가 실패하며, 결함이 아니라 예상되는 실패입니다.
+- Task 4(커밋 `f6d1626`, 리팩터 `bae9289`): 운영자 판정 2·3대로이며, `_compare_choices`의 `purchases` 변형은 기준 발주가 작성 재고보다 더 제공하는지로 바뀌었습니다.
+  값은 note "재조율: `shared_stock`" 절.
+- Task 6(커밋 `3a72a01`, 브리핑·note 정리 `64ae801`): slack `salad 1, mushroom_salad 1`(온식 0)은 온식→냉식 추첨이 매출 상한을 고정된 손익 목표 아래로 내리므로 §4.4로 수용했습니다(명세 §3의 "미세 slack" 거부와 긴장; `order_count` 28은 재지 않은 대안).
+  `prep_labor_capacity` 15 → 7 인하를 수용했습니다: 명세 §5의 방향 제약은 목표에만 걸리고 운영자가 2026-09-21에 이 영업의 상한 스윕을 허용했으며, Step 2의 "15 → 최대 18"은 올리는 쪽만 가정한 서술입니다.
+  묶음 3+1과 2/2 담당 분할은 공학적 선택이고, 브리핑과 `translations/en.po`는 제자리에서 교체했습니다.
+  값은 note "재조율: `split_duties`" 절.
+- Task 7(커밋 `cd6d2a3`, 수렴 실패): 1바퀴에서 온식 다섯 메뉴를 한 번에 0으로 뒀고(공통 절차 7은 가장 큰 값부터 하나씩; 논거는 note), 상한 21 이하에서 여섯 시도 교집합이 없어 멈췄습니다.
+- Task 7b(커밋 `c233ffb`, note 정정 `9c9da50`): 운영자 판정 5에 따라 상한 22에서 냉식 두 메뉴 slack으로 수렴했고 목표는 그대로입니다.
+  §4.4의 중간 단계는 22–24에서 재지 않았습니다(후속).
+  값은 note "재조율: `final_service`" 절의 2차 소절.
+- Task 8(커밋 `220874e`, note 정정 `9049cf8`): `lever_free_policy("long_route")`는 `best_any`가 지렛대를 뺀 기준 정책과 같아 다음 순위 행으로 고정했습니다(Task 10 Step 1의 허용 조항).
+  값은 note "재조율: `long_route`" 절.
+- Task 9(커밋 `8bdbc89`, note 정정 `454b72e`, 수렴 실패)·9b(커밋 `e8fb5b5`, 측정만)·9c(커밋 `3099b2b`, note 정정 `7fef392`, 기준 재선정 `07735de`): Step 2와 공통 절차 8의 "프렙만 스윕 `passed` 0"은 계획의 결함입니다(취소선).
+  명세 §4.3은 무지렛대 정책에서 두 지렛대를 모두 빼며, 승인된 정의는 `tests/test_m3_playthrough.gd`에 코드화된 게이트뿐입니다.
+  그 기준으로 원래 구성에서 수렴했고, 9c의 기준 정책은 리뷰 뒤 1층을 모두 만족하는 행 가운데 시드 0 편차가 가장 작은 행으로 다시 골랐습니다(리뷰가 제안한 행은 `priorities`만 뺀 갈래에서 실패).
+  값은 note "재조율: `rush_hour`" 절의 3차 소절.
+- Task 10a(커밋 `af226c5`, 계획에 없음): `hot_queue`·`rush_hour`의 `lever_free_policy`를 운영자 질문 전에 고정해 Task 10의 검사가 구성 결정과 무관하게 들어가게 했습니다.
+  `rush_hour`의 고정값은 스윕 도구가 프렙만 순회하므로 배치·담당·발주 탐침에서 나온 `move_station cold_01 left` 2회이고, `hot_queue`는 Task 5의 재설계 뒤 다시 고정했습니다.
+- Task 5(커밋 `276e2aa`, note 정정 `e11f4ab`): 운영자 판정 4에 따라 구성을 재설계했습니다.
+  여섯 시도 교집합 세 조합의 손익 최솟값이 같아 공통 절차 4의 규칙으로는 갈리지 않았고 이전 기준 프렙을 유지했습니다.
+  값은 note "재조율: `hot_queue`" 절.
+- Task 10(커밋 `11a48e6`): 계획대로였고, Step 3의 "`origin/main`(`567fe9a`)"은 그 뒤 `origin/main`이 움직여 라벨만 낡았습니다.
+- 리뷰: Task 8·9b의 한 줄 note 수정은 컨트롤러가 범위 재리뷰 없이 확인했고, 나머지 수정 라운드는 모두 범위 리뷰를 거쳤습니다.
+
+### 후속 (이 PR에서 풀지 않음)
+
+- `final_service`의 기준 정책은 `grain_grill` 네 건을 모두 만료시키고 덮밥 두 건을 굶겨 통과하며(주문별 수치는 note 2차 소절), 대체 B가 시드 0에서 기준보다 높습니다.
+- `split_duties`의 변동은 냉식뿐이며, `order_count` 28이 온식 slack의 매출 여유를 줄 수 있습니다(미측정).
+- `final_service`의 §4.4 중간 단계는 상한 22–24에서 재지 않았습니다(더 넓은 slack이 있을 수 있음).
+- `hot_queue`의 여분은 구속 폭입니다(시도 5의 제공이 목표와 같고 시드 0의 제공 여분이 §4.1의 상한과 같음; note "재조율: `hot_queue`" 절).
+- 기존 결함: `persistence/campaign_store.gd`의 `load_records()` 종단 실패 분기가 `active_session`을 빠뜨리고 `_failure()`는 null을 둡니다.
+- 명세 §9와 Task 11의 "§10 표의 풀림 검사 행"은 `mise-forecast-reviews.md`의 §9(결정론 계약) 표를 가리키며, 라벨만 틀리고 행은 고쳤습니다.
+- 플레이테스트(`docs/specs/playtest-price-validation.md`)는 운영자의 시작 문장을 기다립니다.
+
+### Task 10 회귀 결과 (2026-09-22)
+
+두 PCK 검사는 `567fe9a`에서 만든 콘텐츠 6 PCK를 writer로, 워크트리에서 만든 콘텐츠 7 PCK를 reader로 돌렸고, 같은 PCK 검사는 콘텐츠 7 PCK로 돌렸습니다.
+회귀는 하나씩 순서대로 실행했고 모든 suite의 로그에 `SCRIPT ERROR`·`ERROR:` 줄은 없었습니다.
+
+```log
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check-export.sh
+PASS: exported M3 campaign and first served order
+PASS: exported M1 content and first order
+PASS: exported M2 preparation and first order
+PASS: exported M2 extra menu prepared and served
+PASS: exported M4 storage core
+PASS: exported M4 resume and localization
+PASS: exported M5 campaign ending and licenses
+
+$ python3 tests/test_export_check.py
+Ran 10 tests in 0.818s
+
+OK
+
+$ python3 tests/test_ios_export.py
+Ran 2 tests in 0.092s
+
+OK
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m0
+PASS: m0 checks=25 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m1
+PASS: m1 checks=192 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m2
+PASS: m2 checks=489 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3
+PASS: m3 checks=1120 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4-core
+PASS: m4-core checks=902 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m4
+PASS: m4 checks=1206 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m5
+PASS: m5 checks=583 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh mise
+PASS: mise checks=393 failures=0
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh ui-regressions
+PASS: ui-regressions checks=285 failures=0
+
+$ M4_EXPECT_RESTART=1 M4_WRITER_PACK=content6.pck M4_READER_PACK=content7.pck GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot python3 tests/test_m4_restart.py
+Ran 10 tests in 1.720s
+
+OK (skipped=1)
+
+$ GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot python3 tests/test_m4_restart.py
+Ran 10 tests in 1.691s
+
+OK
+```
