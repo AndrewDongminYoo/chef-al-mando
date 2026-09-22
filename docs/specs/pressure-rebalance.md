@@ -131,8 +131,8 @@
 
 - `forecast_slack`을 작성하는 커밋은 콘텐츠 버전을 7로 올립니다.
   시드가 있는 세션의 일정이 스냅샷과 달라지므로 버전 6 이하의 진행 중 영업은 모든 시나리오에서 재시작하고 완료·최고 기록과 준비 기본값은 보존합니다.
-- 목표가 올라간 영업의 완료 기록은 그대로 두며, `legacy_completed` 표식 규칙은 콘텐츠 버전 1의 것이라 적용하지 않습니다.
-  최고 기록은 `maximum_profit`(예보 상한 기준)이 커지므로 계속 유효합니다.
+- 목표가 올라간 영업의 완료 기록은 그대로 두며, ~~`legacy_completed` 표식 규칙은 콘텐츠 버전 1의 것이라 적용하지 않습니다~~ 표식 규칙은 버전 6 이하의 모든 기록에 적용합니다(2026-09-22 정정 절 7).
+  ~~최고 기록은 `maximum_profit`(예보 상한 기준)이 커지므로 계속 유효합니다.~~ `hot_queue`의 구성 변경은 `maximum_profit`을 낮추므로 옛 최고 손익은 현재 상한으로 잘라 보존합니다(2026-09-22 정정 절 7).
 - 스키마는 4 그대로이고 `sim_version`은 건드리지 않습니다.
 
 ## 8. 검증 계약
@@ -177,7 +177,7 @@
 ## 2026-09-22 정정
 
 아래 항목은 구현 계획(`../plans/pressure-rebalance-implementation.md`) Task 1–11 실행 중 이 명세의 서술과 측정·판정이 갈린 지점입니다.
-위 절의 문장은 지금 틀린 두 곳(§5 표의 `final_service` 행, §8의 `split_duties` 문장)만 취소선으로 표시하고 나머지는 고치지 않습니다.
+위 절의 문장은 지금 틀린 세 곳(§5 표의 `final_service` 행, §7의 표식·최고 기록 문장, §8의 `split_duties` 문장)만 취소선으로 표시하고 나머지는 고치지 않습니다.
 수치의 권위는 커밋된 `.tres`·`tests/fixtures/m3_policies.gd`와 `../notes/kitchen-pressure-verification.md`(아래 "note")의 영업별 "2026-09-21 재조율" 절에 있고, 이 절은 값을 다시 적지 않습니다.
 커밋 SHA는 `feat/pressure-rebalance`의 것이며 계획의 2026-09-22 정정 절이 Task별로 인용합니다.
 
@@ -210,3 +210,10 @@
      `split_duties`는 온식→냉식 추첨이 매출 상한을 고정된 손익 목표 아래로 내려 온식 slack을 둘 수 없었고(note "재조율: `split_duties`" 절), `final_service`는 상한 22에서 처음 수렴한 단계를 운영자 지시대로 고정한 것이라 그 위의 §4.4 단계는 재지 않았습니다(note "재조율: `final_service`" 절의 2차 소절; 더 넓은 slack이 있을 수 있음).
 6. **§4.4의 "이동이 하나도 불가능한 slack" 규칙.**
    `tests/test_service_seed.gd`가 시도 1–5마다 생성기가 순서를 바꾸는지 검사해 이 규칙을 코드로 집행합니다.
+7. **§7의 표식 규칙과 최고 기록.**
+   Codex 읽기 리뷰(P1)가 찾았습니다: `hot_queue`의 목표가 12건·4,750(버전 2–6)에서 14건·5,600으로 올랐는데 `campaign_store.gd`는 버전 1 문서에만 표식을 붙였고, `validate_records()`는 표식 없는 완료 기록이 현재 목표에 못 미치면 `corrupt_records`로 거부해 버전 2–6의 정당한 `hot_queue` 완료가 저장 전체를 잠갔습니다.
+   §7의 "표식 규칙은 버전 1의 것"은 틀렸으며, 표식은 버전 6 이하의 모든 문서에서 현재 목표에 못 미치는 완료 기록에 붙습니다 – 그 시대의 목표를 충족했다면 보존해야 한다는 AGENTS.md의 규칙과 §7의 첫 문장이 원래 약속한 것입니다.
+   `CampaignProgress.LEGACY_COMPLETION_TARGETS`는 이제 "출시된 모든 콘텐츠 버전의 가장 낮은 목표"(바닥)이며, `hot_queue`만 12건·1,500으로 바뀌고 나머지 일곱 영업은 버전 1 값에서 내려간 적이 없어 그대로입니다(여덟 `.tres`의 `git log -p --follow`로 확인).
+   바닥에도 못 미치는 완료 기록은 여전히 `corrupt_records`이고, 현재 목표를 달성하면 `record_result()`가 표식을 지우는 규칙은 그대로입니다.
+   `hot_queue`의 구성 변경(그릴 10·수프 5·샐러드 5 → 8·4·8)은 `maximum_profit(served)`를 낮추므로, 버전 6 이하 문서의 `best_profit`이 현재 상한을 넘으면 읽을 때 상한으로 잘라 완료를 보존하고 `validate_records()`의 상한 검사는 엄격하게 둡니다.
+   검사는 `tests/test_m4_store.gd`의 `_test_raised_targets`와 `tests/test_campaign_progress.gd`의 바닥 검사이며, 두 PCK 검사의 writer는 `first_shift` 기록만 쓰므로 바뀌지 않았습니다.

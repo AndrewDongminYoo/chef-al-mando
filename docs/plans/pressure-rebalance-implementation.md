@@ -1058,6 +1058,7 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
   값은 note "재조율: `hot_queue`" 절.
 - Task 10(커밋 `11a48e6`): 계획대로였고, Step 3의 "`origin/main`(`567fe9a`)"은 그 뒤 `origin/main`이 움직여 라벨만 낡았습니다.
 - 리뷰: Task 8·9b의 한 줄 note 수정은 컨트롤러가 범위 재리뷰 없이 확인했고, 나머지 수정 라운드는 모두 범위 리뷰를 거쳤습니다.
+- Task 10 뒤 Codex 읽기 리뷰 P1(수정 커밋 `fix(persistence): keep completions earned under earlier targets when content 7 raises them`): Task 5가 올린 `hot_queue` 목표 아래의 버전 2–6 완료 기록을 `campaign_store.gd`가 표식 없이 읽어 `validate_records()`가 저장 전체를 `corrupt_records`로 거부했고, 표식 규칙을 버전 6 이하 전체로 넓히고 `LEGACY_COMPLETION_TARGETS`를 출시된 가장 낮은 목표로, 옛 `best_profit`은 현재 `maximum_profit`으로 잘라 읽도록 고쳤습니다(명세의 2026-09-22 정정 절 7; 두 PCK 6→7 9 OK / 1 skip, 같은 PCK 10 OK 재확인).
 
 ### 후속 (이 PR에서 풀지 않음)
 

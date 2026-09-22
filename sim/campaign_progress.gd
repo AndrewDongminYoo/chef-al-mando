@@ -2,10 +2,14 @@ extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+## The lowest targets any shipped content version had, per field: a completion earned under an
+## earlier content version keeps its legacy_completed marker only while it clears this floor.
+## hot_queue shipped at 14 / 1,500 (content 1), 12 / 4,750 (content 2-6) and 14 / 5,600 (content 7);
+## every other service only ever rose from its content 1 values.
 const LEGACY_COMPLETION_TARGETS := {
 	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
 	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
-	"hot_queue": {"minimum_served": 14, "minimum_profit": 1500},
+	"hot_queue": {"minimum_served": 12, "minimum_profit": 1500},
 	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
 	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
 	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},

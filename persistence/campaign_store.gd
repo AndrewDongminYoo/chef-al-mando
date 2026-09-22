@@ -159,7 +159,6 @@ func _read(target: String) -> Dictionary:
 		return _failure("corrupt_records")
 	var document: Dictionary = parser.data
 	var content_updated := false
-	var legacy_targets_updated := false
 	for key: String in VERSIONS:
 		var version: Variant = document.get(key)
 		if not _is_integer(version):
@@ -170,7 +169,6 @@ func _read(target: String) -> Dictionary:
 			continue
 		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5, 6]:
 			content_updated = true
-			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue
 		if version != VERSIONS[key]:
 			return _failure("unsupported_version")
@@ -200,10 +198,23 @@ func _read(target: String) -> Dictionary:
 			if not _is_integer(records[key].get(metric)):
 				return _failure("corrupt_records")
 			records[key][metric] = int(records[key][metric])
-		if legacy_targets_updated and records[key].get("completed") == true:
-			if not CampaignProgress.meets_legacy_completion_targets(key, records[key]):
-				return _failure("corrupt_records")
-			records[key].legacy_completed = true
+		var scenario: CampaignDef.ScenarioDef = null
+		if key is String:
+			scenario = _campaign.scenario_for(key)
+		if content_updated and scenario != null:
+			var record: Dictionary = records[key]
+			# An earlier content version may have allowed a higher best profit than the current
+			# composition can pay (content 7 lowered hot_queue's maximum_profit), so the old best is
+			# clamped to the current cap; validate_records keeps its upper bound strict.
+			if record.best_served >= 0 and record.best_served <= scenario.order_count:
+				record.best_profit = mini(record.best_profit, scenario.maximum_profit(record.best_served))
+			# A completion earned under an earlier content version's targets stays completed while it
+			# clears the lowest targets any shipped version had; anything lower is corrupt.
+			if record.get("completed") == true \
+				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+				if not CampaignProgress.meets_legacy_completion_targets(key, record):
+					return _failure("corrupt_records")
+				record.legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("corrupt_records")
 	var active_session: Variant = null
