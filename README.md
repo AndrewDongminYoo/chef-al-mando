@@ -118,7 +118,7 @@ M3 실행 명령은 [캠페인 명세](docs/specs/m3-campaign.md), 결과와 검
 `check.sh m4-core`는 영업 상태·세션·파일·명령 관계만 검사합니다.
 `check.sh m4`는 상태 복원·저장 실패·설정·실제 화면 연동을 검사합니다.
 새 프로세스와 렌더링 명령은 [M4 명세](docs/specs/m4-mobile.md)에 있습니다.
-`check.sh mise`는 예보 폭·시드 생성기·세션과 기록의 시드 보존을 검사하며, 폭이 0인 현재 콘텐츠에서는 작성된 일정과의 항등을 확인합니다.
+`check.sh mise`는 예보 폭·시드 생성기·세션과 기록의 시드 보존을 검사하며, 시드 0은 작성된 일정과의 항등을, 여섯 압력 영업의 시도 1~5는 추첨 인지 기준 정책의 통과와 무계획의 미달을 확인합니다(`docs/specs/pressure-rebalance.md` §4).
 
 ```bash
 bash scripts/check.sh m4-core

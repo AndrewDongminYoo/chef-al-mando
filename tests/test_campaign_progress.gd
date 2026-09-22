@@ -73,15 +73,64 @@ func run(_tree: SceneTree) -> void:
 			"best_profit": -first.starting_budget}})
 	expect(not unmarked_completion.errors.is_empty(),
 		"a current completion below the current targets requires migration provenance")
+	# hot_queue's legacy targets are the pairs it actually shipped: 14 / 1,500 (content 1),
+	# 12 / 5,000 (content 2), 12 / 4,750 (content 3-6) before content 7 raised it to 14 / 5,600.
+	# A record must satisfy one complete pair; the per-field floor (12 served, 1,500 profit) was
+	# never shipped together and must not pass.
+	expect(not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1500})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}),
+		"hot queue legacy completion requires meeting one shipped target pair, not the per-field floor")
+	# A pair only counts for a document whose content_version is at or above the pair's since_content:
+	# a content 1 document cannot claim hot_queue's content 2 or content 3 pair, since it predates them.
+	expect(not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, 1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}, 1),
+		"a content 1 document only meets the content 1 hot queue pair")
+	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000}, 2)
+		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, 2),
+		"a content 2 document meets the content 2 hot queue pair but not the content 3 pair")
+	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, -1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000}, -1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}, -1),
+		"the default content_version -1 accepts every shipped pair, for records whose granting document version is unknown")
+	# Content 1-6 hot_queue: grill 10 x 1,100 + soup 5 x 550 + salad 5 x 400 margins, labor 2,000, so
+	# the top 12 pay 10 x 1,100 + 2 x 550 - 2,000 = 10,100.
+	expect(progress_script.legacy_maximum_profit("hot_queue", 12) == 10100
+		and progress_script.legacy_maximum_profit("missing_scenario", 12) == -1,
+		"the content 6 hot queue cap is recomputed from its old composition and unknown services have none")
+	var content_six_completion: RefCounted = progress_script.new(campaign, {
+		first.id: legacy_records[first.id], second.id: legacy_records[second.id],
+		pressure.id: {"completed": true, "best_served": 12, "best_profit": 4750, "legacy_completed": true},
+	})
+	expect(content_six_completion.errors.is_empty() and content_six_completion.is_unlocked(campaign.scenarios[3].id),
+		"a hot queue completion marked at the content 6 targets remains unlocked below the current targets")
+	var old_best_profit: int = pressure.maximum_profit(12) + 1
+	expect(old_best_profit <= progress_script.legacy_maximum_profit(pressure.id, 12),
+		"an old hot queue best one above the current cap still fits the content 6 cap")
+	var old_best: RefCounted = progress_script.new(campaign, {
+		first.id: legacy_records[first.id], second.id: legacy_records[second.id],
+		pressure.id: {"completed": true, "best_served": 12, "best_profit": old_best_profit, "legacy_completed": true},
+	})
+	expect(old_best.errors.is_empty(), "an old hot queue best under the content 6 cap validates without being rewritten")
+	var lower_result: Dictionary = old_best.record_result(pressure.id, _result(pressure, pressure.minimum_served, pressure.minimum_profit))
+	expect(lower_result.accepted and lower_result.passed
+		and old_best.snapshot().records[pressure.id].best_profit == old_best_profit
+		and old_best.snapshot().records[pressure.id].best_served == pressure.minimum_served
+		and not old_best.snapshot().records[pressure.id].has("legacy_completed"),
+		"a new lower result keeps the previous higher best profit and still validates")
+	expect(not old_best.record_result(pressure.id, _result(pressure, 12, old_best_profit)).accepted,
+		"a new result is still bounded by the current cap")
 	for forged_record: Dictionary in [
-		{"completed": true, "best_served": 13, "best_profit": 1500, "legacy_completed": true},
+		{"completed": true, "best_served": 11, "best_profit": 1500, "legacy_completed": true},
 		{"completed": true, "best_served": 14, "best_profit": 1499, "legacy_completed": true},
+		{"completed": true, "best_served": 11, "best_profit": 4750, "legacy_completed": true},
 	]:
 		var forged_legacy_completion: RefCounted = progress_script.new(campaign, {
 			first.id: legacy_records[first.id], second.id: legacy_records[second.id], pressure.id: forged_record,
 		})
 		expect(not forged_legacy_completion.errors.is_empty(),
-			"a legacy marker below its original targets cannot unlock the next service")
+			"a legacy marker below every shipped target pair cannot unlock the next service")
 	for scenario: Resource in campaign.scenarios:
 		expect(progress.record_result(scenario.id, _result(scenario, scenario.minimum_served, scenario.minimum_profit)).passed, "each passing service unlocks its successor: " + scenario.id)
 	expect(progress.snapshot().ending_unlocked, "the last service unlocks the ending")

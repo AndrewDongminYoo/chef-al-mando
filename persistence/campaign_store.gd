@@ -3,7 +3,7 @@ extends RefCounted
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 4, "content_version": 6, "sim_version": 1}
+const VERSIONS := {"schema_version": 4, "content_version": 7, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
@@ -159,7 +159,6 @@ func _read(target: String) -> Dictionary:
 		return _failure("corrupt_records")
 	var document: Dictionary = parser.data
 	var content_updated := false
-	var legacy_targets_updated := false
 	for key: String in VERSIONS:
 		var version: Variant = document.get(key)
 		if not _is_integer(version):
@@ -168,9 +167,8 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and int(version) in READABLE_SCHEMA_VERSIONS:
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5, 6]:
 			content_updated = true
-			legacy_targets_updated = int(version) == LEGACY_CONTENT_VERSION
 			continue
 		if version != VERSIONS[key]:
 			return _failure("unsupported_version")
@@ -200,10 +198,20 @@ func _read(target: String) -> Dictionary:
 			if not _is_integer(records[key].get(metric)):
 				return _failure("corrupt_records")
 			records[key][metric] = int(records[key][metric])
-		if legacy_targets_updated and records[key].get("completed") == true:
-			if not CampaignProgress.meets_legacy_completion_targets(key, records[key]):
-				return _failure("corrupt_records")
-			records[key].legacy_completed = true
+		var scenario: CampaignDef.ScenarioDef = null
+		if key is String:
+			scenario = _campaign.scenario_for(key)
+		if content_updated and scenario != null:
+			var record: Dictionary = records[key]
+			# A completion earned under an earlier content version's targets stays completed while it
+			# satisfies one target pair shipped at or before this document's own content_version;
+			# anything else is corrupt. Best results are never rewritten here: an old best above the
+			# current cap stays valid through the legacy cap in CampaignProgress.validate_records.
+			if record.get("completed") == true \
+				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+				if not CampaignProgress.meets_legacy_completion_targets(key, record, int(document.content_version)):
+					return _failure("corrupt_records")
+				record.legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("corrupt_records")
 	var active_session: Variant = null
@@ -231,9 +239,10 @@ func _read(target: String) -> Dictionary:
 
 
 func _content_update_restarts_session(source_content_version: int, _active_session: Dictionary) -> bool:
-	# Content 5 keyed prep quantities by mise item and content 6 added missing_mise_ids to every order
-	# snapshot with mixed consumption, so no earlier session can restore.
-	return source_content_version < 6
+	# Content 5 keyed prep quantities by mise item, content 6 added missing_mise_ids with mixed
+	# consumption, and content 7 authored forecast_slack so a seeded session's schedule no longer
+	# matches its snapshot; no earlier session can restore.
+	return source_content_version < 7
 
 
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:

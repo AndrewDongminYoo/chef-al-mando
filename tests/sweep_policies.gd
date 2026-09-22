@@ -5,7 +5,11 @@ extends SceneTree
 
 const Policies := preload("res://tests/fixtures/m3_policies.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+const SeedGate := preload("res://tests/fixtures/seed_gate.gd")
 const KEEP_KINDS: Array[String] = ["duties", "priorities", "placement", "purchases"]
+const WITHOUT_KINDS: Array[String] = ["set_purchase", "set_duty", "move_station", "rotate_station", "priorities"]
+const PURCHASE_MODES: Array[String] = ["authored", "draw"]
+const GATE_ATTEMPTS: Array[int] = [0, 1, 2, 3, 4, 5]
 
 
 func _init() -> void:
@@ -50,6 +54,31 @@ func _init() -> void:
 			push_error("invalid --keep token: " + token)
 			quit(2)
 			return
+	var purchase_mode: String = arguments.get("purchases", "authored")
+	if purchase_mode not in PURCHASE_MODES:
+		push_error("invalid --purchases: " + purchase_mode)
+		quit(2)
+		return
+	var without: PackedStringArray = arguments["without"].split(",") if arguments.has("without") else PackedStringArray()
+	for token: String in without:
+		if token not in WITHOUT_KINDS:
+			push_error("invalid --without token: " + token)
+			quit(2)
+			return
+	if purchase_mode == "draw" and "set_purchase" in without:
+		push_error("--purchases draw fixes the purchase commands; drop --without set_purchase")
+		quit(2)
+		return
+	# --gate only evaluates the scenario's seed gate (campaign, scenario, GATE_ATTEMPTS); it ignores
+	# --items/--keep/--purchases/--without, but still runs after their validation above so an
+	# invalid value is rejected before a gate result.
+	if arguments.has("gate"):
+		var verdict: Dictionary = SeedGate.evaluate(campaign, scenario, GATE_ATTEMPTS)
+		for row: Dictionary in verdict.rows:
+			print("SEED_GATE_ROW ", scenario.id, " ", JSON.stringify(row, "", true))
+		print("SEED_GATE_VERDICT ", JSON.stringify({"scenario": scenario.id, "passed": verdict.passed, "failures": verdict.failures}, "", true))
+		quit(0)
+		return
 	var base: Dictionary = {"preparation": [], "priorities": {}}
 	var reference: Dictionary = Policies.reference_policy(scenario.id)
 	for command: Dictionary in reference.preparation:
@@ -59,6 +88,17 @@ func _init() -> void:
 			base.preparation.append(command.duplicate(true))
 	if "priorities" in keep:
 		base.priorities = reference.priorities.duplicate(true)
+	if purchase_mode == "draw":
+		var drawn: Array = []
+		for command: Dictionary in Policies.draw_aware_policy(scenario, seed_value).preparation:
+			if command.kind == "set_purchase":
+				drawn.append(command)
+		var kept: Array = []
+		for command: Dictionary in base.preparation:
+			if command.kind != "set_purchase":
+				kept.append(command)
+		base.preparation = drawn + kept
+	base = Policies.without_kinds(base, Array(without))
 	var state := {"scenario": scenario, "seed": seed_value, "items": items, "caps": caps, "base": base,
 		"combinations": 0, "passed": 0, "best": {}, "best_any": {}}
 	var quantities: Array[int] = []
@@ -67,7 +107,8 @@ func _init() -> void:
 	_sweep(state, quantities, 0)
 	print("SWEEP_SUMMARY ", JSON.stringify({"scenario": scenario.id, "attempt": attempt, "seed": seed_value,
 		"combinations": state.combinations, "passed": state.passed, "best": state.best,
-		"best_any": state.best_any if arguments.has("best") else {}}, "", true))
+		"best_any": state.best_any if arguments.has("best") else {},
+		"purchases": purchase_mode, "without": without}, "", true))
 	quit(0)
 
 

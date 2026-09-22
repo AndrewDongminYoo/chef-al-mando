@@ -124,6 +124,11 @@ purchases = Dictionary[String, int]({
 "protein": 7,
 "vegetable": 31
 })
+forecast_slack = Dictionary[String, int]({
+"grain_grill": 1,
+"mushroom_soup": 1,
+"protein_bowl": 1
+})
 menu_ids = PackedStringArray("salad", "soup", "grill", "grain_salad", "mushroom_salad", "mushroom_soup", "grain_grill", "protein_bowl")
 order_count = 30
 first_arrival_tick = 10

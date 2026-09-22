@@ -1,5 +1,6 @@
 extends "res://tests/harness.gd"
 
+const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const CampaignStore := preload("res://persistence/campaign_store.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
@@ -43,14 +44,14 @@ func run(_tree: SceneTree) -> void:
 		"the next successful records write upgrades schema 1")
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
 	expect(migrated is Dictionary and migrated.size() == 6 and migrated.schema_version == 4
-		and migrated.content_version == 6 and migrated.sim_version == 1
+		and migrated.content_version == 7 and migrated.sim_version == 1
 		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null
 		and migrated.has("attempts") and migrated.attempts == {},
 		"schema 1 upgrades to the exact schema 4 envelope")
 	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
 		"schema 1 record metrics remain exact after migration")
 	var session := _later_session(campaign, 1)
-	var schema_two := {"schema_version": 2, "content_version": 6, "sim_version": 1,
+	var schema_two := {"schema_version": 2, "content_version": 7, "sim_version": 1,
 		"records": records, "active_session": session}
 	_write(file_path, JSON.stringify(schema_two))
 	loaded = CampaignStore.new(campaign, file_path).load_records()
@@ -137,8 +138,13 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 		"final_service": {"completed": true, "best_served": 24, "best_profit": 4000},
 	}
 	var migrated_records := legacy_records.duplicate(true)
-	for record: Dictionary in migrated_records.values():
-		record.legacy_completed = true
+	for scenario_id: String in migrated_records:
+		var scenario: Resource = campaign.scenario_for(scenario_id)
+		var record: Dictionary = migrated_records[scenario_id]
+		if record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit:
+			record.legacy_completed = true
+	expect(migrated_records.first_shift.size() == 3 and migrated_records.hot_queue.size() == 4,
+		"a content 1 completion that still meets the current targets needs no marker while a raised target does")
 	_write(target, JSON.stringify({"schema_version": 3, "content_version": 1, "sim_version": 1,
 		"records": legacy_records, "active_session": active_session}))
 	var original_bytes := FileAccess.get_file_as_bytes(target)
@@ -168,7 +174,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	expect(CampaignStore.new(campaign, version_two_target).save_records(current_records).accepted,
 		"the next write upgrades a version 2 record to the current content version")
 	var version_two_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_two_target))
-	expect(version_two_migrated is Dictionary and version_two_migrated.content_version == 6,
+	expect(version_two_migrated is Dictionary and version_two_migrated.content_version == 7,
 		"a migrated version 2 record writes the current content version")
 	var version_three_target := directory + "/content_version_three.json"
 	_write(version_three_target, JSON.stringify({"schema_version": 3, "content_version": 3,
@@ -183,7 +189,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	expect(CampaignStore.new(campaign, version_three_target).save_records(current_records).accepted,
 		"the next write upgrades a version 3 record to the current content version")
 	var version_three_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_three_target))
-	expect(version_three_migrated is Dictionary and version_three_migrated.content_version == 6,
+	expect(version_three_migrated is Dictionary and version_three_migrated.content_version == 7,
 		"a migrated version 3 record writes the current content version")
 	var version_three_hot_queue_target := directory + "/content_version_three_hot_queue.json"
 	var hot_queue_session := _scenario_session(campaign, "hot_queue")
@@ -209,10 +215,10 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	expect(FileAccess.get_file_as_bytes(version_four_target) == version_four_bytes,
 		"restarting a version 4 session leaves the old file unchanged until the next write")
 	expect(CampaignStore.new(campaign, version_four_target).save_records(current_records).accepted,
-		"the next write upgrades a version 4 record to content version 6")
+		"the next write upgrades a version 4 record to content version 7")
 	var version_four_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_four_target))
-	expect(version_four_migrated is Dictionary and version_four_migrated.content_version == 6,
-		"a migrated version 4 record writes content version 6")
+	expect(version_four_migrated is Dictionary and version_four_migrated.content_version == 7,
+		"a migrated version 4 record writes content version 7")
 	var version_five_target := directory + "/content_version_five.json"
 	var version_five_session := _scenario_session(campaign, "lunch_prep")
 	_write(version_five_target, JSON.stringify({"schema_version": 4, "content_version": 5, "sim_version": 1,
@@ -225,10 +231,26 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	expect(FileAccess.get_file_as_bytes(version_five_target) == version_five_bytes,
 		"restarting a version 5 session leaves the old file unchanged until the next write")
 	expect(CampaignStore.new(campaign, version_five_target).save_records(current_records).accepted,
-		"the next write upgrades a version 5 record to content version 6")
+		"the next write upgrades a version 5 record to content version 7")
 	var version_five_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_five_target))
-	expect(version_five_migrated is Dictionary and version_five_migrated.content_version == 6,
-		"a migrated version 5 record writes content version 6")
+	expect(version_five_migrated is Dictionary and version_five_migrated.content_version == 7,
+		"a migrated version 5 record writes content version 7")
+	var version_six_target := directory + "/content_version_six.json"
+	var version_six_session := _scenario_session(campaign, "lunch_prep")
+	_write(version_six_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": current_records, "attempts": {}, "active_session": version_six_session}))
+	var version_six_bytes := FileAccess.get_file_as_bytes(version_six_target)
+	loaded = CampaignStore.new(campaign, version_six_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
+		and loaded.active_session == null,
+		"authored forecast slack restarts a version 6 session because a seeded schedule no longer matches its snapshot")
+	expect(FileAccess.get_file_as_bytes(version_six_target) == version_six_bytes,
+		"restarting a version 6 session leaves the old file unchanged until the next write")
+	expect(CampaignStore.new(campaign, version_six_target).save_records(current_records).accepted,
+		"the next write upgrades a version 6 record to content version 7")
+	var version_six_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_six_target))
+	expect(version_six_migrated is Dictionary and version_six_migrated.content_version == 7,
+		"a migrated version 6 record writes content version 7")
 	var version_three_corrupt_target := directory + "/content_version_three_corrupt_session.json"
 	var corrupt_session: Dictionary = active_session.duplicate(true)
 	corrupt_session.speed = 3
@@ -293,6 +315,125 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 		"an ordinary save cannot replace a current file with an invalid completion")
 	expect(not invalid_store.recover_backup().accepted and FileAccess.get_file_as_bytes(invalid_target) == invalid_bytes,
 		"recovery cannot replace an invalid current completion without a valid backup")
+	_test_raised_targets(campaign, directory)
+
+
+## Content 7 raised hot_queue from 12 served / 5,000 profit (content 2) and 12 / 4,750 (content 3-6)
+## to 14 / 5,600 and changed its composition, which lowers maximum_profit(served); a content 2-6
+## completion earned under the old targets must survive with the legacy marker, and an old best
+## profit above the new cap stays valid unchanged while it fits the content 6 cap.
+func _test_raised_targets(campaign: Resource, directory: String) -> void:
+	var hot_queue: Resource = campaign.scenario_for("hot_queue")
+	var cap: int = hot_queue.maximum_profit(12)
+	expect(hot_queue.minimum_served > 12 and hot_queue.minimum_profit > 4750 and cap >= 4750,
+		"the raised hot queue targets sit above the content 6 targets and the content 6 targets sit under the current cap")
+	var earlier_records := {}
+	for scenario_id: String in ["first_shift", "lunch_prep"]:
+		var scenario: Resource = campaign.scenario_for(scenario_id)
+		earlier_records[scenario_id] = {"completed": true,
+			"best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit}
+	var old_target_records := earlier_records.duplicate(true)
+	old_target_records.hot_queue = {"completed": true, "best_served": 12, "best_profit": 4750}
+	var marked_records := old_target_records.duplicate(true)
+	marked_records.hot_queue.legacy_completed = true
+	var target := directory + "/content_version_six_old_hot_queue_targets.json"
+	_write(target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	var original_bytes := FileAccess.get_file_as_bytes(target)
+	var loaded: Dictionary = CampaignStore.new(campaign, target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.active_session == null
+		and loaded.records == marked_records and loaded.records.hot_queue.legacy_completed == true,
+		"a content 6 hot queue completion at the old targets loads with the legacy marker and the other records unchanged")
+	expect(FileAccess.get_file_as_bytes(target) == original_bytes,
+		"marking an old-target hot queue completion leaves the content 6 file unchanged until the next write")
+	expect(CampaignStore.new(campaign, target).save_records(loaded.records).accepted,
+		"the next write keeps an old-target hot queue completion")
+	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(target))
+	expect(migrated is Dictionary and migrated.content_version == 7 and migrated.records.hot_queue.size() == 4
+		and migrated.records.hot_queue.legacy_completed == true,
+		"the upgraded content 7 file carries the hot queue legacy marker")
+	loaded = CampaignStore.new(campaign, target).load_records()
+	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == marked_records,
+		"a migrated old-target hot queue completion remains exact on later loads")
+	# The 12 / 4,750 pair only shipped at content 3, so a document from an earlier content version
+	# cannot claim it even though 12 / 4,750 is otherwise a valid shipped pair.
+	var content_one_target := directory + "/content_version_one_hot_queue_content_three_pair.json"
+	_write(content_one_target, JSON.stringify({"schema_version": 4, "content_version": 1, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_one_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 1 hot queue completion at 12 served / 4,750 profit is corrupt because content 1 only shipped 14 / 1,500")
+	var content_two_target := directory + "/content_version_two_hot_queue_content_three_pair.json"
+	_write(content_two_target, JSON.stringify({"schema_version": 4, "content_version": 2, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_two_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 2 hot queue completion at 12 served / 4,750 profit is corrupt because content 2 shipped 12 / 5,000, not 12 / 4,750")
+	var content_three_target := directory + "/content_version_three_hot_queue_content_three_pair.json"
+	_write(content_three_target, JSON.stringify({"schema_version": 4, "content_version": 3, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_three_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records,
+		"a content 3 hot queue completion at 12 served / 4,750 profit is exactly its own shipped pair and loads with the legacy marker")
+	var below_floor_target := directory + "/content_version_six_hot_queue_below_floor.json"
+	var below_floor_records := old_target_records.duplicate(true)
+	below_floor_records.hot_queue.best_served = 11
+	_write(below_floor_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": below_floor_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, below_floor_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 hot queue completion below every shipped target is corrupt")
+	var legacy_cap: int = CampaignProgress.legacy_maximum_profit("hot_queue", 12)
+	expect(legacy_cap > cap + 1, "the content 6 hot queue cap sits above the current cap so an old-best fixture is meaningful")
+	var above_cap_target := directory + "/content_version_six_hot_queue_above_cap.json"
+	var above_cap_records := old_target_records.duplicate(true)
+	above_cap_records.hot_queue.best_profit = cap + 1
+	var kept_records := marked_records.duplicate(true)
+	kept_records.hot_queue.best_profit = cap + 1
+	_write(above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": above_cap_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, above_cap_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == kept_records,
+		"a content 6 hot queue best profit between the current and the content 6 cap loads unchanged and stays completed")
+	expect(CampaignStore.new(campaign, above_cap_target).save_records(loaded.records).accepted
+		and CampaignStore.new(campaign, above_cap_target).load_records().records == kept_records,
+		"an old hot queue best profit above the current cap writes and reloads unchanged")
+	var current_above_cap_target := directory + "/content_version_seven_hot_queue_above_cap.json"
+	_write(current_above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
+		"records": kept_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, current_above_cap_target).load_records()
+	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == kept_records,
+		"a content 7 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version")
+	var above_legacy_cap_target := directory + "/content_version_six_hot_queue_above_legacy_cap.json"
+	var above_legacy_cap_records := old_target_records.duplicate(true)
+	above_legacy_cap_records.hot_queue.best_profit = legacy_cap + 50
+	_write(above_legacy_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": above_legacy_cap_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, above_legacy_cap_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 hot queue best profit above the content 6 cap is corrupt")
+	var unchanged_cap_target := directory + "/content_version_six_first_shift_above_cap.json"
+	var first: Resource = campaign.scenario_for("first_shift")
+	var unchanged_cap_records := {"first_shift": {"completed": true, "best_served": 10, "best_profit": 4000}}
+	expect(first.maximum_profit(10) < 4000, "the first shift fixture profit sits above its cap")
+	_write(unchanged_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": unchanged_cap_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, unchanged_cap_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 best profit above the cap of a service whose cap never dropped is corrupt")
+	var current_target := directory + "/content_version_seven_old_hot_queue_targets.json"
+	_write(current_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, current_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 7 file cannot claim a hot queue completion at the content 6 targets without the marker")
+	var premarked_target := directory + "/content_version_six_premarked_hot_queue.json"
+	_write(premarked_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
+		"records": marked_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, premarked_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records
+		and loaded.active_session == null,
+		"a content 6 hot queue record that already carries the legacy marker loads with the marker kept and the record unchanged")
 
 
 func _write(target: String, text: String) -> void:
@@ -465,7 +606,7 @@ func _test_recovery(campaign: Resource, directory: String, records: Dictionary, 
 func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
 	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 6, "sim_version": 1, "records": {}, "active_session": valid_session}))
+		"content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session}))
 	expect(valid_document is Dictionary
 		and valid_document.active_session.simulation.orders[0].reserved_inputs.vegetable is float,
 		"the store recovery fixture round-trips the reservation through actual JSON")
@@ -502,7 +643,7 @@ func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -
 func _test_task_path_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
 	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 6, "sim_version": 1, "records": {}, "active_session": valid_session}))
+		"content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session}))
 	var valid_task: Dictionary = valid_document.active_session.simulation.tasks[0]
 	expect(valid_task.path_index == 0.0 and valid_task.collection_index == -1.0
 		and valid_task.path.size() >= 2,
@@ -550,7 +691,7 @@ func _test_task_path_json_recovery(campaign: Resource, directory: String) -> voi
 func _test_movement_and_result_json_recovery(campaign: Resource, directory: String) -> void:
 	for corruption: String in ["progress", "result_position"]:
 		var valid_session := _moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
-		var document := {"schema_version": 2, "content_version": 6, "sim_version": 1,
+		var document := {"schema_version": 2, "content_version": 7, "sim_version": 1,
 			"records": {}, "active_session": valid_session}
 		var valid_text := JSON.stringify(document)
 		var corrupted: Variant = JSON.parse_string(valid_text)

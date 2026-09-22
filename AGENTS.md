@@ -156,6 +156,7 @@ Cross-update replay compatibility is not a v1 goal.
 - Use integer minor currency units for money.
 - Keep order arrival ticks fixed per scenario; generate the menu of each slot from the scenario's forecast slack with a seed (`docs/specs/mise-forecast-reviews.md`).
 - Seed 0 must reproduce the authored `order_recipe_ids` exactly; a retry from the closing screen reuses the seed, and a restart from the campaign screen draws a new seed from `attempt_index`.
+- Every pressure service with a lever in `tests/fixtures/m3_policies.gd` (`Policies.LEVER_KINDS`; `final_service` has none and is held only by the no-plan shortfall) names it there, and `check.sh m3` requires the reference policy stripped of that lever, and the strongest lever-free policy the sweep found, to miss a target (`docs/specs/pressure-rebalance.md` §4.3).
 - End the service at game-time second 300.
 - Mark unfinished orders as unserved at closing.
 - Do not restore consumed ingredients at closing.

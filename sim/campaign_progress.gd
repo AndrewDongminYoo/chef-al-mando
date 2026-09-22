@@ -2,15 +2,40 @@ extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
+## Every target pair any shipped content version had, per service, tagged with the content version
+## that introduced it (since_content): a completion earned under an earlier content version keeps
+## its legacy_completed marker only while it satisfies at least one complete pair below, never a
+## per-field floor across pairs (12 served / 1,500 profit was never shipped together for hot_queue).
+## A pair only counts for a document whose content_version is at or above its since_content — a
+## content 1 save cannot claim hot_queue's content 2 or content 3 pair, since that document could not
+## have earned a completion under a version it predates.
+## hot_queue shipped 14 / 1,500 (content 1), 12 / 5,000 (content 2), and 12 / 4,750 (content 3-6)
+## before content 7 raised it to 14 / 5,600; every other service only ever had its single content 1
+## pair.
 const LEGACY_COMPLETION_TARGETS := {
-	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
-	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
-	"hot_queue": {"minimum_served": 14, "minimum_profit": 1500},
-	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
-	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
-	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},
-	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
-	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
+	"first_shift": [{"minimum_served": 10, "minimum_profit": 1000, "since_content": 1}],
+	"lunch_prep": [{"minimum_served": 14, "minimum_profit": 1000, "since_content": 1}],
+	"hot_queue": [{"minimum_served": 14, "minimum_profit": 1500, "since_content": 1},
+		{"minimum_served": 12, "minimum_profit": 5000, "since_content": 2},
+		{"minimum_served": 12, "minimum_profit": 4750, "since_content": 3}],
+	"shared_stock": [{"minimum_served": 16, "minimum_profit": 1500, "since_content": 1}],
+	"long_route": [{"minimum_served": 17, "minimum_profit": 2000, "since_content": 1}],
+	"split_duties": [{"minimum_served": 19, "minimum_profit": 2500, "since_content": 1}],
+	"rush_hour": [{"minimum_served": 22, "minimum_profit": 3000, "since_content": 1}],
+	"final_service": [{"minimum_served": 24, "minimum_profit": 4000, "since_content": 1}],
+}
+## The pre-content-7 composition of every scenario whose maximum_profit(served) content 7 lowered,
+## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a best profit
+## earned under that composition stays valid (validate_records widens its bound to this old cap)
+## instead of being rewritten, so the widened bound only ever admits values a shipped composition
+## could pay.
+## hot_queue was grill 10 / soup 5 / salad 5 with no forecast_slack (grill 1,500 - protein 400 = 1,100;
+## soup 900 - grain 150 - 2 x vegetable 100 = 550; salad 500 - vegetable 100 = 400; labor_cost 2,000).
+## Extend this table whenever a future content version lowers a scenario's cap; without an entry an
+## old best above the new cap is corrupt.
+const LEGACY_PROFIT_CAPS := {
+	"hot_queue": {"margins": [1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100,
+		550, 550, 550, 550, 550, 400, 400, 400, 400, 400], "labor_cost": 2000},
 }
 
 var errors: Array[String] = []
@@ -54,7 +79,12 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 		if not record.get("completed") is bool or not record.get("best_served") is int or not record.get("best_profit") is int:
 			problems.append("invalid record value types")
 			continue
-		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > scenario.maximum_profit(record.best_served):
+		# A best profit is bounded by the highest cap any shipped composition paid for that served
+		# count, so a best earned before content 7 lowered hot_queue's cap stays valid without being
+		# rewritten; scenarios without a legacy cap keep the strict current bound, and record_result
+		# bounds every new result by the current cap alone.
+		var profit_cap: int = maxi(scenario.maximum_profit(record.best_served), legacy_maximum_profit(scenario_id, record.best_served))
+		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > profit_cap:
 			problems.append("record value is outside the service limits")
 		if has_legacy_completion and (not record.completed or not meets_legacy_completion_targets(scenario_id, record)):
 			problems.append("invalid legacy completion marker")
@@ -73,10 +103,34 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 	return problems
 
 
-static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
-	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
-	return targets is Dictionary and record.best_served >= targets.minimum_served \
-		and record.best_profit >= targets.minimum_profit
+## content_version filters which pairs count: -1 (default) counts every pair, used by
+## validate_records for a record that already carries the marker, where the granting document's
+## version is not known. A non-negative content_version only counts pairs whose since_content is at
+## or below it, so a save cannot claim a pair its own content version had not shipped yet.
+static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary, content_version: int = -1) -> bool:
+	var pairs: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
+	if not pairs is Array:
+		return false
+	for pair: Dictionary in pairs:
+		if content_version >= 0 and pair.since_content > content_version:
+			continue
+		if record.best_served >= pair.minimum_served and record.best_profit >= pair.minimum_profit:
+			return true
+	return false
+
+
+## The maximum_profit(served) a scenario paid under content 1-6, or -1 when content 7 did not lower it.
+static func legacy_maximum_profit(scenario_id: String, served: int) -> int:
+	var table: Variant = LEGACY_PROFIT_CAPS.get(scenario_id)
+	if not table is Dictionary:
+		return -1
+	var margins: Array = table.margins.duplicate()
+	margins.sort()
+	margins.reverse()
+	var upper_bound: int = -table.labor_cost
+	for index: int in mini(maxi(served, 0), margins.size()):
+		upper_bound += maxi(margins[index], 0)
+	return upper_bound
 
 
 func is_unlocked(scenario_id: String) -> bool:
