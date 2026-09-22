@@ -181,7 +181,8 @@ func _test_scenario_fields(campaign: Resource) -> void:
 	for scenario: Resource in campaign.scenarios:
 		if scenario.id in FIXED_FORECAST:
 			expect(scenario.forecast_slack.is_empty(), "the first two services keep a fixed forecast: " + scenario.id)
-		elif not scenario.forecast_slack.is_empty():
+		else:
+			expect(not scenario.forecast_slack.is_empty(), "every pressure service varies from the second attempt: " + scenario.id)
 			var total: int = 0
 			for recipe_id: String in scenario.menu_ids:
 				var slack: int = scenario.forecast_slack.get(recipe_id, 0)

@@ -1158,6 +1158,25 @@ E의 오프셋은 수프 170–190·두 번째 구이 290–310·마지막 샐�
 검사 변경은 둘입니다: `tests/test_schedule_generator.gd`는 작성 순서의 최장 연속을 샐러드 2로, 시드 104076537의 추첨(슬롯 4의 구이가 샐러드로 바뀐 한 슬롯 이동)을 샐러드 3·구이 1·수프 1로 고쳤고, `tests/test_service_seed.gd`는 기준 건수를 8·4·8로 바꾸고 "slack 0" 범위·최대 손익 검사를 작성 slack이 생긴 `hot_queue` 대신 slack을 비운 복사본에 대도록 했습니다.
 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,106개, `mise`는 369개, `ui-regressions`는 276개, `m4`는 1,206개, `m2`는 489개를 실패 없이 통과했습니다(`m2`는 `tests/test_service_feedback.gd`가 `hot_queue.tres`를 읽어 함께 돌렸습니다).
 
+### 2026-09-22 시드 게이트 종합
+
+압력 영업 여섯 곳(hot_queue·shared_stock·long_route·split_duties·rush_hour·final_service) 모두 `forecast_slack`을 갖고, `Policies.LEVER_KINDS`의 다섯 곳(final_service 제외)은 스윕으로 고정한 `lever_free_policy` 갈래를 갖습니다.
+아래 표는 `GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh mise` 실행이 `build/check/mise.log`에 남긴 `SEED_GATE` 줄에서 이 여섯 영업의 시도 1–5 값만 모은 것입니다.
+값 하나하나의 근거(정책·스윕·재조율 판단)는 각 영업의 "### 2026-09-21 재조율" 절이 주인이므로 여기서는 다시 적지 않습니다: hot_queue는 바로 위 절, 나머지 다섯은 이 문서 안의 해당 이름 절(`shared_stock`·`split_duties`·`final_service`·`long_route`·`rush_hour`)입니다.
+
+| 영업          | 시도 1(제공·손익) | 시도 2(제공·손익) | 시도 3(제공·손익) | 시도 4(제공·손익) | 시도 5(제공·손익) |
+| ------------- | ----------------: | ----------------: | ----------------: | ----------------: | ----------------: |
+| hot_queue     |      15 · 6,650원 |      17 · 7,800원 |      16 · 8,150원 |      15 · 6,100원 |      14 · 5,750원 |
+| shared_stock  |      18 · 4,450원 |      19 · 5,450원 |      18 · 4,750원 |      18 · 4,500원 |      18 · 4,300원 |
+| long_route    |     22 · 13,700원 |     22 · 13,150원 |     22 · 12,900원 |     23 · 14,400원 |     22 · 13,700원 |
+| split_duties  |     26 · 12,350원 |     26 · 12,400원 |     26 · 12,400원 |     26 · 12,350원 |     26 · 12,400원 |
+| rush_hour     |     26 · 10,300원 |      24 · 8,850원 |      25 · 9,300원 |      24 · 9,000원 |      24 · 8,800원 |
+| final_service |     27 · 10,900원 |     26 · 10,600원 |     26 · 10,350원 |     27 · 10,950원 |     26 · 10,600원 |
+
+새 사실은 이 표뿐입니다: 여섯 영업 30행이 모두 통과했습니다(`mise checks=393 failures=0`, `SEED_GATE` 줄 40개 가운데 첫 두 영업 first_shift·lunch_prep의 10행은 고정 예보라 이 표에서 뺐습니다).
+콘텐츠 6→7 두 PCK 복원 검사(`M4_EXPECT_RESTART=1 M4_WRITER_PACK=content6.pck M4_READER_PACK=content7.pck python3 tests/test_m4_restart.py`)는 9 OK·1 skip을 냈습니다.
+같은 PCK로 돌린 복원 검사(`python3 tests/test_m4_restart.py`)는 10 OK를 냈습니다.
+
 ## 저장 호환성
 
 새 쓰기가 쓰는 콘텐츠 버전은 `persistence/campaign_store.gd`의 `VERSIONS`가 소유하고, 그 버전 이력은 [M4 모바일 명세](../specs/m4-mobile.md)가 소유합니다.

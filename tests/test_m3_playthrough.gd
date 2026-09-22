@@ -91,6 +91,8 @@ func run(_tree: SceneTree) -> void:
 						expect(stripped_run.accepted and not Policies.passes_targets(scenario, stripped_run),
 							"the reference policy misses a target without its lever %s: %s" % [str(subset), scenario.id])
 					var lever_free: Dictionary = Policies.lever_free_policy(scenario.id)
+					expect(lever_free != Policies.without_lever_policy(scenario.id),
+						"the lever-free policy is pinned from a sweep, not the stripped reference: " + scenario.id)
 					expect(Policies.without_kinds(lever_free, levers) == lever_free,
 						"the pinned lever-free policy contains no lever command: " + scenario.id)
 					var lever_free_run := Policies.run_policy(scenario, lever_free)
