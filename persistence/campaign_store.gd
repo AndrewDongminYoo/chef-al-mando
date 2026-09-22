@@ -204,12 +204,12 @@ func _read(target: String) -> Dictionary:
 		if content_updated and scenario != null:
 			var record: Dictionary = records[key]
 			# A completion earned under an earlier content version's targets stays completed while it
-			# clears the lowest targets any shipped version had; anything lower is corrupt. Best results
-			# are never rewritten here: an old best above the current cap stays valid through the
-			# legacy cap in CampaignProgress.validate_records.
+			# satisfies one target pair shipped at or before this document's own content_version;
+			# anything else is corrupt. Best results are never rewritten here: an old best above the
+			# current cap stays valid through the legacy cap in CampaignProgress.validate_records.
 			if record.get("completed") == true \
 				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
-				if not CampaignProgress.meets_legacy_completion_targets(key, record):
+				if not CampaignProgress.meets_legacy_completion_targets(key, record, int(document.content_version)):
 					return _failure("corrupt_records")
 				record.legacy_completed = true
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():

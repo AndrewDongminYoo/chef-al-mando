@@ -2,23 +2,27 @@ extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
-## Every target pair any shipped content version had, per service: a completion earned under an
-## earlier content version keeps its legacy_completed marker only while it satisfies at least one
-## complete pair below, never a per-field floor across pairs (12 served / 1,500 profit was never
-## shipped together for hot_queue).
+## Every target pair any shipped content version had, per service, tagged with the content version
+## that introduced it (since_content): a completion earned under an earlier content version keeps
+## its legacy_completed marker only while it satisfies at least one complete pair below, never a
+## per-field floor across pairs (12 served / 1,500 profit was never shipped together for hot_queue).
+## A pair only counts for a document whose content_version is at or above its since_content — a
+## content 1 save cannot claim hot_queue's content 2 or content 3 pair, since that document could not
+## have earned a completion under a version it predates.
 ## hot_queue shipped 14 / 1,500 (content 1), 12 / 5,000 (content 2), and 12 / 4,750 (content 3-6)
 ## before content 7 raised it to 14 / 5,600; every other service only ever had its single content 1
 ## pair.
 const LEGACY_COMPLETION_TARGETS := {
-	"first_shift": [{"minimum_served": 10, "minimum_profit": 1000}],
-	"lunch_prep": [{"minimum_served": 14, "minimum_profit": 1000}],
-	"hot_queue": [{"minimum_served": 14, "minimum_profit": 1500}, {"minimum_served": 12, "minimum_profit": 5000},
-		{"minimum_served": 12, "minimum_profit": 4750}],
-	"shared_stock": [{"minimum_served": 16, "minimum_profit": 1500}],
-	"long_route": [{"minimum_served": 17, "minimum_profit": 2000}],
-	"split_duties": [{"minimum_served": 19, "minimum_profit": 2500}],
-	"rush_hour": [{"minimum_served": 22, "minimum_profit": 3000}],
-	"final_service": [{"minimum_served": 24, "minimum_profit": 4000}],
+	"first_shift": [{"minimum_served": 10, "minimum_profit": 1000, "since_content": 1}],
+	"lunch_prep": [{"minimum_served": 14, "minimum_profit": 1000, "since_content": 1}],
+	"hot_queue": [{"minimum_served": 14, "minimum_profit": 1500, "since_content": 1},
+		{"minimum_served": 12, "minimum_profit": 5000, "since_content": 2},
+		{"minimum_served": 12, "minimum_profit": 4750, "since_content": 3}],
+	"shared_stock": [{"minimum_served": 16, "minimum_profit": 1500, "since_content": 1}],
+	"long_route": [{"minimum_served": 17, "minimum_profit": 2000, "since_content": 1}],
+	"split_duties": [{"minimum_served": 19, "minimum_profit": 2500, "since_content": 1}],
+	"rush_hour": [{"minimum_served": 22, "minimum_profit": 3000, "since_content": 1}],
+	"final_service": [{"minimum_served": 24, "minimum_profit": 4000, "since_content": 1}],
 }
 ## The pre-content-7 composition of every scenario whose maximum_profit(served) content 7 lowered,
 ## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a best profit
@@ -99,11 +103,17 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 	return problems
 
 
-static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
+## content_version filters which pairs count: -1 (default) counts every pair, used by
+## validate_records for a record that already carries the marker, where the granting document's
+## version is not known. A non-negative content_version only counts pairs whose since_content is at
+## or below it, so a save cannot claim a pair its own content version had not shipped yet.
+static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary, content_version: int = -1) -> bool:
 	var pairs: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
 	if not pairs is Array:
 		return false
 	for pair: Dictionary in pairs:
+		if content_version >= 0 and pair.since_content > content_version:
+			continue
 		if record.best_served >= pair.minimum_served and record.best_profit >= pair.minimum_profit:
 			return true
 	return false

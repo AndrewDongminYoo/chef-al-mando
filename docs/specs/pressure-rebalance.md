@@ -213,7 +213,8 @@
 7. **§7의 표식 규칙과 최고 기록.**
    Codex 읽기 리뷰(P1)가 찾았습니다: `hot_queue`의 목표가 12건·5,000(버전 2)·12건·4,750(버전 3–6)에서 14건·5,600으로 올랐는데 `campaign_store.gd`는 버전 1 문서에만 표식을 붙였고, `validate_records()`는 표식 없는 완료 기록이 현재 목표에 못 미치면 `corrupt_records`로 거부해 버전 2–6의 정당한 `hot_queue` 완료가 저장 전체를 잠갔습니다.
    §7의 "표식 규칙은 버전 1의 것"은 틀렸으며, 표식은 버전 6 이하의 모든 문서에서 현재 목표에 못 미치는 완료 기록에 붙습니다 – 그 시대의 목표를 충족했다면 보존해야 한다는 AGENTS.md의 규칙과 §7의 첫 문장이 원래 약속한 것입니다.
-   `CampaignProgress.LEGACY_COMPLETION_TARGETS`는 영업마다 출시된 목표 쌍의 목록이며, 완료 기록은 그 가운데 하나를 완전히 만족해야 legacy_completed 표식을 유지합니다(CodeRabbit 리뷰, 2026-09-22: 필드별 최저값("바닥")으로 적었던 첫 판은 `hot_queue`가 실제로는 출시한 적 없는 12건·1,500 쌍까지 받아들이는 결함이 있었습니다).
+   `CampaignProgress.LEGACY_COMPLETION_TARGETS`는 영업마다 출시된 목표 쌍의 목록이며, 완료 기록은 문서 자신의 `content_version` 이하에서 출시된 쌍 가운데 하나를 완전히 만족해야 legacy_completed 표식을 유지합니다(CodeRabbit 리뷰, 2026-09-22: 필드별 최저값("바닥")으로 적었던 첫 판은 `hot_queue`가 실제로는 출시한 적 없는 12건·1,500 쌍까지 받아들이는 결함이 있었습니다).
+   각 쌍은 자신을 도입한 콘텐츠 버전(`since_content`)을 갖고, `meets_legacy_completion_targets()`의 `content_version` 인자는 그 버전 이하의 쌍만 세며 기본값 −1은 모든 쌍을 셉니다(호스티드 Codex 리뷰 라운드 2 P2, PR #30, 2026-09-22: 콘텐츠 버전을 무시한 첫 판은 `hot_queue`의 콘텐츠 1 저장이 콘텐츠 3의 12건·4,750 쌍까지 주장해 실제로는 불가능한 완료를 받아들이는 결함이 있었습니다).
    `hot_queue`는 세 쌍(14건·1,500 – 버전 1, 12건·5,000 – 버전 2, 12건·4,750 – 버전 3–6)을 갖고, 나머지 일곱 영업은 버전 1 값에서 내려간 적이 없어 단일 쌍 그대로입니다(여덟 `.tres`의 `git log -p --follow`로 확인).
    어느 쌍도 만족하지 못하는 완료 기록은 여전히 `corrupt_records`이고, 현재 목표를 달성하면 `record_result()`가 표식을 지우는 규칙은 그대로입니다.
    `hot_queue`의 구성 변경(그릴 10·수프 5·샐러드 5 → 8·4·8)은 `maximum_profit(served)`를 낮추므로, `validate_records()`의 손익 상한은 현재 상한과 옛 상한(`CampaignProgress.LEGACY_PROFIT_CAPS`에 옛 구성의 마진 다중집합과 인건비를 두고 `legacy_maximum_profit()`이 계산, 지금은 `hot_queue`뿐) 가운데 큰 쪽입니다 – 옛 상한 이하의 최고 손익은 문서 버전과 무관하게 바꾸지 않고 유효하며, 옛 구성이 낼 수 있던 값만 넓혀 받고, 표가 없는 영업은 현재 상한 그대로이고, 새 결과는 `record_result()`가 현재 상한으로만 막습니다.

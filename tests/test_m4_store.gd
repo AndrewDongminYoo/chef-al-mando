@@ -355,6 +355,26 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == marked_records,
 		"a migrated old-target hot queue completion remains exact on later loads")
+	# The 12 / 4,750 pair only shipped at content 3, so a document from an earlier content version
+	# cannot claim it even though 12 / 4,750 is otherwise a valid shipped pair.
+	var content_one_target := directory + "/content_version_one_hot_queue_content_three_pair.json"
+	_write(content_one_target, JSON.stringify({"schema_version": 4, "content_version": 1, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_one_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 1 hot queue completion at 12 served / 4,750 profit is corrupt because content 1 only shipped 14 / 1,500")
+	var content_two_target := directory + "/content_version_two_hot_queue_content_three_pair.json"
+	_write(content_two_target, JSON.stringify({"schema_version": 4, "content_version": 2, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_two_target).load_records()
+	expect(not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 2 hot queue completion at 12 served / 4,750 profit is corrupt because content 2 shipped 12 / 5,000, not 12 / 4,750")
+	var content_three_target := directory + "/content_version_three_hot_queue_content_three_pair.json"
+	_write(content_three_target, JSON.stringify({"schema_version": 4, "content_version": 3, "sim_version": 1,
+		"records": old_target_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, content_three_target).load_records()
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records,
+		"a content 3 hot queue completion at 12 served / 4,750 profit is exactly its own shipped pair and loads with the legacy marker")
 	var below_floor_target := directory + "/content_version_six_hot_queue_below_floor.json"
 	var below_floor_records := old_target_records.duplicate(true)
 	below_floor_records.hot_queue.best_served = 11

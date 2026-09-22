@@ -82,6 +82,18 @@ func run(_tree: SceneTree) -> void:
 		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000})
 		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}),
 		"hot queue legacy completion requires meeting one shipped target pair, not the per-field floor")
+	# A pair only counts for a document whose content_version is at or above the pair's since_content:
+	# a content 1 document cannot claim hot_queue's content 2 or content 3 pair, since it predates them.
+	expect(not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, 1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}, 1),
+		"a content 1 document only meets the content 1 hot queue pair")
+	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000}, 2)
+		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, 2),
+		"a content 2 document meets the content 2 hot queue pair but not the content 3 pair")
+	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750}, -1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000}, -1)
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}, -1),
+		"the default content_version -1 accepts every shipped pair, for records whose granting document version is unknown")
 	# Content 1-6 hot_queue: grill 10 x 1,100 + soup 5 x 550 + salad 5 x 400 margins, labor 2,000, so
 	# the top 12 pay 10 x 1,100 + 2 x 550 - 2,000 = 10,100.
 	expect(progress_script.legacy_maximum_profit("hot_queue", 12) == 10100
