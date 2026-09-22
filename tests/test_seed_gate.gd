@@ -65,8 +65,9 @@ func _test_draw_aware_policy(campaign: Resource) -> void:
 	expect(repeat.accepted and repeat.hash == run.hash, "a seeded run repeats its final state hash")
 
 
-## 게이트는 풀리지 않는 fixture에서 실패해야 합니다(§10). 첫째: 손익 목표를 예보 상한의 최대 손익과 같게
-## 두면 어떤 실제 영업도 닿지 못합니다. 둘째: 목표가 없다시피 하면 무계획이 통과해 게이트가 실패합니다.
+## 게이트는 풀리지 않는 fixture에서 실패해야 합니다(§10). 세 합성 fixture로 검증합니다: 손익 목표를 예보
+## 상한의 최대 손익과 같게 두어 실제 영업이 닿지 못하는 unsolvable, 목표가 없다시피 해 무계획이 통과하는
+## trivial, 무계획이 정확히 한 건 못 미치도록 좁혀 넓힌 게이트만 잡아내는 narrow입니다.
 func _test_synthetic_failures(campaign: Resource) -> void:
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var unsolvable: Resource = hot_queue.duplicate()

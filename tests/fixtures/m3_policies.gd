@@ -97,7 +97,9 @@ static func lever_subsets(scenario_id: String) -> Array:
 
 ## tests/sweep_policies.gd --without <지렛대> --best 가 시드 0에서 찾은 가장 강한 무지렛대 정책(best_any).
 ## 게이트는 이 정책이 한 목표 이상에 미달해야 통과하며, 값의 근거는 docs/notes/kitchen-pressure-verification.md의
-## 재조율 절입니다. 아직 스윕하지 않은 영업은 지렛대를 뺀 기준 정책이 그 자리를 채웁니다.
+## 재조율 절입니다. 아직 스윕하지 않은 영업은 지렛대를 뺀 기준 정책이 그 자리를 채우지만, 게이트는 그 값이
+## 지렛대를 뺀 기준 정책과 달라야 통과하므로(§4.3) 그 채움 자체는 게이트를 통과하지 못합니다.
+## LEVER_KINDS의 모든 영업은 실제로 고정된 무지렛대 정책을 갖습니다.
 static func lever_free_policy(scenario_id: String) -> Dictionary:
 	var policy: Dictionary = without_lever_policy(scenario_id)
 	match scenario_id:
@@ -125,7 +127,7 @@ static func lever_free_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "prepped_mushroom", 1)
 			_add(policy, "set_prep", "thawed_protein", 2)
 		## rush_hour은 지렛대가 set_prep·priorities 둘이라 이 스윕 도구(프렙만 순회)가 닿지 않아, Task 9의
-		## placement·duty·purchase 탐침(rh_lever_free_probe.gd, 시드 0·작성 발주, 85가지)에서 고정합니다:
+		## placement·duty·purchase 탐침(rh_lever_free_probe.gd, scratchpad·미커밋, 시드 0·작성 발주, 85가지)에서 고정합니다:
 		## move_station cold_01 left 2회 → 23 · 6,500(목표 23건·8,500원 미달). docs/notes/kitchen-pressure-verification.md의 rush_hour 절 참고.
 		"rush_hour":
 			policy = {"preparation": [], "priorities": {}}

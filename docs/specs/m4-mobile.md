@@ -77,6 +77,8 @@ M3 schema 1은 읽을 때 `active_session: null`로 해석하며, 읽기만으�
 콘텐츠 버전 4는 완료·최고 기록을 그대로 유지하고 미장 재고 구조가 달라졌으므로 모든 시나리오의 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 5로 갱신합니다.
 2026-09-21 승인된 부분 프렙은 새 쓰기의 `content_version`을 6으로 올립니다.
 콘텐츠 버전 5는 완료·최고 기록을 그대로 유지하고 주문 스냅샷 형식과 소비 규칙이 달라졌으므로 모든 시나리오의 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 6으로 갱신합니다.
+2026-09-22 승인된 [압력 영업 재조율](pressure-rebalance.md) §7의 `forecast_slack` 작성은 새 쓰기의 `content_version`을 7로 올립니다.
+콘텐츠 버전 6은 완료·최고 기록을 그대로 유지하고 시드가 있는 세션의 일정이 스냅샷과 달라지므로 모든 시나리오의 진행 중 영업을 `null`로 해석하며, 다음 정상 쓰기에서 버전 7로 갱신합니다.
 `load_records()`와 `save_records(records)`의 기존 호출은 유지합니다.
 records만 저장하는 호출은 기존 active session을 보존해야 합니다.
 `save_active_session(session, records)`는 둘을 한 번에 교체하고, `clear_active_session()`은 기록을 유지한 채 session만 `null`로 저장합니다.

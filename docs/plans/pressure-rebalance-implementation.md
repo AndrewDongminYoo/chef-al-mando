@@ -1065,6 +1065,8 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
 - `split_duties`의 변동은 냉식뿐이며, `order_count` 28이 온식 slack의 매출 여유를 줄 수 있습니다(미측정).
 - `final_service`의 §4.4 중간 단계는 상한 22–24에서 재지 않았습니다(더 넓은 slack이 있을 수 있음).
 - `hot_queue`의 여분은 구속 폭입니다(시도 5의 제공이 목표와 같고 시드 0의 제공 여분이 §4.1의 상한과 같음; note "재조율: `hot_queue`" 절).
+- 후속으로 다루지 않은 구속 폭: `split_duties`의 기준 정책은 시드 0과 시도 1–5 전부에서 제공 여분이 0이며(목표 26건에 26건 제공), `hot_queue`·`split_duties` 둘 다 마지막 도착(2500)이 손님 인내 500을 더한 마감 tick(3000)에 정확히 걸리고 발주도 시드 0 필요량과 정확히 같습니다(note "재조율: `hot_queue`"·"재조율: `split_duties`" 절).
+- `tests/sweep_policies.gd`의 `--gate` 분기는 `--attempt`·`--purchases`·`--without`·`--items` 검증보다 먼저 반환해, `--gate --purchases draw`가 그 플래그를 조용히 무시합니다(도구 결함).
 - 기존 결함: `persistence/campaign_store.gd`의 `load_records()` 종단 실패 분기가 `active_session`을 빠뜨리고 `_failure()`는 null을 둡니다.
 - 플레이테스트(`docs/specs/playtest-price-validation.md`)는 운영자의 시작 문장을 기다립니다.
 
