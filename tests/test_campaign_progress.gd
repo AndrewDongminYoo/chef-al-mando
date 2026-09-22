@@ -73,13 +73,15 @@ func run(_tree: SceneTree) -> void:
 			"best_profit": -first.starting_budget}})
 	expect(not unmarked_completion.errors.is_empty(),
 		"a current completion below the current targets requires migration provenance")
-	# The legacy floor is the lowest target any shipped content version had: hot_queue shipped at
-	# 14 / 1,500 (content 1), 12 / 5,000 (content 2) and 12 / 4,750 (content 3-6) before content 7
-	# raised it to 14 / 5,600.
-	expect(progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1500})
-		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 11, "best_profit": 1500})
-		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1499}),
-		"the hot queue legacy floor is 12 served and 1,500 profit")
+	# hot_queue's legacy targets are the pairs it actually shipped: 14 / 1,500 (content 1),
+	# 12 / 5,000 (content 2), 12 / 4,750 (content 3-6) before content 7 raised it to 14 / 5,600.
+	# A record must satisfy one complete pair; the per-field floor (12 served, 1,500 profit) was
+	# never shipped together and must not pass.
+	expect(not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1500})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 4750})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 5000})
+		and progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 14, "best_profit": 1500}),
+		"hot queue legacy completion requires meeting one shipped target pair, not the per-field floor")
 	# Content 1-6 hot_queue: grill 10 x 1,100 + soup 5 x 550 + salad 5 x 400 margins, labor 2,000, so
 	# the top 12 pay 10 x 1,100 + 2 x 550 - 2,000 = 10,100.
 	expect(progress_script.legacy_maximum_profit("hot_queue", 12) == 10100
@@ -116,7 +118,7 @@ func run(_tree: SceneTree) -> void:
 			first.id: legacy_records[first.id], second.id: legacy_records[second.id], pressure.id: forged_record,
 		})
 		expect(not forged_legacy_completion.errors.is_empty(),
-			"a legacy marker below the lowest shipped targets cannot unlock the next service")
+			"a legacy marker below every shipped target pair cannot unlock the next service")
 	for scenario: Resource in campaign.scenarios:
 		expect(progress.record_result(scenario.id, _result(scenario, scenario.minimum_served, scenario.minimum_profit)).passed, "each passing service unlocks its successor: " + scenario.id)
 	expect(progress.snapshot().ending_unlocked, "the last service unlocks the ending")

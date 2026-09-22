@@ -1061,6 +1061,8 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
 - Task 10 뒤 Codex 읽기 리뷰 P1(수정 커밋 `fix(persistence): keep completions earned under earlier targets when content 7 raises them`): Task 5가 올린 `hot_queue` 목표 아래의 버전 2–6 완료 기록을 `campaign_store.gd`가 표식 없이 읽어 `validate_records()`가 저장 전체를 `corrupt_records`로 거부했고, 표식 규칙을 버전 6 이하 전체로 넓히고 `LEGACY_COMPLETION_TARGETS`를 출시된 가장 낮은 목표로, 옛 `best_profit`은 현재 `maximum_profit`으로 잘라 읽도록 고쳤습니다(명세의 2026-09-22 정정 절 7; 두 PCK 6→7 9 OK / 1 skip, 같은 PCK 10 OK 재확인).
 - 두 번째 Codex 리뷰 P2(수정 커밋 `fix(persistence): clamp an old best profit only where content 7 lowered the cap`): 위 자르기가 상한이 내려간 적 없는 영업의 상한 초과 기록(`first_shift` 10건·4,000)까지 조용히 잘라 받아들였으므로, `CampaignProgress.LEGACY_PROFIT_CAPS`(버전 1–6 `hot_queue` 구성의 마진과 인건비)와 `legacy_maximum_profit()`을 더해 옛 상한 이하의 값만 자르고 나머지는 `corrupt_records`로 되돌렸습니다(명세의 2026-09-22 정정 절 7).
 - PR #30 호스티드 Codex 리뷰 P1(수정 커밋 `fix(persistence): keep an old best profit valid under its legacy cap instead of clamping it`): 자르기가 플레이어의 최고 손익을 덮어쓰고 다음 저장에서 손실을 굳혀 AGENTS.md의 "Preserve completion records and best results"를 어겼으므로, 읽기의 자르기를 없애고 `validate_records()`의 손익 상한을 현재 상한과 `legacy_maximum_profit()` 가운데 큰 쪽으로 넓혀 옛 최고 기록을 바꾸지 않고 유효하게 두었습니다(명세의 2026-09-22 정정 절 7).
+- CodeRabbit 리뷰 라운드(수정 커밋 `fix(persistence): accept legacy completions only against shipped target pairs and validate sweep flags before --gate`): 바로 위 P1·P2 라운드가 넓힌 `LEGACY_COMPLETION_TARGETS`의 "출시된 가장 낮은 목표"는 필드별 바닥이라 `hot_queue`가 실제로는 출시한 적 없는 12건·1,500 쌍까지 legacy_completed로 받아들였으므로, 영업마다 출시된 목표 쌍의 목록으로 바꾸고 완료 기록이 쌍 하나를 완전히 만족해야 표식을 유지하도록 고쳤습니다(`sim/campaign_progress.gd`, 명세의 2026-09-22 정정 절 7).
+  같은 커밋에서 `tests/sweep_policies.gd`의 `--gate` 분기 순서를 `--attempt`·`--items`·`--keep`·`--purchases`·`--without` 검증 뒤로 옮겨 `--gate --purchases draw`가 그 값을 조용히 무시하던 도구 결함을 없앴고("후속" 목록에서 이 항목을 지웠습니다), `AGENTS.md`의 지렛대 문장 범위를 `Policies.LEVER_KINDS`로 좁히고, 명세 §6·§8의 옵션·fixture 개수를 정정했습니다.
 
 ### 후속 (이 PR에서 풀지 않음)
 
@@ -1069,9 +1071,10 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
 - `final_service`의 §4.4 중간 단계는 상한 22–24에서 재지 않았습니다(더 넓은 slack이 있을 수 있음).
 - `hot_queue`의 여분은 구속 폭입니다(시도 5의 제공이 목표와 같고 시드 0의 제공 여분이 §4.1의 상한과 같음; note "재조율: `hot_queue`" 절).
 - 후속으로 다루지 않은 구속 폭: `split_duties`의 기준 정책은 시드 0과 시도 1–5 전부에서 제공 여분이 0이며(목표 26건에 26건 제공), `hot_queue`·`split_duties` 둘 다 마지막 도착(2500)이 손님 인내 500을 더한 마감 tick(3000)에 정확히 걸리고 발주도 시드 0 필요량과 정확히 같습니다(note "재조율: `hot_queue`"·"재조율: `split_duties`" 절).
-- `tests/sweep_policies.gd`의 `--gate` 분기는 `--attempt`·`--purchases`·`--without`·`--items` 검증보다 먼저 반환해, `--gate --purchases draw`가 그 플래그를 조용히 무시합니다(도구 결함).
 - 기존 결함: `persistence/campaign_store.gd`의 `load_records()` 종단 실패 분기가 `active_session`을 빠뜨리고 `_failure()`는 null을 둡니다.
 - 플레이테스트(`docs/specs/playtest-price-validation.md`)는 운영자의 시작 문장을 기다립니다.
+- AGENTS.md의 "Verify both mobile platforms on physical devices." 지침(Android·iOS 실기기 검증)은 이 PR의 자동 게이트(`check.sh`)에 포함되지 않습니다.
+  플레이테스트·릴리스 단계에서 운영자가 수행합니다.
 
 ### Task 10 회귀 결과 (2026-09-22)
 

@@ -2,20 +2,23 @@ extends RefCounted
 
 const CampaignDef := preload("res://content/campaign_def.gd")
 const ScheduleGenerator := preload("res://content/schedule_generator.gd")
-## The lowest targets any shipped content version had, per field: a completion earned under an
-## earlier content version keeps its legacy_completed marker only while it clears this floor.
-## hot_queue shipped at 14 / 1,500 (content 1), 12 / 5,000 (content 2), 12 / 4,750 (content 3-6) and
-## 14 / 5,600 (content 7);
-## every other service only ever rose from its content 1 values.
+## Every target pair any shipped content version had, per service: a completion earned under an
+## earlier content version keeps its legacy_completed marker only while it satisfies at least one
+## complete pair below, never a per-field floor across pairs (12 served / 1,500 profit was never
+## shipped together for hot_queue).
+## hot_queue shipped 14 / 1,500 (content 1), 12 / 5,000 (content 2), and 12 / 4,750 (content 3-6)
+## before content 7 raised it to 14 / 5,600; every other service only ever had its single content 1
+## pair.
 const LEGACY_COMPLETION_TARGETS := {
-	"first_shift": {"minimum_served": 10, "minimum_profit": 1000},
-	"lunch_prep": {"minimum_served": 14, "minimum_profit": 1000},
-	"hot_queue": {"minimum_served": 12, "minimum_profit": 1500},
-	"shared_stock": {"minimum_served": 16, "minimum_profit": 1500},
-	"long_route": {"minimum_served": 17, "minimum_profit": 2000},
-	"split_duties": {"minimum_served": 19, "minimum_profit": 2500},
-	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
-	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
+	"first_shift": [{"minimum_served": 10, "minimum_profit": 1000}],
+	"lunch_prep": [{"minimum_served": 14, "minimum_profit": 1000}],
+	"hot_queue": [{"minimum_served": 14, "minimum_profit": 1500}, {"minimum_served": 12, "minimum_profit": 5000},
+		{"minimum_served": 12, "minimum_profit": 4750}],
+	"shared_stock": [{"minimum_served": 16, "minimum_profit": 1500}],
+	"long_route": [{"minimum_served": 17, "minimum_profit": 2000}],
+	"split_duties": [{"minimum_served": 19, "minimum_profit": 2500}],
+	"rush_hour": [{"minimum_served": 22, "minimum_profit": 3000}],
+	"final_service": [{"minimum_served": 24, "minimum_profit": 4000}],
 }
 ## The pre-content-7 composition of every scenario whose maximum_profit(served) content 7 lowered,
 ## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a best profit
@@ -97,9 +100,13 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 
 
 static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary) -> bool:
-	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
-	return targets is Dictionary and record.best_served >= targets.minimum_served \
-		and record.best_profit >= targets.minimum_profit
+	var pairs: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
+	if not pairs is Array:
+		return false
+	for pair: Dictionary in pairs:
+		if record.best_served >= pair.minimum_served and record.best_profit >= pair.minimum_profit:
+			return true
+	return false
 
 
 ## The maximum_profit(served) a scenario paid under content 1-6, or -1 when content 7 did not lower it.

@@ -24,13 +24,6 @@ func _init() -> void:
 		push_error("unknown scenario: " + str(arguments.get("scenario", "")))
 		quit(2)
 		return
-	if arguments.has("gate"):
-		var verdict: Dictionary = SeedGate.evaluate(campaign, scenario, GATE_ATTEMPTS)
-		for row: Dictionary in verdict.rows:
-			print("SEED_GATE_ROW ", scenario.id, " ", JSON.stringify(row, "", true))
-		print("SEED_GATE_VERDICT ", JSON.stringify({"scenario": scenario.id, "passed": verdict.passed, "failures": verdict.failures}, "", true))
-		quit(0)
-		return
 	var attempt_text: String = arguments.get("attempt", "0")
 	if not attempt_text.is_valid_int() or int(attempt_text) < 0:
 		push_error("invalid --attempt: " + attempt_text)
@@ -75,6 +68,16 @@ func _init() -> void:
 	if purchase_mode == "draw" and "set_purchase" in without:
 		push_error("--purchases draw fixes the purchase commands; drop --without set_purchase")
 		quit(2)
+		return
+	# --gate only evaluates the scenario's seed gate (campaign, scenario, GATE_ATTEMPTS); it ignores
+	# --items/--keep/--purchases/--without, but still runs after their validation above so an
+	# invalid value is rejected before a gate result.
+	if arguments.has("gate"):
+		var verdict: Dictionary = SeedGate.evaluate(campaign, scenario, GATE_ATTEMPTS)
+		for row: Dictionary in verdict.rows:
+			print("SEED_GATE_ROW ", scenario.id, " ", JSON.stringify(row, "", true))
+		print("SEED_GATE_VERDICT ", JSON.stringify({"scenario": scenario.id, "passed": verdict.passed, "failures": verdict.failures}, "", true))
+		quit(0)
 		return
 	var base: Dictionary = {"preparation": [], "priorities": {}}
 	var reference: Dictionary = Policies.reference_policy(scenario.id)
