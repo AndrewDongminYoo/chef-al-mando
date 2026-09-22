@@ -54,8 +54,11 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "prepped_mushroom", 3)
 			policy.priorities = {"grill": 2, "protein_bowl": 2}
 		"final_service":
-			_add(policy, "set_prep", "marinated_protein", 5)
-			_add(policy, "set_prep", "prepped_grain", 3)
+			_add(policy, "set_prep", "marinated_protein", 6)
+			_add(policy, "set_prep", "prepped_vegetable", 1)
+			_add(policy, "set_prep", "prepped_grain", 1)
+			_add(policy, "set_prep", "prepped_mushroom", 2)
+			policy.priorities = {"grill": 2}
 	return policy
 
 
@@ -226,7 +229,7 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 			policy.priorities = {"mushroom_soup": 0}
 		"final_service":
 			policy = reference_policy(scenario_id)
-			_add(policy, "set_purchase", "protein", 6)
+			_add(policy, "set_purchase", "protein", 7)
 	if not policy.preparation.is_empty() or not policy.priorities.is_empty():
 		alternatives.append(policy)
 	return alternatives

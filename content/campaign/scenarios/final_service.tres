@@ -124,9 +124,13 @@ purchases = Dictionary[String, int]({
 "protein": 8,
 "vegetable": 32
 })
+forecast_slack = Dictionary[String, int]({
+"mushroom_salad": 1,
+"salad": 1
+})
 menu_ids = PackedStringArray("protein_bowl", "grill", "soup", "mushroom_soup", "grain_grill", "grain_salad", "mushroom_salad", "salad")
 order_count = 32
 first_arrival_tick = 10
 arrival_interval_ticks = 80
-prep_labor_capacity = 18
+prep_labor_capacity = 22
 space_rules = true
