@@ -1011,7 +1011,7 @@ git commit -m "docs: point the blueprint, mise spec and agent rules at the rebal
 
 ### 실행 순서
 
-계획의 Task 번호 순서가 아니라 다음 순서로 실행했습니다: 1, 2(확장 셋), 3, 4, 6, 7(수렴 실패), 8, 9(수렴 실패), 10a(계획에 없음), 5, 7b, 9b(수렴 실패), 9c, 10, 11.
+계획의 Task 번호 순서가 아니라 다음 순서로 실행했습니다: 1, 2(확장 넷), 3, 4, 6, 7(수렴 실패), 8, 9(수렴 실패), 10a(계획에 없음), 5, 7b, 9b(수렴 실패), 9c, 10, 11.
 `hot_queue`(Task 5)는 Task 2의 중단 분기가 걸려 운영자 결정까지 미뤄졌고 Task 3–9 뒤에 실행했습니다.
 note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통일하고 측정일은 본문에 적었습니다.
 
@@ -1066,7 +1066,6 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
 - `final_service`의 §4.4 중간 단계는 상한 22–24에서 재지 않았습니다(더 넓은 slack이 있을 수 있음).
 - `hot_queue`의 여분은 구속 폭입니다(시도 5의 제공이 목표와 같고 시드 0의 제공 여분이 §4.1의 상한과 같음; note "재조율: `hot_queue`" 절).
 - 기존 결함: `persistence/campaign_store.gd`의 `load_records()` 종단 실패 분기가 `active_session`을 빠뜨리고 `_failure()`는 null을 둡니다.
-- 명세 §9와 Task 11의 "§10 표의 풀림 검사 행"은 `mise-forecast-reviews.md`의 §9(결정론 계약) 표를 가리키며, 라벨만 틀리고 행은 고쳤습니다.
 - 플레이테스트(`docs/specs/playtest-price-validation.md`)는 운영자의 시작 문장을 기다립니다.
 
 ### Task 10 회귀 결과 (2026-09-22)
