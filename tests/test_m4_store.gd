@@ -321,7 +321,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 ## Content 7 raised hot_queue from 12 served / 5,000 profit (content 2) and 12 / 4,750 (content 3-6)
 ## to 14 / 5,600 and changed its composition, which lowers maximum_profit(served); a content 2-6
 ## completion earned under the old targets must survive with the legacy marker, and an old best
-## profit above the new cap is clamped.
+## profit above the new cap stays valid unchanged while it fits the content 6 cap.
 func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var cap: int = hot_queue.maximum_profit(12)
@@ -364,20 +364,26 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	expect(not loaded.accepted and loaded.reason == "corrupt_records",
 		"a content 6 hot queue completion below every shipped target is corrupt")
 	var legacy_cap: int = CampaignProgress.legacy_maximum_profit("hot_queue", 12)
-	expect(legacy_cap > cap + 1, "the content 6 hot queue cap sits above the current cap so a clamp fixture is meaningful")
+	expect(legacy_cap > cap + 1, "the content 6 hot queue cap sits above the current cap so an old-best fixture is meaningful")
 	var above_cap_target := directory + "/content_version_six_hot_queue_above_cap.json"
 	var above_cap_records := old_target_records.duplicate(true)
 	above_cap_records.hot_queue.best_profit = cap + 1
-	var clamped_records := marked_records.duplicate(true)
-	clamped_records.hot_queue.best_profit = cap
+	var kept_records := marked_records.duplicate(true)
+	kept_records.hot_queue.best_profit = cap + 1
 	_write(above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
 		"records": above_cap_records, "attempts": {}, "active_session": null}))
 	loaded = CampaignStore.new(campaign, above_cap_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == clamped_records,
-		"a content 6 hot queue best profit between the current and the content 6 cap is clamped to the current cap and stays completed")
+	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == kept_records,
+		"a content 6 hot queue best profit between the current and the content 6 cap loads unchanged and stays completed")
 	expect(CampaignStore.new(campaign, above_cap_target).save_records(loaded.records).accepted
-		and CampaignStore.new(campaign, above_cap_target).load_records().records == clamped_records,
-		"a clamped hot queue best profit writes and reloads exactly")
+		and CampaignStore.new(campaign, above_cap_target).load_records().records == kept_records,
+		"an old hot queue best profit above the current cap writes and reloads unchanged")
+	var current_above_cap_target := directory + "/content_version_seven_hot_queue_above_cap.json"
+	_write(current_above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
+		"records": kept_records, "attempts": {}, "active_session": null}))
+	loaded = CampaignStore.new(campaign, current_above_cap_target).load_records()
+	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == kept_records,
+		"a content 7 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version")
 	var above_legacy_cap_target := directory + "/content_version_six_hot_queue_above_legacy_cap.json"
 	var above_legacy_cap_records := old_target_records.duplicate(true)
 	above_legacy_cap_records.hot_queue.best_profit = legacy_cap + 50
@@ -385,7 +391,7 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 		"records": above_legacy_cap_records, "attempts": {}, "active_session": null}))
 	loaded = CampaignStore.new(campaign, above_legacy_cap_target).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 6 hot queue best profit above the content 6 cap is corrupt instead of clamped")
+		"a content 6 hot queue best profit above the content 6 cap is corrupt")
 	var unchanged_cap_target := directory + "/content_version_six_first_shift_above_cap.json"
 	var first: Resource = campaign.scenario_for("first_shift")
 	var unchanged_cap_records := {"first_shift": {"completed": true, "best_served": 10, "best_profit": 4000}}
@@ -394,7 +400,7 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 		"records": unchanged_cap_records, "attempts": {}, "active_session": null}))
 	loaded = CampaignStore.new(campaign, unchanged_cap_target).load_records()
 	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 6 best profit above the cap of a service whose cap never dropped is corrupt, not clamped")
+		"a content 6 best profit above the cap of a service whose cap never dropped is corrupt")
 	var current_target := directory + "/content_version_seven_old_hot_queue_targets.json"
 	_write(current_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
 		"records": old_target_records, "attempts": {}, "active_session": null}))

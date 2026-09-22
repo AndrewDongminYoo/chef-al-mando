@@ -132,7 +132,7 @@
 - `forecast_slack`을 작성하는 커밋은 콘텐츠 버전을 7로 올립니다.
   시드가 있는 세션의 일정이 스냅샷과 달라지므로 버전 6 이하의 진행 중 영업은 모든 시나리오에서 재시작하고 완료·최고 기록과 준비 기본값은 보존합니다.
 - 목표가 올라간 영업의 완료 기록은 그대로 두며, ~~`legacy_completed` 표식 규칙은 콘텐츠 버전 1의 것이라 적용하지 않습니다~~ 표식 규칙은 버전 6 이하의 모든 기록에 적용합니다(2026-09-22 정정 절 7).
-  ~~최고 기록은 `maximum_profit`(예보 상한 기준)이 커지므로 계속 유효합니다.~~ `hot_queue`의 구성 변경은 `maximum_profit`을 낮추므로 옛 최고 손익은 현재 상한으로 잘라 보존합니다(2026-09-22 정정 절 7).
+  ~~최고 기록은 `maximum_profit`(예보 상한 기준)이 커지므로 계속 유효합니다.~~ `hot_queue`의 구성 변경은 `maximum_profit`을 낮추므로 옛 최고 손익은 옛 상한(`CampaignProgress.LEGACY_PROFIT_CAPS`)까지 그대로 유효합니다(2026-09-22 정정 절 7).
 - 스키마는 4 그대로이고 `sim_version`은 건드리지 않습니다.
 
 ## 8. 검증 계약
@@ -215,6 +215,6 @@
    §7의 "표식 규칙은 버전 1의 것"은 틀렸으며, 표식은 버전 6 이하의 모든 문서에서 현재 목표에 못 미치는 완료 기록에 붙습니다 – 그 시대의 목표를 충족했다면 보존해야 한다는 AGENTS.md의 규칙과 §7의 첫 문장이 원래 약속한 것입니다.
    `CampaignProgress.LEGACY_COMPLETION_TARGETS`는 이제 "출시된 모든 콘텐츠 버전의 가장 낮은 목표"(바닥)이며, `hot_queue`만 12건·1,500으로 바뀌고 나머지 일곱 영업은 버전 1 값에서 내려간 적이 없어 그대로입니다(여덟 `.tres`의 `git log -p --follow`로 확인).
    바닥에도 못 미치는 완료 기록은 여전히 `corrupt_records`이고, 현재 목표를 달성하면 `record_result()`가 표식을 지우는 규칙은 그대로입니다.
-   `hot_queue`의 구성 변경(그릴 10·수프 5·샐러드 5 → 8·4·8)은 `maximum_profit(served)`를 낮추므로, 버전 6 이하 문서의 `best_profit`이 현재 상한을 넘으면 읽을 때 상한으로 잘라 완료를 보존하고 `validate_records()`의 상한 검사는 엄격하게 둡니다.
-   두 번째 Codex 리뷰(P2)가 이 자르기가 상한이 내려간 적 없는 영업의 깨진 기록(`first_shift` 10건·4,000)까지 받아들이는 것을 찾아, 자르기는 `CampaignProgress.LEGACY_PROFIT_CAPS`에 옛 구성(마진 다중집합과 인건비)이 있는 영업 – 지금은 `hot_queue`뿐 – 에서 옛 상한 `legacy_maximum_profit()` 이하의 값에만 적용하고, 그 밖의 기록은 그대로 `validate_records()`가 거부합니다.
+   `hot_queue`의 구성 변경(그릴 10·수프 5·샐러드 5 → 8·4·8)은 `maximum_profit(served)`를 낮추므로, `validate_records()`의 손익 상한은 현재 상한과 옛 상한(`CampaignProgress.LEGACY_PROFIT_CAPS`에 옛 구성의 마진 다중집합과 인건비를 두고 `legacy_maximum_profit()`이 계산, 지금은 `hot_queue`뿐) 가운데 큰 쪽입니다 – 옛 상한 이하의 최고 손익은 문서 버전과 무관하게 바꾸지 않고 유효하며, 옛 구성이 낼 수 있던 값만 넓혀 받고, 표가 없는 영업은 현재 상한 그대로이고, 새 결과는 `record_result()`가 현재 상한으로만 막습니다.
+   처음 고친 판(첫 커밋)은 읽을 때 옛 최고 손익을 현재 상한으로 잘랐고, 두 번째 Codex 리뷰(P2)가 그 자르기가 상한이 내려간 적 없는 영업의 깨진 기록(`first_shift` 10건·4,000)까지 받아들이는 것을, PR #30의 호스티드 Codex 리뷰(P1)가 자르기 자체가 최고 기록을 덮어써 다음 저장에서 손실을 굳히는 것(AGENTS.md "Preserve completion records and best results" 위반)을 찾아 위의 넓힌 상한으로 바꿨습니다.
    검사는 `tests/test_m4_store.gd`의 `_test_raised_targets`와 `tests/test_campaign_progress.gd`의 바닥 검사이며, 두 PCK 검사의 writer는 `first_shift` 기록만 쓰므로 바뀌지 않았습니다.

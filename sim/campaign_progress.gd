@@ -18,8 +18,10 @@ const LEGACY_COMPLETION_TARGETS := {
 	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
 }
 ## The pre-content-7 composition of every scenario whose maximum_profit(served) content 7 lowered,
-## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a content 1-6
-## best profit above the current cap is clamped to it only while it fits this old cap.
+## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a best profit
+## earned under that composition stays valid (validate_records widens its bound to this old cap)
+## instead of being rewritten, so the widened bound only ever admits values a shipped composition
+## could pay.
 ## hot_queue was grill 10 / soup 5 / salad 5 with no forecast_slack (grill 1,500 - protein 400 = 1,100;
 ## soup 900 - grain 150 - 2 x vegetable 100 = 550; salad 500 - vegetable 100 = 400; labor_cost 2,000).
 ## Extend this table whenever a future content version lowers a scenario's cap; without an entry an
@@ -70,7 +72,12 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 		if not record.get("completed") is bool or not record.get("best_served") is int or not record.get("best_profit") is int:
 			problems.append("invalid record value types")
 			continue
-		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > scenario.maximum_profit(record.best_served):
+		# A best profit is bounded by the highest cap any shipped composition paid for that served
+		# count, so a best earned before content 7 lowered hot_queue's cap stays valid without being
+		# rewritten; scenarios without a legacy cap keep the strict current bound, and record_result
+		# bounds every new result by the current cap alone.
+		var profit_cap: int = maxi(scenario.maximum_profit(record.best_served), legacy_maximum_profit(scenario_id, record.best_served))
+		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > profit_cap:
 			problems.append("record value is outside the service limits")
 		if has_legacy_completion and (not record.completed or not meets_legacy_completion_targets(scenario_id, record)):
 			problems.append("invalid legacy completion marker")

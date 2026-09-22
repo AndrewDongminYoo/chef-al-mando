@@ -91,6 +91,22 @@ func run(_tree: SceneTree) -> void:
 	})
 	expect(content_six_completion.errors.is_empty() and content_six_completion.is_unlocked(campaign.scenarios[3].id),
 		"a hot queue completion marked at the content 6 targets remains unlocked below the current targets")
+	var old_best_profit: int = pressure.maximum_profit(12) + 1
+	expect(old_best_profit <= progress_script.legacy_maximum_profit(pressure.id, 12),
+		"an old hot queue best one above the current cap still fits the content 6 cap")
+	var old_best: RefCounted = progress_script.new(campaign, {
+		first.id: legacy_records[first.id], second.id: legacy_records[second.id],
+		pressure.id: {"completed": true, "best_served": 12, "best_profit": old_best_profit, "legacy_completed": true},
+	})
+	expect(old_best.errors.is_empty(), "an old hot queue best under the content 6 cap validates without being rewritten")
+	var lower_result: Dictionary = old_best.record_result(pressure.id, _result(pressure, pressure.minimum_served, pressure.minimum_profit))
+	expect(lower_result.accepted and lower_result.passed
+		and old_best.snapshot().records[pressure.id].best_profit == old_best_profit
+		and old_best.snapshot().records[pressure.id].best_served == pressure.minimum_served
+		and not old_best.snapshot().records[pressure.id].has("legacy_completed"),
+		"a new lower result keeps the previous higher best profit and still validates")
+	expect(not old_best.record_result(pressure.id, _result(pressure, 12, old_best_profit)).accepted,
+		"a new result is still bounded by the current cap")
 	for forged_record: Dictionary in [
 		{"completed": true, "best_served": 11, "best_profit": 1500, "legacy_completed": true},
 		{"completed": true, "best_served": 14, "best_profit": 1499, "legacy_completed": true},

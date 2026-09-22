@@ -1060,6 +1060,7 @@ note의 여섯 재조율 절은 제목을 "2026-09-21 재조율" 계열로 통�
 - 리뷰: Task 8·9b의 한 줄 note 수정은 컨트롤러가 범위 재리뷰 없이 확인했고, 나머지 수정 라운드는 모두 범위 리뷰를 거쳤습니다.
 - Task 10 뒤 Codex 읽기 리뷰 P1(수정 커밋 `fix(persistence): keep completions earned under earlier targets when content 7 raises them`): Task 5가 올린 `hot_queue` 목표 아래의 버전 2–6 완료 기록을 `campaign_store.gd`가 표식 없이 읽어 `validate_records()`가 저장 전체를 `corrupt_records`로 거부했고, 표식 규칙을 버전 6 이하 전체로 넓히고 `LEGACY_COMPLETION_TARGETS`를 출시된 가장 낮은 목표로, 옛 `best_profit`은 현재 `maximum_profit`으로 잘라 읽도록 고쳤습니다(명세의 2026-09-22 정정 절 7; 두 PCK 6→7 9 OK / 1 skip, 같은 PCK 10 OK 재확인).
 - 두 번째 Codex 리뷰 P2(수정 커밋 `fix(persistence): clamp an old best profit only where content 7 lowered the cap`): 위 자르기가 상한이 내려간 적 없는 영업의 상한 초과 기록(`first_shift` 10건·4,000)까지 조용히 잘라 받아들였으므로, `CampaignProgress.LEGACY_PROFIT_CAPS`(버전 1–6 `hot_queue` 구성의 마진과 인건비)와 `legacy_maximum_profit()`을 더해 옛 상한 이하의 값만 자르고 나머지는 `corrupt_records`로 되돌렸습니다(명세의 2026-09-22 정정 절 7).
+- PR #30 호스티드 Codex 리뷰 P1(수정 커밋 `fix(persistence): keep an old best profit valid under its legacy cap instead of clamping it`): 자르기가 플레이어의 최고 손익을 덮어쓰고 다음 저장에서 손실을 굳혀 AGENTS.md의 "Preserve completion records and best results"를 어겼으므로, 읽기의 자르기를 없애고 `validate_records()`의 손익 상한을 현재 상한과 `legacy_maximum_profit()` 가운데 큰 쪽으로 넓혀 옛 최고 기록을 바꾸지 않고 유효하게 두었습니다(명세의 2026-09-22 정정 절 7).
 
 ### 후속 (이 PR에서 풀지 않음)
 

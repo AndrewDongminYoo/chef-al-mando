@@ -203,18 +203,10 @@ func _read(target: String) -> Dictionary:
 			scenario = _campaign.scenario_for(key)
 		if content_updated and scenario != null:
 			var record: Dictionary = records[key]
-			# Content 7 lowered hot_queue's maximum_profit by changing its composition, so an old best
-			# that fit the earlier cap (CampaignProgress.LEGACY_PROFIT_CAPS) is clamped to the current
-			# one; a scenario without a legacy cap, or a best above the old cap, is left for
-			# validate_records to reject, which keeps its upper bound strict.
-			if CampaignProgress.LEGACY_PROFIT_CAPS.has(key) \
-				and record.best_served >= 0 and record.best_served <= scenario.order_count:
-				var current_cap: int = scenario.maximum_profit(record.best_served)
-				if record.best_profit > current_cap \
-					and record.best_profit <= CampaignProgress.legacy_maximum_profit(key, record.best_served):
-					record.best_profit = current_cap
 			# A completion earned under an earlier content version's targets stays completed while it
-			# clears the lowest targets any shipped version had; anything lower is corrupt.
+			# clears the lowest targets any shipped version had; anything lower is corrupt. Best results
+			# are never rewritten here: an old best above the current cap stays valid through the
+			# legacy cap in CampaignProgress.validate_records.
 			if record.get("completed") == true \
 				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
 				if not CampaignProgress.meets_legacy_completion_targets(key, record):
