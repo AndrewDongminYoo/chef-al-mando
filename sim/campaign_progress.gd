@@ -17,6 +17,17 @@ const LEGACY_COMPLETION_TARGETS := {
 	"rush_hour": {"minimum_served": 22, "minimum_profit": 3000},
 	"final_service": {"minimum_served": 24, "minimum_profit": 4000},
 }
+## The pre-content-7 composition of every scenario whose maximum_profit(served) content 7 lowered,
+## as the margin multiset and labor cost ScenarioDef.maximum_profit would have summed: a content 1-6
+## best profit above the current cap is clamped to it only while it fits this old cap.
+## hot_queue was grill 10 / soup 5 / salad 5 with no forecast_slack (grill 1,500 - protein 400 = 1,100;
+## soup 900 - grain 150 - 2 x vegetable 100 = 550; salad 500 - vegetable 100 = 400; labor_cost 2,000).
+## Extend this table whenever a future content version lowers a scenario's cap; without an entry an
+## old best above the new cap is corrupt.
+const LEGACY_PROFIT_CAPS := {
+	"hot_queue": {"margins": [1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100,
+		550, 550, 550, 550, 550, 400, 400, 400, 400, 400], "labor_cost": 2000},
+}
 
 var errors: Array[String] = []
 var _campaign: CampaignDef
@@ -82,6 +93,20 @@ static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictio
 	var targets: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
 	return targets is Dictionary and record.best_served >= targets.minimum_served \
 		and record.best_profit >= targets.minimum_profit
+
+
+## The maximum_profit(served) a scenario paid under content 1-6, or -1 when content 7 did not lower it.
+static func legacy_maximum_profit(scenario_id: String, served: int) -> int:
+	var table: Variant = LEGACY_PROFIT_CAPS.get(scenario_id)
+	if not table is Dictionary:
+		return -1
+	var margins: Array = table.margins.duplicate()
+	margins.sort()
+	margins.reverse()
+	var upper_bound: int = -table.labor_cost
+	for index: int in mini(maxi(served, 0), margins.size()):
+		upper_bound += maxi(margins[index], 0)
+	return upper_bound
 
 
 func is_unlocked(scenario_id: String) -> bool:

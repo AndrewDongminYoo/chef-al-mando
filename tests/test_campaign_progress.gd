@@ -80,6 +80,11 @@ func run(_tree: SceneTree) -> void:
 		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 11, "best_profit": 1500})
 		and not progress_script.meets_legacy_completion_targets(pressure.id, {"best_served": 12, "best_profit": 1499}),
 		"the hot queue legacy floor is 12 served and 1,500 profit")
+	# Content 1-6 hot_queue: grill 10 x 1,100 + soup 5 x 550 + salad 5 x 400 margins, labor 2,000, so
+	# the top 12 pay 10 x 1,100 + 2 x 550 - 2,000 = 10,100.
+	expect(progress_script.legacy_maximum_profit("hot_queue", 12) == 10100
+		and progress_script.legacy_maximum_profit("missing_scenario", 12) == -1,
+		"the content 6 hot queue cap is recomputed from its old composition and unknown services have none")
 	var content_six_completion: RefCounted = progress_script.new(campaign, {
 		first.id: legacy_records[first.id], second.id: legacy_records[second.id],
 		pressure.id: {"completed": true, "best_served": 12, "best_profit": 4750, "legacy_completed": true},

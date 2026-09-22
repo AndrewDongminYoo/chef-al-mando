@@ -216,4 +216,5 @@
    `CampaignProgress.LEGACY_COMPLETION_TARGETS`는 이제 "출시된 모든 콘텐츠 버전의 가장 낮은 목표"(바닥)이며, `hot_queue`만 12건·1,500으로 바뀌고 나머지 일곱 영업은 버전 1 값에서 내려간 적이 없어 그대로입니다(여덟 `.tres`의 `git log -p --follow`로 확인).
    바닥에도 못 미치는 완료 기록은 여전히 `corrupt_records`이고, 현재 목표를 달성하면 `record_result()`가 표식을 지우는 규칙은 그대로입니다.
    `hot_queue`의 구성 변경(그릴 10·수프 5·샐러드 5 → 8·4·8)은 `maximum_profit(served)`를 낮추므로, 버전 6 이하 문서의 `best_profit`이 현재 상한을 넘으면 읽을 때 상한으로 잘라 완료를 보존하고 `validate_records()`의 상한 검사는 엄격하게 둡니다.
+   두 번째 Codex 리뷰(P2)가 이 자르기가 상한이 내려간 적 없는 영업의 깨진 기록(`first_shift` 10건·4,000)까지 받아들이는 것을 찾아, 자르기는 `CampaignProgress.LEGACY_PROFIT_CAPS`에 옛 구성(마진 다중집합과 인건비)이 있는 영업 – 지금은 `hot_queue`뿐 – 에서 옛 상한 `legacy_maximum_profit()` 이하의 값에만 적용하고, 그 밖의 기록은 그대로 `validate_records()`가 거부합니다.
    검사는 `tests/test_m4_store.gd`의 `_test_raised_targets`와 `tests/test_campaign_progress.gd`의 바닥 검사이며, 두 PCK 검사의 writer는 `first_shift` 기록만 쓰므로 바뀌지 않았습니다.
