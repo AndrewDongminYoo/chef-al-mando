@@ -50,11 +50,12 @@ static func reference_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "prepped_vegetable", 7)
 		"rush_hour":
 			_add(policy, "set_prep", "marinated_protein", 1)
-			_add(policy, "set_prep", "prepped_vegetable", 4)
+			_add(policy, "set_prep", "prepped_vegetable", 5)
 			_add(policy, "set_prep", "prepped_grain", 3)
-			_add(policy, "set_prep", "thawed_protein", 1)
 			_add(policy, "set_prep", "prepped_mushroom", 3)
-			policy.priorities = {"grain_salad": 0, "mushroom_soup": 0}
+			_add(policy, "set_prep", "soup_base", 2)
+			_add(policy, "set_prep", "thawed_protein", 1)
+			policy.priorities = {"salad": 2, "protein_bowl": 2}
 		"final_service":
 			_add(policy, "set_prep", "marinated_protein", 6)
 			_add(policy, "set_prep", "prepped_vegetable", 1)

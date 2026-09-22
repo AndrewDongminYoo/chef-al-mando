@@ -829,7 +829,7 @@ slack 1·1·1·1에서 시도 1·3·4가 미달한 이유는 정책이 아니라
 
 ### 2026-09-21 재조율: `rush_hour` (1차·2차 수렴 실패 → 2026-09-22 3차 코드화된 게이트 기준으로 수렴)
 
-[압력 영업 재조율 계획](../plans/pressure-rebalance-implementation.md) Task 9의 기록이며(측정일 2026-09-22), 공통 절차 2–9가 수렴하지 않아 `content/campaign/scenarios/rush_hour.tres`와 `tests/fixtures/m3_policies.gd`는 바꾸지 않았고 이 절만 남깁니다.
+[압력 영업 재조율 계획](../plans/pressure-rebalance-implementation.md) Task 9의 기록이며(측정일 2026-09-22), 공통 절차 2–9가 수렴하지 않아 `content/campaign/scenarios/rush_hour.tres`와 `tests/fixtures/m3_policies.gd`는 바꾸지 않았고 이 절만 남깁니다(아래 3차 소절에서 둘 다 바뀜).
 결론은 두 지렛대 가운데 우선순위 쪽이 명세 §4.3의 스윕 의미("우선순위 없는 프렙 조합이 하나도 통과하지 않음")로는 여유·목표만으로 필요해질 수 없다는 것입니다: 시드 0에서 프렙만으로 30건 가운데 27–28건을 제공하는 조합이 있어 목표를 그 위로 올려야 하는데, 프렙과 우선순위를 함께 둔 어떤 정책도 시도 1–5의 추첨에서 그 값을 유지하지 못하고, 이 갈림은 slack을 §4.4가 허용하는 마지막 단계(두 메뉴)까지 줄여도 닫히지 않습니다.
 따라서 이 영업은 `final_service`와 같이 명세 §5의 3단계(구성) 대상입니다.
 스윕은 위 스윕 절의 `tests/sweep_policies.gd`를 상한 21로 돌렸고(19·20의 값은 통과 조합의 노동량으로 도출, 위 지렛대 측정 절의 규칙), `--items`는 계획대로 `marinated_protein:3,prepped_vegetable:6,prepped_grain:6,prepped_mushroom:6,soup_base:3,thawed_protein:3`입니다.
@@ -1005,10 +1005,12 @@ Pairs 묶음의 Pb(냉식 먼저·온식 10 tick 뒤 쌍 셋)가 여섯 시도 2
 |    7 | `grain_grill`·`protein_bowl`(1차 로그 1,412행: 프렙 4집합 × 129 + 2집합 × 448)      |                50 |                  39 |                    1 | 위 대체 A 프렙 + `grill 0, mushroom_soup 0` · 25/9,300                                                                                                                             |
 
 단계 1–5에서는 어떤 (프렙, 사전) 행도 여섯 시도 최솟값이 23건·8,500원에 닿지 않아(손익 최솟값 최고 8,400원) 우선순위 조건 이전에 시도 편차에서 막히고, 단계 6이 이 가족에서 세 조건을 모두 만족하는 가장 넓은 slack입니다.
-단계 6의 25행 가운데 시드 0 편차가 가장 작고 1층 폭이 가장 넓은 행을 골랐습니다: `marinated_protein 1, prepped_vegetable 4, prepped_grain 3, thawed_protein 1, prepped_mushroom 3`(노동량 14) + `grain_salad 0, mushroom_soup 0`, 여섯 시도 25/9,900 · 25/9,100 · 26/10,850 · 25/9,100 · 25/9,300 · 25/9,800, 프렙만 시드 0 23건·7,000원.
-같은 프렙에 우선순위를 두지 않으면 시도 1–5가 22/6,150 · 23/6,750 · 23/6,700 · 23/6,600 · 24/7,900이라 우선순위가 시드 0에서 손익 2,900원, 다른 추첨에서 제공 1–3건·손익 1,900–4,100원을 냅니다.
-공통 절차 6·7은 목표 상향을 요구하지 않았습니다: 무계획 폭은 모든 시도에서 제공 2건 이상 또는 손익 1,500원 이상(시도 1은 제공 1건이지만 손익 3,100원)이고, 시드 0의 §4.1 여분은 제공 2건·손익 1,400원이라 목표 23건·8,500원을 그대로 둡니다.
-상한도 18을 넘길 이유가 없어(기준 노동량 14, 대체 A 15) 그대로입니다.
+단계 6의 25행에 우선순위만 둔 시드 0 값(slack과 무관하므로 1차 로그 `rh-prio-small.log`의 프렙 없음 행)을 대면 7행은 우선순위만으로 두 목표를 통과해 1층의 `set_prep` 갈래에 걸리고(예: `marinated_protein 1, prepped_vegetable 5, prepped_grain 3, prepped_mushroom 3` + `mushroom_salad 0, salad 0`은 편차 0건·300원에 프렙만 22건·6,100원이지만 우선순위만 25건·8,500원이라 탈락, 탐침 `rh9c_c6b.json`으로도 확인), 18행이 세 갈래를 모두 미달합니다(`rh9c_layer1_r6.py`).
+그 18행 가운데 시드 0 편차가 가장 작고 1층 폭(여섯 시도 최솟값 − 프렙만 시드 0)이 가장 넓은 행을 골랐습니다: `marinated_protein 1, prepped_vegetable 5, prepped_grain 3, prepped_mushroom 3, soup_base 2, thawed_protein 1`(노동량 17) + `salad 2, protein_bowl 2`, 여섯 시도 24/9,000 · 26/10,300 · 24/8,850 · 25/9,300 · 24/9,000 · 24/8,800, 편차 0건·200원, 프렙만 시드 0 22건·6,100원(폭 2건·2,700원), 우선순위만 22건·7,000원.
+3차 첫 커밋(`3099b2b`)의 기준 `marinated_protein 1, prepped_vegetable 4, prepped_grain 3, thawed_protein 1, prepped_mushroom 3` + `grain_salad 0, mushroom_soup 0`(편차 0건·800원, 폭 2건·2,100원, 시드 0 25건이라 §4.1 제공 여분이 상한 2에 걸림)은 검토에서 이 기준으로 바뀌었습니다.
+같은 프렙에 우선순위를 두지 않으면 시도 1–5가 22/5,800 · 24/8,250 · 22/5,800 · 21/3,800 · 23/7,000이라 우선순위가 시드 0에서 제공 2건·손익 2,900원, 다른 추첨에서 제공 0–4건·손익 600–5,200원을 냅니다.
+공통 절차 6·7은 목표 상향을 요구하지 않았습니다: 무계획 폭은 모든 시도에서 제공 2건 이상 또는 손익 1,500원 이상(시도 1은 제공 1건이지만 손익 3,100원)이고, 시드 0의 §4.1 여분은 제공 1건·손익 500원이라 목표 23건·8,500원을 그대로 둡니다(제공 여분은 2가 되면 상한에 닿는 구속 폭이며, 이 기준은 그보다 1 아래입니다).
+상한도 18을 넘길 이유가 없어(기준 노동량 17, 대체 A 15) 그대로이며, 상한 19–21은 위 1차 로그 재선별(5,791행, 상한 21에서 잰 값이라 노동량 19–21의 프렙을 포함)이 단계 1–7을 덮고 그 히트가 단계 7의 하나뿐이라 단계 1–5에는 19–21에서도 히트가 없습니다.
 단계 6의 추첨은 시도마다 슬롯 1–2개입니다: 시도 1은 슬롯 15(1200 tick) `protein_bowl` → `mushroom_soup`, 2는 슬롯 13(1030) `mushroom_soup` → `grain_grill`, 3은 슬롯 23(1880) `protein_bowl` → `mushroom_soup`, 4는 슬롯 7(520) `protein_bowl` → `mushroom_soup`과 슬롯 14(1115) `grain_grill` → `protein_bowl`, 5는 슬롯 22(1795) `grain_grill` → `mushroom_soup`이며, 추첨 인지 발주는 양송이 12(시도 1·3)·현미 15(시도 2)·채소 32–33(시도 1·3·4·5)까지 오르고 `insufficient_budget`은 없습니다.
 
 확정값(권위는 `.tres`):
@@ -1024,30 +1026,30 @@ Pairs 묶음의 Pb(냉식 먼저·온식 10 tick 뒤 쌍 셋)가 여섯 시도 2
 
 | 시도 |       시드 | 추첨 인지 제공 | 추첨 인지 손익 | 무계획 제공 | 무계획 손익 | 판정 |
 | ---: | ---------: | -------------: | -------------: | ----------: | ----------: | ---- |
-|    0 |          0 |             25 |          9,900 |          21 |       4,650 | 통과 |
-|    1 | 1294029795 |             25 |          9,100 |          22 |       5,400 | 통과 |
-|    2 | 1310807414 |             26 |         10,850 |          21 |       4,100 | 통과 |
-|    3 | 1327585033 |             25 |          9,100 |          20 |       3,550 | 통과 |
-|    4 | 1344362652 |             25 |          9,300 |          20 |       3,300 | 통과 |
-|    5 | 1361140271 |             25 |          9,800 |          21 |       4,450 | 통과 |
+|    0 |          0 |             24 |          9,000 |          21 |       4,650 | 통과 |
+|    1 | 1294029795 |             26 |         10,300 |          22 |       5,400 | 통과 |
+|    2 | 1310807414 |             24 |          8,850 |          21 |       4,100 | 통과 |
+|    3 | 1327585033 |             25 |          9,300 |          20 |       3,550 | 통과 |
+|    4 | 1344362652 |             24 |          9,000 |          20 |       3,300 | 통과 |
+|    5 | 1361140271 |             24 |          8,800 |          21 |       4,450 | 통과 |
 
-1층의 세 정책은 시드 0에서 프렙만(`marinated_protein 1, prepped_vegetable 4, prepped_grain 3, thawed_protein 1, prepped_mushroom 3`) 23건·7,000원, 우선순위만(`grain_salad 0, mushroom_soup 0`) 17건·700원, 둘 다 뺀 무계획 21건·4,650원으로 모두 미달합니다.
+1층의 세 정책은 시드 0에서 프렙만(`marinated_protein 1, prepped_vegetable 5, prepped_grain 3, prepped_mushroom 3, soup_base 2, thawed_protein 1`) 22건·6,100원, 우선순위만(`salad 2, protein_bowl 2`) 22건·7,000원, 둘 다 뺀 무계획 21건·4,650원으로 모두 미달합니다.
 2층의 `lever_free_policy("rush_hour")`는 Task 10a가 고정한 `move_station cold_01 left` 2회 그대로이며 23건·6,500원으로 손익에 미달하고(`M3_LEVER rush_hour` 줄), 목표가 그대로라 다시 재지 않았습니다.
 프렙만 스윕은 돌리지 않았습니다: 위 1차 절의 바닥(상한 18에서 704가지가 23건·8,500원을 통과)은 그대로이고, 코드화된 게이트는 그것을 읽지 않습니다.
 
 정책 변경(권위는 `tests/fixtures/m3_policies.gd`):
 
-| 정책     | 이전                                                                                                    | 이후                                                                                                                                       | 시드 0      |
-| -------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
-| 기준     | prepped_vegetable 4, prepped_grain 3, prepped_mushroom 3 · 10/18 + `grill 2, protein_bowl 2`            | marinated_protein 1, prepped_vegetable 4, prepped_grain 3, thawed_protein 1, prepped_mushroom 3 · 14/18 + `grain_salad 0, mushroom_soup 0` | 25 · 9,900  |
-| 대체 A   | marinated_protein 1, prepped_vegetable 5, prepped_grain 3, thawed_protein 1, prepped_mushroom 3 · 15/18 | 같음                                                                                                                                       | 25 · 9,100  |
-| 대체 B   | `mushroom_soup 0`                                                                                       | 같음                                                                                                                                       | 26 · 10,500 |
-| 무지렛대 | `move_station cold_01 left` 2회                                                                         | 같음                                                                                                                                       | 23 · 6,500  |
+| 정책     | 이전                                                                                                    | 이후                                                                                                                                             | 시드 0      |
+| -------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- |
+| 기준     | prepped_vegetable 4, prepped_grain 3, prepped_mushroom 3 · 10/18 + `grill 2, protein_bowl 2`            | marinated_protein 1, prepped_vegetable 5, prepped_grain 3, prepped_mushroom 3, soup_base 2, thawed_protein 1 · 17/18 + `salad 2, protein_bowl 2` | 24 · 9,000  |
+| 대체 A   | marinated_protein 1, prepped_vegetable 5, prepped_grain 3, thawed_protein 1, prepped_mushroom 3 · 15/18 | 같음                                                                                                                                             | 25 · 9,100  |
+| 대체 B   | `mushroom_soup 0`                                                                                       | 같음                                                                                                                                             | 26 · 10,500 |
+| 무지렛대 | `move_station cold_01 left` 2회                                                                         | 같음                                                                                                                                             | 23 · 6,500  |
 
-세 정책의 해시는 쌍별로 다르고 1배·4배 해시가 같습니다(`rh9c_c6.json`의 `RH_POLICY` 줄).
+세 정책의 해시는 쌍별로 다르고 1배·4배 해시가 같습니다(`rh9c_c6c.json`의 `RH_POLICY` 줄).
 대체 A는 우선순위 없이 통과하는 프렙만 정책이지만 코드화된 게이트는 대체 정책의 지렛대 사용을 묻지 않으므로 그대로 둡니다.
 `tests/capture_m3.gd`의 연어 재우기 되돌리기 주석은 기준 정책이 `marinated_protein`을 두지 않는다는 전제를 적고 있어 그 전제가 사라졌다고 고쳤고, 되돌리기(`set_prep marinated_protein 0`)는 절대값 명령이라 기준 정책의 `set_prep marinated_protein 1`이 뒤에서 값을 다시 두므로 동작은 같고, 이 캡처는 어느 suite·CI도 부르지 않는 수동 실행(`docs/notes/m3-verification.md`)이지만 창을 띄워 한 번 돌려 `M3 rendered input checks=191 failures=0`을 확인했습니다.
-`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,115개(2차 시점의 1,112에서 `test_m3_ui.gd`가 프렙 명령 3 → 5개, 우선순위 도착 7 → 8건을 세어 세 개 늚), `mise`는 387개를 실패 없이 통과했고, 구성·브리핑·상한이 그대로라 `ui-regressions`·`m4`는 돌리지 않았습니다.
+`GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot bash scripts/check.sh m3`는 1,115개(2차 시점의 1,112에서 `test_m3_ui.gd`가 프렙 명령 3 → 6개를 세어 세 개 늚, 우선순위가 붙는 도착은 구이 4·덮밥 3 → 샐러드 4·덮밥 3으로 7건 그대로), `mise`는 387개를 실패 없이 통과했고, 구성·브리핑·상한이 그대로라 `ui-regressions`·`m4`는 돌리지 않았습니다.
 Task 10의 "고정한 정책은 지렛대를 뺀 기준 정책과 다르다" 검사는 이 영업에서 지렛대를 뺀 기준 정책이 빈 정책이고 고정한 정책이 `move_station cold_01 left` 2회라 이제 성립합니다.
 위 1차 절의 "이 영업은 `final_service`와 같이 명세 §5의 3단계(구성) 대상"과 2차 절의 "열어야 할 규칙" (1)은 이 3차로 낡았습니다: (1)이 곧 코드화된 게이트의 뜻이었고, 그 뜻에서는 원래 구성이 후보였습니다.
 탐침·선별 스크립트·로그는 세션 scratchpad에만 있고 커밋하지 않았습니다.
