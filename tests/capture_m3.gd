@@ -55,8 +55,9 @@ func run() -> void:
 			await _safe_click(panel.prep_plus.marinated_protein, service.safe_area.get_global_rect())
 			checks.expect(service.preparation.snapshot().prep_quantities.marinated_protein == 1, "the last mise row accepts an actual coordinate tap")
 			await save_frame("res://build/check/m3-last-mise-row-preparation.png")
-			# This reset only works because rush_hour's reference policy (tests/fixtures/m3_policies.gd) never sets
-			# marinated_protein; a retune that adds it there would make this reset redundant or wrong.
+			# Since the 2026-09-22 rush_hour retune the reference policy (tests/fixtures/m3_policies.gd) sets
+			# marinated_protein 1 itself, so this reset only proves the undo is accepted; the reference's own
+			# absolute set_prep then restores the quantity it needs.
 			checks.expect(service.submit_preparation("set_prep", "marinated_protein", 0).accepted, "rendered fixture undoes the coordinate-tap quantity before the reference policy")
 		var policy := Policies.reference_policy(scenario.id)
 		for command: Dictionary in policy.preparation:
