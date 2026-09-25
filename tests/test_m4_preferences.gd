@@ -73,6 +73,23 @@ func _test_store(file_path: String) -> void:
 	expect(not protected.accepted and protected.reason == "future_version"
 		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
 		"a future settings file is never overwritten")
+	_write(file_path, JSON.stringify({"schema_version": 2, "locale": "en", "sound_enabled": false,
+		"text_size": "large", "added_later": true}))
+	original_bytes = FileAccess.get_file_as_bytes(file_path)
+	protected = SettingsStore.new(file_path).save_settings(values)
+	expect(not protected.accepted and protected.reason == "future_version"
+		and FileAccess.get_file_as_bytes(file_path) == original_bytes,
+		"a future settings file with an added key is never overwritten")
+	_write(file_path, "not valid json")
+	var replaced: Dictionary = SettingsStore.new(file_path).save_settings(values)
+	var reloaded: Dictionary = SettingsStore.new(file_path).load_settings()
+	expect(replaced.accepted and reloaded.accepted and reloaded.values == values,
+		"a corrupt settings file is replaced by the next valid save")
+	_write(file_path, JSON.stringify({"schema_version": 0}))
+	replaced = SettingsStore.new(file_path).save_settings(values)
+	reloaded = SettingsStore.new(file_path).load_settings()
+	expect(replaced.accepted and reloaded.accepted and reloaded.values == values,
+		"a settings file with a schema below 1 is corrupt and replaced by the next valid save")
 
 
 func _test_failed_load_locale(file_path: String) -> void:
