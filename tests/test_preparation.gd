@@ -1,6 +1,7 @@
 extends "res://tests/harness.gd"
 
 const Definitions := preload("res://content/definitions.gd")
+const ServiceSession := preload("res://persistence/service_session.gd")
 const PLAN_PATH := "res://sim/preparation_plan.gd"
 const CONTENT_PATH := "res://content/m2_first_service.tres"
 var plan_script: GDScript
@@ -78,10 +79,11 @@ func _test_budget_and_invalid_commands() -> void:
 	var partial_plan: RefCounted = plan_script.new(partial)
 	expect(command(partial_plan, "set_purchase", "vegetable", 20, 1).accepted,
 		"a scenario that omits a purchasable ingredient still accepts its authored purchases")
-	var outside := command(partial_plan, "set_purchase", "protein", 1, 2)
-	expect(not outside.accepted and outside.reason == "invalid_purchase"
-		and not view(partial_plan).selection.purchases.has("protein"),
-		"a purchase outside the scenario's authored purchases is rejected")
+	expect(command(partial_plan, "set_purchase", "protein", 1, 2).accepted
+		and view(partial_plan).selection.purchases.protein == 1,
+		"a zero-stock purchasable ingredient left out of the authored purchases can still be bought")
+	expect(ServiceSession._exact_preparation(partial, view(partial_plan).selection),
+		"buying an omitted purchasable ingredient keeps the session restorable")
 
 
 func _test_shared_raw_stock() -> void:
