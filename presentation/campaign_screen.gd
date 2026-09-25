@@ -340,8 +340,6 @@ func _sync_settings_controls() -> void:
 func _on_preferences_changed() -> void:
 	preferences.apply_to(self)
 	_refresh_strings()
-	if active_service != null:
-		active_service.apply_preferences()
 
 
 func _refresh_strings() -> void:
@@ -572,9 +570,11 @@ func _resume_active_session() -> bool:
 	if not active_service.restore_service(restored):
 		return false
 	if active_service.state == KitchenScreen.State.CLOSED:
-		last_result = progress.record_result(selected_scenario_id, active_service.simulation.snapshot())
-		service_goal_button.text = tr("결과")
-		_show_result()
+		var recorded := progress.record_result(selected_scenario_id, active_service.simulation.snapshot())
+		if recorded.accepted:
+			last_result = recorded
+			service_goal_button.text = tr("결과")
+			_show_result()
 	return true
 
 
@@ -649,9 +649,11 @@ func _on_service_closed(result: Dictionary, scenario_id: String) -> void:
 		return
 	if not last_result.is_empty():
 		return
-	last_result = progress.record_result(scenario_id, result)
-	if not last_result.accepted:
+	# A rejected result changes no record, so a repeated delivery is rejected again without effect.
+	var recorded := progress.record_result(scenario_id, result)
+	if not recorded.accepted:
 		return
+	last_result = recorded
 	pending_save = not session_only
 	_save_progress()
 	service_goal_button.text = tr("결과")

@@ -21,7 +21,7 @@ func save_settings(values: Dictionary) -> Dictionary:
 	if not _valid_values(values):
 		return _failure("invalid_settings")
 	var existing := _read(file_path)
-	if existing.reason != "missing" and not existing.accepted:
+	if existing.reason not in ["missing", "corrupt_settings"] and not existing.accepted:
 		return _failure(existing.reason)
 	var temporary := file_path + ".tmp"
 	var document := {"schema_version": SCHEMA_VERSION, "locale": values.locale,
@@ -54,13 +54,14 @@ func _read(target: String) -> Dictionary:
 	if parser.parse(text) != OK or not parser.data is Dictionary:
 		return _failure("corrupt_settings")
 	var document: Dictionary = parser.data
-	if document.size() != 4 or not _is_integer(document.get("schema_version")):
+	if not _is_integer(document.get("schema_version")):
 		return _failure("corrupt_settings")
 	var version := int(document.schema_version)
 	if version > SCHEMA_VERSION:
 		return _failure("future_version")
-	if version != SCHEMA_VERSION:
-		return _failure("unsupported_version")
+	# No app version ever wrote a schema below 1, so such a file is corrupt, not protected.
+	if version != SCHEMA_VERSION or document.size() != 4:
+		return _failure("corrupt_settings")
 	var values := {"locale": document.get("locale"), "sound_enabled": document.get("sound_enabled"),
 		"text_size": document.get("text_size")}
 	if not _valid_values(values):

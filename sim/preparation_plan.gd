@@ -45,7 +45,11 @@ func _defaults() -> Dictionary:
 		quantities[item.id] = 0
 	for employee: Definitions.EmployeeDef in _source.employees:
 		duties[employee.id] = "all"
-	return {"purchases": _source.purchases.duplicate(), "prep_quantities": quantities, "placements": placements, "duties": duties, "menu_priorities": priorities}
+	var purchases: Dictionary = _source.purchases.duplicate()
+	for ingredient: Definitions.IngredientDef in _source.ingredients:
+		if ingredient.purchasable and not purchases.has(ingredient.id):
+			purchases[ingredient.id] = 0
+	return {"purchases": purchases, "prep_quantities": quantities, "placements": placements, "duties": duties, "menu_priorities": priorities}
 
 
 func _valid_selection_shape(selection: Dictionary) -> bool:
