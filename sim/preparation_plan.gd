@@ -121,7 +121,8 @@ func apply_command(command: Dictionary) -> Dictionary:
 	match command.kind:
 		"set_purchase":
 			var ingredient := _source.ingredient_for(target)
-			if ingredient == null or not ingredient.purchasable or not command.value is int or command.value < 0:
+			if ingredient == null or not ingredient.purchasable or not _source.purchases.has(target) \
+				or not command.value is int or command.value < 0:
 				return _rejected("invalid_purchase")
 			candidate.purchases[target] = command.value
 		"set_prep":
