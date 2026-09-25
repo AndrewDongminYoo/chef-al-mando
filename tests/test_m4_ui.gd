@@ -236,6 +236,8 @@ func run(tree: SceneTree) -> void:
 	await _test_recovered_active_session(tree, entry, directory)
 	await _test_lifecycle_audio(tree, entry, directory)
 	await _test_service_locale_refresh(tree, entry, directory)
+	await _test_rejected_close_and_single_preference_apply(tree, entry, directory)
+	await _test_rejected_resume_result(tree, entry, directory)
 	await _test_future_settings_error(tree, entry, directory)
 	await _test_invalid_campaign_settings(tree, entry, directory)
 	await _test_operational_option_popups(tree, entry, directory)
@@ -845,6 +847,78 @@ func _test_invalid_campaign_settings(tree: SceneTree, entry: String, directory: 
 		screen.queue_free()
 		await tree.process_frame
 		await tree.process_frame
+
+
+func _test_rejected_close_and_single_preference_apply(tree: SceneTree, entry: String, directory: String) -> void:
+	TranslationServer.set_locale("ko")
+	var save_path := directory + "/rejected-close.json"
+	var screen := _boot(tree, entry, save_path, directory + "/rejected-close-settings.json")
+	await tree.process_frame
+	screen.get("begin_button").pressed.emit()
+	var service: Control = screen.get("active_service")
+	service.set_process(false)
+	var progress_before: Dictionary = screen.get("progress").snapshot()
+	var bytes_before := FileAccess.get_file_as_bytes(save_path)
+	service.emit_signal("service_closed", {"closed": false})
+	service.emit_signal("service_closed", {"closed": false})
+	expect(screen.get("last_result").is_empty()
+		and screen.get("progress").snapshot() == progress_before
+		and FileAccess.get_file_as_bytes(save_path) == bytes_before,
+		"a rejected closing result leaves no result and records nothing, even when delivered twice")
+	screen.call("_refresh_strings")
+	screen.call("_show_result")
+	expect(not screen.get("result_dialog").visible and screen.get("service_goal_button").text == "목표",
+		"a rejected closing result never reaches the result dialog")
+	var probe_script := GDScript.new()
+	probe_script.source_code = "extends \"res://presentation/audio_feedback.gd\"\n\nvar calls: int = 0\n\n\nfunc set_enabled(value: bool) -> void:\n\tcalls += 1\n\tsuper(value)\n"
+	expect(probe_script.reload() == OK, "the preference application probe compiles")
+	var original_audio: Node = service.get("audio_feedback")
+	var probe: Node = probe_script.new()
+	service.set("audio_feedback", probe)
+	service.call("apply_preferences")
+	var per_application: int = probe.get("calls")
+	screen.get("preferences").update_settings({"text_size": "large"})
+	expect(per_application == 1 and probe.get("calls") == 2 * per_application,
+		"one settings change applies preferences to the active service exactly once")
+	service.set("audio_feedback", original_audio)
+	probe.free()
+	screen.get("preferences").update_settings({"text_size": "normal"})
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+
+func _test_rejected_resume_result(tree: SceneTree, entry: String, directory: String) -> void:
+	TranslationServer.set_locale("ko")
+	var campaign: Resource = load("res://content/campaign/campaign.tres")
+	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	var simulation := ServiceSim.new(started.definitions, null, started.options)
+	while not simulation.snapshot().closed:
+		simulation.step()
+	var screen := _boot(tree, entry, directory + "/rejected-resume.json", directory + "/rejected-resume-settings.json")
+	await tree.process_frame
+	var progress_script := GDScript.new()
+	progress_script.source_code = "extends \"res://sim/campaign_progress.gd\"\n\n\nfunc record_result(_scenario_id: String, _result: Dictionary) -> Dictionary:\n\treturn {\"accepted\": false, \"reason\": \"invalid_result\"}\n"
+	expect(progress_script.reload() == OK, "the rejecting progress probe compiles")
+	screen.set("progress", progress_script.new(campaign))
+	screen.set("active_session", ServiceSession.capture("first_shift", started.selection, simulation))
+	var resumed: bool = screen.call("_resume_active_session")
+	var service: Control = screen.get("active_service")
+	expect(resumed and service != null and service.get("state") == 3
+		and screen.get("last_result").is_empty() and screen.get("service_goal_button").text == "목표"
+		and not screen.get("result_dialog").visible,
+		"a restored closed session whose result is rejected leaves no result")
+	if service != null:
+		service.get("audio_feedback").set_enabled(false)
+	screen.call("_refresh_strings")
+	screen.call("_show_goal")
+	expect(screen.get("last_result").is_empty(),
+		"the goal and locale paths after a rejected resume never read a rejected result")
+	screen.queue_free()
+	await tree.process_frame
+	await tree.process_frame
 
 
 func _test_future_settings_error(tree: SceneTree, entry: String, directory: String) -> void:
