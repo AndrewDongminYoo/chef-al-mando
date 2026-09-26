@@ -507,7 +507,14 @@ func snapshot() -> Dictionary:
 	var tasks: Array[Dictionary] = []
 	var employees: Array[Dictionary] = []
 	var sorted_orders: Array[OrderState] = _orders.duplicate()
-	sorted_orders.sort_custom(func(a: OrderState, b: OrderState) -> bool: return a.id < b.id)
+	# Sort by the number in `order_NN` so that `order_100` follows `order_99`; restore pairs saved
+	# orders with the schedule by position. For two-digit ids this equals the former string order.
+	sorted_orders.sort_custom(func(a: OrderState, b: OrderState) -> bool:
+		var a_index := a.id.trim_prefix("order_").to_int()
+		var b_index := b.id.trim_prefix("order_").to_int()
+		if a_index != b_index:
+			return a_index < b_index
+		return a.id < b.id)
 	for order: OrderState in sorted_orders:
 		var task: TaskState = _tasks.get(order.id)
 		orders.append({"id": order.id, "recipe_id": order.recipe.id, "name": order.recipe.display_name,

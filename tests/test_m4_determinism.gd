@@ -44,6 +44,8 @@ func run(_tree: SceneTree) -> void:
 	_test_tick_zero_employee_relationships(service_sim_script)
 	_test_active_duty_relationships(service_sim_script)
 	_test_restore_checkpoints(service_sim_script)
+	_test_shipped_snapshot_order(service_sim_script)
+	_test_three_digit_order_ids(service_sim_script)
 
 
 func _test_inventory_corruption(data: Resource, preparation: Dictionary, original: RefCounted,
@@ -1061,6 +1063,90 @@ func _compare_restored_run(fixture: Dictionary, service_sim_script: GDScript, ch
 		resumed.call("step")
 	expect(resumed.call("state_hash") == simulation.call("state_hash"),
 		"restore preserves the final hash: " + checkpoint)
+
+
+## Every shipped id has two digits, so the numeric snapshot order must equal the string order
+## that existing saves and snapshot hashes were written with.
+func _test_shipped_snapshot_order(service_sim_script: GDScript) -> void:
+	var directory := "res://content/campaign/scenarios"
+	var scenario_count: int = 0
+	for file_name: String in DirAccess.get_files_at(directory):
+		if not file_name.ends_with(".tres"):
+			continue
+		scenario_count += 1
+		var scenario := ResourceLoader.load(directory + "/" + file_name, "", ResourceLoader.CACHE_MODE_IGNORE)
+		var started := PreparationPlan.new(scenario).apply_command({"kind": "start", "target_id": "",
+			"value": null, "apply_tick": 0, "sequence": 1})
+		expect(started.accepted, "the shipped scenario starts for the snapshot order check: " + file_name)
+		if not started.accepted:
+			continue
+		var simulation: RefCounted = service_sim_script.new(started.definitions, null, started.options)
+		while not simulation.get("closed"):
+			simulation.call("step")
+		var ids := _snapshot_order_ids(simulation)
+		var string_sorted := ids.duplicate()
+		string_sorted.sort()
+		expect(ids.size() == started.definitions.order_schedule().size() and ids.size() < 100
+			and ids == string_sorted and ids == _live_order_ids(simulation),
+			"the shipped snapshot order equals the string and live order: " + file_name)
+	expect(scenario_count > 0, "the snapshot order check reads the shipped scenarios")
+
+
+## Issue #36: three-digit ids must not sort before two-digit ones, and restore must keep live order.
+func _test_three_digit_order_ids(service_sim_script: GDScript) -> void:
+	var data := _fresh()
+	var order_count: int = 105
+	var recipe_ids := PackedStringArray()
+	for _index: int in order_count:
+		recipe_ids.append("salad")
+	data.order_count = order_count
+	data.order_recipe_ids = recipe_ids
+	data.first_arrival_tick = 10
+	data.arrival_interval_ticks = 20
+	data.minimum_served = 1
+	data.minimum_profit = -data.starting_budget
+	expect(data.validate(false).is_empty(), "the 105-order fixture is valid")
+	var started := PreparationPlan.new(data).apply_command({"kind": "start", "target_id": "", "value": null,
+		"apply_tick": 0, "sequence": 1})
+	expect(started.accepted, "the 105-order fixture starts")
+	if not started.accepted:
+		return
+	var simulation: RefCounted = service_sim_script.new(started.definitions, null, started.options)
+	while simulation.get("_schedule_cursor") < order_count:
+		simulation.call("step")
+	var ids := _snapshot_order_ids(simulation)
+	var live_ids := _live_order_ids(simulation)
+	expect(ids.size() == order_count and ids.find("order_99") < ids.find("order_100")
+		and ids.find("order_100") < ids.find("order_105") and ids == live_ids,
+		"the snapshot lists order_99 before order_100 and matches live order")
+	var restored: Dictionary = service_sim_script.call("restore", started.definitions,
+		simulation.call("export_state"), started.options)
+	expect(restored.get("accepted") == true, "restore accepts the 105-order checkpoint")
+	if not restored.get("accepted", false):
+		return
+	var resumed: RefCounted = restored.simulation
+	expect(_live_order_ids(resumed) == live_ids, "restore keeps the live order of three-digit ids")
+	var same_events := true
+	while not simulation.get("closed"):
+		simulation.call("step")
+		resumed.call("step")
+		same_events = same_events and resumed.call("events") == simulation.call("events")
+	expect(same_events and resumed.call("state_hash") == simulation.call("state_hash"),
+		"a restored 105-order run publishes the same events and final hash")
+
+
+func _snapshot_order_ids(simulation: RefCounted) -> Array[String]:
+	var ids: Array[String] = []
+	for order: Dictionary in simulation.call("snapshot").orders:
+		ids.append(order.id)
+	return ids
+
+
+func _live_order_ids(simulation: RefCounted) -> Array[String]:
+	var ids: Array[String] = []
+	for order: RefCounted in simulation.get("_orders"):
+		ids.append(order.get("id"))
+	return ids
 
 
 func _fresh() -> Resource:
