@@ -100,6 +100,22 @@ M0~M1에는 우선 7 작업일을 배정하며, 통과 전에는 캠페인 확�
 
 ## 로컬 실행과 검사
 
+### 호스팅 Linux 컨테이너 준비
+
+Ubuntu 24.04 기반 Linux x86_64 컨테이너에서는 `bash setup.sh`로 검사 도구를 준비합니다.
+스크립트는 `.godot-version`에 고정된 Godot Standard, Python 3, headless 리소스 import에 필요한 Fontconfig를 확인하며, 없는 명령만 설치합니다.
+패키지 설치에는 `apt-get`과 root 또는 암호 없는 `sudo` 권한이 필요합니다.
+이미 설치된 Godot의 버전이 다르면 자동으로 덮어쓰지 않고 실패합니다.
+다른 아키텍처에서는 고정 버전의 엔진을 먼저 설치하고 `GODOT_BIN`을 지정해야 합니다.
+
+[Codex Cloud 환경 설정](https://developers.openai.com/codex/cloud/environments)의 setup script에 `bash setup.sh`를 등록하고, 캐시 재개 시 다시 확인하려면 maintenance script에도 같은 명령을 등록합니다.
+다운로드가 필요하면 setup 단계에서 GitHub 접근이 가능해야 합니다.
+새로 설치하는 `godot`은 `/usr/local/bin`에 두므로 세션 간 `export` 유지에 의존하지 않습니다.
+`GODOT_BIN`으로 기존 엔진을 지정한다면 Cloud 환경 변수에도 같은 값을 설정합니다.
+이 준비 과정은 기존 headless 검사를 위한 것이며, 모바일 SDK·서명·실기기 검증을 준비하지 않습니다.
+
+### 검사 명령
+
 저장소 루트에서 다음 명령을 사용합니다.
 `GODOT_BIN`은 `.godot-version`과 같은 버전이 설치된 절대 경로로 설정합니다.
 검사 명령은 [구현 명세의 검증 명령 계약](docs/specs/m0-m1.md)이 소유합니다.

@@ -16,19 +16,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Install pinned Godot
-        env:
-          GODOT_SHA256: cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4
+      - name: Set up hosted Linux tools
         run: |
-          version="$(tr -d '[:space:]' < .godot-version)"
-          release="$(cut -d. -f1-3 <<< "$version")-$(cut -d. -f4 <<< "$version")"
-          archive="Godot_v${release}_linux.x86_64.zip"
-          curl --fail --location --retry 2 \
-            "https://github.com/godotengine/godot-builds/releases/download/$release/$archive" \
-            --output "$RUNNER_TEMP/$archive"
-          echo "$GODOT_SHA256  $RUNNER_TEMP/$archive" | sha256sum --check
-          unzip -q "$RUNNER_TEMP/$archive" -d "$RUNNER_TEMP/godot"
-          echo "GODOT_BIN=$RUNNER_TEMP/godot/${archive%.zip}" >> "$GITHUB_ENV"
+          bash setup.sh
+          bash setup.sh
+      - name: Check setup behavior
+        run: python3 tests/test_setup.py
       - name: Check M0
         run: bash scripts/check.sh m0
       - name: Check M1
