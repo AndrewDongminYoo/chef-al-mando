@@ -2,6 +2,7 @@ extends SceneTree
 
 const AppPreferences := preload("res://presentation/app_preferences.gd")
 
+
 func _initialize() -> void:
 	_check.call_deferred()
 
@@ -19,11 +20,19 @@ func _check() -> void:
 		quit(1)
 		return
 	var valid := true
-	for scenario_path: String in ["res://content/m1_first_service.tres", "res://content/m2_first_service.tres", "res://tests/fixtures/m2_extra_menu.tres"]:
+	for scenario_path: String in [
+		"res://content/m1_first_service.tres",
+		"res://content/m2_first_service.tres",
+		"res://tests/fixtures/m2_extra_menu.tres"
+	]:
 		if not FileAccess.file_exists(scenario_path + ".remap"):
 			printerr("FAIL: required converted export content is missing: " + scenario_path)
 			valid = false
-	for scenario_path: String in ["res://content/m1_first_service.tres", "res://content/m2_first_service.tres", "res://tests/fixtures/m2_extra_menu.tres"]:
+	for scenario_path: String in [
+		"res://content/m1_first_service.tres",
+		"res://content/m2_first_service.tres",
+		"res://tests/fixtures/m2_extra_menu.tres"
+	]:
 		if valid and not await _check_scenario(scenario_path, settings_path):
 			valid = false
 	if valid and not await _check_campaign(directory):
@@ -71,9 +80,17 @@ func _check_m5(directory: String) -> bool:
 			return false
 		var view: Dictionary = run.snapshot
 		var result: Dictionary = progress.record_result(scenario.id, view)
-		if not view.closed or view.tick != 3000 or not view.errors.is_empty() \
-			or view.orders.size() != scenario.order_count or not result.get("passed", false) \
-			or view.accounting.profit != view.accounting.revenue - view.accounting.purchased_cost - view.accounting.labor_cost:
+		if (
+			not view.closed
+			or view.tick != 3000
+			or not view.errors.is_empty()
+			or view.orders.size() != scenario.order_count
+			or not result.get("passed", false)
+			or (
+				view.accounting.profit
+				!= view.accounting.revenue - view.accounting.purchased_cost - view.accounting.labor_cost
+			)
+		):
 			printerr("FAIL: exported M5 service or goals failed: " + scenario.id)
 			return false
 		for quantity: int in view.inventory.values():
@@ -100,19 +117,30 @@ func _check_m5(directory: String) -> bool:
 	await process_frame
 	screen.get("ending_button").pressed.emit()
 	await process_frame
-	var ending_visible: bool = screen.get("ending_panel").is_visible_in_tree() \
-		and screen.get("ending_title").text == "여덟 번의 영업을 마쳤습니다" \
-		and screen.get("ending_copy").is_visible_in_tree() and not screen.get("ending_copy").text.is_empty() \
-		and screen.get("ending_return_button").is_visible_in_tree() and not screen.get("catalog_panel").visible
+	var ending_visible: bool = (
+		screen.get("ending_panel").is_visible_in_tree()
+		and screen.get("ending_title").text == "여덟 번의 영업을 마쳤습니다"
+		and screen.get("ending_copy").is_visible_in_tree()
+		and not screen.get("ending_copy").text.is_empty()
+		and screen.get("ending_return_button").is_visible_in_tree()
+		and not screen.get("catalog_panel").visible
+	)
 	screen.get("ending_return_button").pressed.emit()
 	await process_frame
 	screen.get("settings_button").pressed.emit()
 	screen.get("licenses_button").pressed.emit()
 	await process_frame
 	var body: RichTextLabel = screen.get("licenses_body")
-	var valid: bool = ending_visible and screen.get("catalog_panel").visible and screen.get("ending_button").visible and screen.get("licenses_dialog").visible \
-		and body.is_visible_in_tree() and body.text.contains(Engine.get_license_text()) \
-		and body.text.contains("Godot 엔진 소스:") and body.text.contains("제삼자 구성요소")
+	var valid: bool = (
+		ending_visible
+		and screen.get("catalog_panel").visible
+		and screen.get("ending_button").visible
+		and screen.get("licenses_dialog").visible
+		and body.is_visible_in_tree()
+		and body.text.contains(Engine.get_license_text())
+		and body.text.contains("Godot 엔진 소스:")
+		and body.text.contains("제삼자 구성요소")
+	)
 	for component: Dictionary in Engine.get_copyright_info():
 		valid = valid and body.text.contains(component.name)
 		for part: Dictionary in component.parts:
@@ -127,8 +155,12 @@ func _check_m5(directory: String) -> bool:
 	await process_frame
 	valid = valid and scroll.value > 0 and scroll.value >= scroll.max_value - scroll.page - 1
 	screen.preferences.update_settings({"locale": "en"})
-	valid = valid and body.text.contains("Godot Engine source:") and body.text.contains("Third-party components") \
+	valid = (
+		valid
+		and body.text.contains("Godot Engine source:")
+		and body.text.contains("Third-party components")
 		and body.text.contains(Engine.get_license_text())
+	)
 	for license_text: String in Engine.get_license_info().values():
 		valid = valid and body.text.contains(license_text)
 	screen.queue_free()
@@ -139,14 +171,17 @@ func _check_m5(directory: String) -> bool:
 
 
 func _check_storage_core() -> bool:
+	# gdlint: ignore=duplicated-load
 	var campaign: Resource = load("res://content/campaign/campaign.tres")
 	var plan: RefCounted = load("res://sim/preparation_plan.gd").new(campaign.scenario_for("first_shift"))
-	var priority: Dictionary = plan.apply_command({"kind": "set_menu_priority", "target_id": "salad", "value": 0,
-		"apply_tick": 0, "sequence": 1})
+	var priority: Dictionary = plan.apply_command(
+		{"kind": "set_menu_priority", "target_id": "salad", "value": 0, "apply_tick": 0, "sequence": 1}
+	)
 	if not priority.accepted:
 		return false
-	var started: Dictionary = plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 2})
+	var started: Dictionary = plan.apply_command(
+		{"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 2}
+	)
 	if not started.accepted:
 		return false
 	var simulation: RefCounted = load("res://sim/service_sim.gd").new(started.definitions, null, started.options)
@@ -154,15 +189,22 @@ func _check_storage_core() -> bool:
 		simulation.step()
 	var session_script: GDScript = load("res://persistence/service_session.gd")
 	var session: Dictionary = session_script.capture("first_shift", started.selection, simulation)
-	if session.simulation.orders.size() != 1 or session.simulation.last_sequence != 0 \
-		or session.simulation.orders[0].priority != 0:
+	if (
+		session.simulation.orders.size() != 1
+		or session.simulation.last_sequence != 0
+		or session.simulation.orders[0].priority != 0
+	):
 		return false
 	var corrupted := session.duplicate(true)
 	corrupted.simulation.orders[0].priority = 2
 	var rejected: Dictionary = session_script.restore(campaign, corrupted, {})
 	var restored: Dictionary = session_script.restore(campaign, session, {})
-	if rejected.accepted or rejected.reason != "invalid_order" or not restored.accepted \
-		or restored.simulation.state_hash() != simulation.state_hash():
+	if (
+		rejected.accepted
+		or rejected.reason != "invalid_order"
+		or not restored.accepted
+		or restored.simulation.state_hash() != simulation.state_hash()
+	):
 		return false
 	while not simulation.closed:
 		simulation.step()
@@ -188,7 +230,10 @@ func _check_scenario(scenario_path: String, settings_path: String) -> bool:
 		var mise_id: String = recipe.get("mise_ids")[0]
 		var item: Resource = data.call("ingredient_for", mise_id)
 		var result: Dictionary = screen.call("submit_preparation", "set_prep", mise_id, 1)
-		prepared = result.accepted and screen.get("preparation_panel").prep_labels[mise_id].text.contains(item.get("display_name"))
+		prepared = (
+			result.accepted
+			and screen.get("preparation_panel").prep_labels[mise_id].text.contains(item.get("display_name"))
+		)
 	var can_start: bool = not screen.get("start_button").disabled
 	screen.get("start_button").pressed.emit()
 	screen.call("advance", 1.0)
@@ -254,7 +299,9 @@ func _check_m4_resume(directory: String) -> bool:
 	screen.set("settings_path", settings_path)
 	root.add_child(screen)
 	await process_frame
-	var valid: bool = TranslationServer.get_locale() == "en" and screen.get("menu_title").text == "Chef al Mando · Service list"
+	var valid: bool = (
+		TranslationServer.get_locale() == "en" and screen.get("menu_title").text == "Chef al Mando · Service list"
+	)
 	screen.call("select_scenario", "first_shift")
 	valid = valid and screen.call("begin_service")
 	var service: Control = screen.get("active_service")
@@ -265,16 +312,25 @@ func _check_m4_resume(directory: String) -> bool:
 		service.get("start_button").pressed.emit()
 		service.call("advance", 10.0)
 		var checkpoint: Dictionary = screen.get("store").load_records()
-		valid = valid and checkpoint.accepted and checkpoint.active_session is Dictionary \
+		valid = (
+			valid
+			and checkpoint.accepted
+			and checkpoint.active_session is Dictionary
 			and checkpoint.active_session.simulation.tick == 100
+		)
 		screen.call("return_to_menu")
 		await process_frame
 		valid = valid and screen.get("continue_button").visible and screen.get("continue_button").text == "Continue"
 		screen.get("continue_button").pressed.emit()
 		await process_frame
 		service = screen.get("active_service")
-		valid = valid and service != null and service.get("state") == 2 \
-			and service.get("simulation").tick == 100 and service.get("status_label").text.contains("Paused")
+		valid = (
+			valid
+			and service != null
+			and service.get("state") == 2
+			and service.get("simulation").tick == 100
+			and service.get("status_label").text.contains("Paused")
+		)
 	screen.queue_free()
 	await process_frame
 	if not valid:

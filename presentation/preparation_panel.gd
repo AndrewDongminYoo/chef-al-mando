@@ -6,17 +6,22 @@ signal station_selected(station_id: String)
 const Definitions := preload("res://content/definitions.gd")
 const DUTIES: Array[String] = ["all", "cold", "hot", "off"]
 const DUTY_NAMES: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
-const REASONS := {"insufficient_budget": "예산이 부족합니다 · 고정 인건비도 남겨 두세요",
+const REASONS := {
+	"insufficient_budget": "예산이 부족합니다 · 고정 인건비도 남겨 두세요",
 	"insufficient_labor": "준비 노동량이 부족합니다 · 다른 프렙을 줄여 보세요",
 	"missing_ingredients": "원재료가 부족합니다 · 발주를 늘리거나 프렙을 줄이세요",
 	"menu_missing_ingredients": "만들 수 없는 메뉴가 있습니다 · 원재료나 프렙을 확보하세요",
-	"outside_kitchen": "벽이나 주방 밖에는 놓을 수 없습니다", "station_overlap": "다른 설비나 장애물과 겹칩니다",
-	"invalid_work_position": "작업 위치는 설비 옆 한 칸이어야 합니다", "blocked_work_position": "작업 위치가 막힙니다",
-	"employee_start_blocked": "직원 시작 위치를 막을 수 없습니다", "no_route": "설비 사이의 이동 경로가 막힙니다",
+	"outside_kitchen": "벽이나 주방 밖에는 놓을 수 없습니다",
+	"station_overlap": "다른 설비나 장애물과 겹칩니다",
+	"invalid_work_position": "작업 위치는 설비 옆 한 칸이어야 합니다",
+	"blocked_work_position": "작업 위치가 막힙니다",
+	"employee_start_blocked": "직원 시작 위치를 막을 수 없습니다",
+	"no_route": "설비 사이의 이동 경로가 막힙니다",
 	"work_position_overlap": "다른 설비의 작업 위치와 겹칩니다",
 	"fixed_station": "고정 설비는 위치와 작업 방향을 바꿀 수 없습니다",
 	"cold_hot_adjacent": "냉식대와 화구 사이에 한 칸 이상 띄우세요",
-	"service_started": "영업 중에는 준비를 바꿀 수 없습니다"}
+	"service_started": "영업 중에는 준비를 바꿀 수 없습니다"
+}
 
 var definitions: Definitions
 var current: Dictionary = {}
@@ -163,7 +168,9 @@ func _build_layout(column: VBoxContainer) -> void:
 		picker.add_theme_font_size_override("font_size", 20)
 		for title: String in DUTY_NAMES:
 			picker.add_item(tr(title))
-		picker.item_selected.connect(func(index: int) -> void: command_requested.emit("set_duty", employee.id, DUTIES[index]))
+		picker.item_selected.connect(
+			func(index: int) -> void: command_requested.emit("set_duty", employee.id, DUTIES[index])
+		)
 		row.add_child(picker)
 		duty_buttons[employee.id] = picker
 	select_station(definitions.stations[0].id)
@@ -189,7 +196,16 @@ func select_station(station_id: String) -> void:
 func _show_station() -> void:
 	for station: Dictionary in current.get("stations", []):
 		if station.id == selected_station_id:
-			station_label.text = tr("%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)") % [tr(station.name), station.tile[0], station.tile[1], station.work_position[0], station.work_position[1]]
+			station_label.text = (
+				tr("%s · 노란 테두리\n위치 (%d, %d) · 작업 위치 (%d, %d)")
+				% [
+					tr(station.name),
+					station.tile[0],
+					station.tile[1],
+					station.work_position[0],
+					station.work_position[1]
+				]
+			)
 			placement_preview.visible = current.get("space_rules", false)
 			var lines := PackedStringArray([tr("공간 규칙 · 작업 위치 중첩 금지 / 냉식대·화구 이격")])
 			var titles := {"up": "↑ 위", "left": "← 왼쪽", "down": "↓ 아래", "right": "→ 오른쪽", "rotate": "작업 방향 ↻ 회전"}
@@ -215,19 +231,25 @@ func refresh(snapshot: Dictionary) -> void:
 		if not ingredient.purchasable:
 			continue
 		var quantity: int = snapshot.purchases.get(ingredient.id, 0)
-		purchase_labels[ingredient.id].text = tr("%s %d개\n개당 %d") % [tr(ingredient.display_name), quantity, ingredient.unit_cost]
+		purchase_labels[ingredient.id].text = (
+			tr("%s %d개\n개당 %d") % [tr(ingredient.display_name), quantity, ingredient.unit_cost]
+		)
 		purchase_minus[ingredient.id].disabled = quantity == 0
 	for mise_id: String in prep_labels:
 		var item := definitions.ingredient_for(mise_id)
 		var quantity: int = snapshot.prep_quantities.get(mise_id, 0)
-		prep_labels[mise_id].text = tr("%s %d개\n메뉴 %d종 · 원가 %d · 노동 %d / 개") % [tr(item.display_name), quantity,
-			definitions.menu_count_for(mise_id), item.unit_cost, item.labor_units]
+		prep_labels[mise_id].text = (
+			tr("%s %d개\n메뉴 %d종 · 원가 %d · 노동 %d / 개")
+			% [tr(item.display_name), quantity, definitions.menu_count_for(mise_id), item.unit_cost, item.labor_units]
+		)
 		prep_minus[mise_id].disabled = quantity == 0
 	for employee_id: String in duty_buttons:
 		duty_buttons[employee_id].select(DUTIES.find(snapshot.duties[employee_id]))
 	for recipe_id: String in priority_labels:
 		var priority: int = snapshot.menu_priorities[recipe_id]
-		priority_labels[recipe_id].text = tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), priority]
+		priority_labels[recipe_id].text = (
+			tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), priority]
+		)
 		priority_minus[recipe_id].disabled = priority == 0
 		priority_plus[recipe_id].disabled = priority == 2
 	var lines: PackedStringArray = [tr("준비 확정 후 영업이 시작됩니다."), tr("원재료와 프렙은 이번 영업에만 사용합니다."), "", tr("시작 재고")]
@@ -235,7 +257,12 @@ func refresh(snapshot: Dictionary) -> void:
 		lines.append(tr("%s · %d개") % [tr(ingredient.display_name), snapshot.inventory[ingredient.id]])
 	lines.append(tr("\n메뉴별 기본 우선순위"))
 	for recipe_id: String in definitions.menu_ids:
-		lines.append(tr("%s · 우선순위 %d") % [tr(definitions.recipe_for(recipe_id).display_name), snapshot.menu_priorities[recipe_id]])
+		lines.append(
+			(
+				tr("%s · 우선순위 %d")
+				% [tr(definitions.recipe_for(recipe_id).display_name), snapshot.menu_priorities[recipe_id]]
+			)
+		)
 	if snapshot.get("space_rules", false):
 		lines.append(tr("\n고정 설비와 작업 위치를 확인하세요.\n배치와 담당의 효과는 마감 지표로 비교하세요."))
 	else:

@@ -15,7 +15,9 @@ func run() -> void:
 	elif "--phone-wide" in OS.get_cmdline_user_args():
 		root.size = Vector2i(1566, 720)
 	var directory := "user://capture_m3_%d" % Time.get_ticks_usec()
-	checks.expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "rendered record fixture directory is created")
+	checks.expect(
+		DirAccess.make_dir_recursive_absolute(directory) == OK, "rendered record fixture directory is created"
+	)
 	var scene: PackedScene = load(ProjectSettings.get_setting("application/run/main_scene"))
 	var screen := scene.instantiate() as CampaignScreen
 	screen.save_path = directory + "/records.json"
@@ -25,14 +27,20 @@ func run() -> void:
 	await _settle(screen)
 	if "--negative-layout" in OS.get_cmdline_user_args():
 		screen.begin_button.position.x = screen.size.x + 100
-	checks.expect(screen.safe_area.get_global_rect().encloses(screen.begin_button.get_global_rect()), "M3 rendered start must remain in the safe area")
+	checks.expect(
+		screen.safe_area.get_global_rect().encloses(screen.begin_button.get_global_rect()),
+		"M3 rendered start must remain in the safe area"
+	)
 	if checks.failures > 0:
 		await _finish(screen, directory)
 		return
 	await save_frame("res://build/check/m3-catalog.png")
 	await _safe_click(screen.scenario_buttons.first_shift, screen.safe_area.get_global_rect())
 	await _safe_click(screen.begin_button, screen.safe_area.get_global_rect())
-	checks.expect(screen.active_service != null and screen.active_service.definitions.id == "first_shift", "rendered catalog input starts the selected service preparation")
+	checks.expect(
+		screen.active_service != null and screen.active_service.definitions.id == "first_shift",
+		"rendered catalog input starts the selected service preparation"
+	)
 	if screen.active_service == null:
 		await _finish(screen, directory)
 		return
@@ -53,12 +61,18 @@ func run() -> void:
 			await process_frame
 			await process_frame
 			await _safe_click(panel.prep_plus.marinated_protein, service.safe_area.get_global_rect())
-			checks.expect(service.preparation.snapshot().prep_quantities.marinated_protein == 1, "the last mise row accepts an actual coordinate tap")
+			checks.expect(
+				service.preparation.snapshot().prep_quantities.marinated_protein == 1,
+				"the last mise row accepts an actual coordinate tap"
+			)
 			await save_frame("res://build/check/m3-last-mise-row-preparation.png")
 			# Since the 2026-09-22 rush_hour retune the reference policy (tests/fixtures/m3_policies.gd) sets
 			# marinated_protein 1 itself, so this reset only proves the undo is accepted; the reference's own
 			# absolute set_prep then restores the quantity it needs.
-			checks.expect(service.submit_preparation("set_prep", "marinated_protein", 0).accepted, "rendered fixture undoes the coordinate-tap quantity before the reference policy")
+			checks.expect(
+				service.submit_preparation("set_prep", "marinated_protein", 0).accepted,
+				"rendered fixture undoes the coordinate-tap quantity before the reference policy"
+			)
 		var policy := Policies.reference_policy(scenario.id)
 		for command: Dictionary in policy.preparation:
 			var result := service.submit_preparation(command.kind, command.target_id, command.value)
@@ -71,12 +85,18 @@ func run() -> void:
 		for arrival: Dictionary in scenario.order_schedule():
 			service.advance((arrival.arrival_tick - service.simulation.tick) / 10.0)
 			if policy.priorities.has(arrival.recipe_id):
-				checks.expect(service.submit_command("set_priority", arrival.id, policy.priorities[arrival.recipe_id]).accepted, "rendered fixture submits a real service priority command")
+				checks.expect(
+					service.submit_command("set_priority", arrival.id, policy.priorities[arrival.recipe_id]).accepted,
+					"rendered fixture submits a real service priority command"
+				)
 		if index == 5:
 			await _safe_click(service.pause_button, service.safe_area.get_global_rect())
 			checks.expect(service.duty_buttons.size() == 4, "rendered service has four employee controls")
 			for button: OptionButton in service.duty_buttons:
-				checks.expect(service.safe_area.get_global_rect().encloses(button.get_global_rect()), "each employee control fits inside the safe area")
+				checks.expect(
+					service.safe_area.get_global_rect().encloses(button.get_global_rect()),
+					"each employee control fits inside the safe area"
+				)
 			await save_frame("res://build/check/m3-four-employees.png")
 			await _safe_click(service.resume_button, service.safe_area.get_global_rect())
 			checks.expect(service.is_running(), "rendered resume must continue the paused service")
@@ -91,39 +111,67 @@ func run() -> void:
 		service.advance((3000 - service.simulation.tick) / 10.0)
 		await process_frame
 		await process_frame
-		checks.expect(screen.last_result.get("passed", false) and screen.result_dialog.visible, "rendered closing passes its actual campaign targets: " + scenario.id)
+		checks.expect(
+			screen.last_result.get("passed", false) and screen.result_dialog.visible,
+			"rendered closing passes its actual campaign targets: " + scenario.id
+		)
 		if failed_store != null:
-			checks.expect(screen.pending_save and screen.retry_save_button.visible, "rendered closing reaches a real save failure")
+			checks.expect(
+				screen.pending_save and screen.retry_save_button.visible, "rendered closing reaches a real save failure"
+			)
 			await save_frame("res://build/check/m3-save-failure-%d.png" % index)
 			for button: Button in [screen.next_button, screen.retry_service_button]:
-				checks.expect(button.disabled, "unsaved completion disables the result navigation button: " + button.text)
+				checks.expect(
+					button.disabled, "unsaved completion disables the result navigation button: " + button.text
+				)
 				var dialog := button.get_viewport() as Window
 				await _viewport_click(button, Vector2(dialog.position) + button.get_global_rect().get_center())
-				checks.expect(screen.active_service == service and screen.last_result.get("passed", false), "a coordinate tap cannot discard the unsaved completion")
+				checks.expect(
+					screen.active_service == service and screen.last_result.get("passed", false),
+					"a coordinate tap cannot discard the unsaved completion"
+				)
 			await _dialog_click(screen.result_dialog.get_ok_button(), screen.safe_area.get_global_rect())
 			checks.expect(service.restart_button.disabled, "unsaved completion disables the analysis restart button")
 			await _viewport_click(service.restart_button, service.restart_button.get_global_rect().get_center())
 			checks.expect(service.simulation.tick == 3000, "a coordinate tap cannot restart the unsaved service")
 			await _safe_click(screen.service_menu_button, service.safe_area.get_global_rect())
-			checks.expect(screen.active_service == service and screen.result_dialog.visible, "menu input restores the pending save dialog")
+			checks.expect(
+				screen.active_service == service and screen.result_dialog.visible,
+				"menu input restores the pending save dialog"
+			)
 			await _dialog_click(screen.retry_save_button, service.safe_area.get_global_rect())
-			checks.expect(screen.pending_save and screen.next_button.disabled, "another rendered save failure preserves the navigation gate")
+			checks.expect(
+				screen.pending_save and screen.next_button.disabled,
+				"another rendered save failure preserves the navigation gate"
+			)
 			failed_store.failure = ""
 			await _dialog_click(screen.retry_save_button, service.safe_area.get_global_rect())
-			checks.expect(not screen.pending_save and not service.restart_button.disabled, "a successful rendered save retry restores navigation")
+			checks.expect(
+				not screen.pending_save and not service.restart_button.disabled,
+				"a successful rendered save retry restores navigation"
+			)
 			var reopened := StoreTests.CampaignStore.new(screen.campaign, screen.save_path)
-			checks.expect(reopened.load_records().records == screen.progress.snapshot().records, "a new store reads the rendered retry result from disk")
+			checks.expect(
+				reopened.load_records().records == screen.progress.snapshot().records,
+				"a new store reads the rendered retry result from disk"
+			)
 		if index == 0:
 			await save_frame("res://build/check/m3-first-result.png")
 			await _dialog_click(screen.result_dialog.get_ok_button(), screen.safe_area.get_global_rect())
-			checks.expect(not screen.result_dialog.visible and service.analysis_scroll.visible, "rendered analysis input returns to the closing explanation")
+			checks.expect(
+				not screen.result_dialog.visible and service.analysis_scroll.visible,
+				"rendered analysis input returns to the closing explanation"
+			)
 			await save_frame("res://build/check/m3-first-analysis.png")
 			await _safe_click(screen.service_goal_button, service.safe_area.get_global_rect())
 		if index == 7:
 			await save_frame("res://build/check/m3-final-result.png")
 		await _dialog_click(screen.next_button, service.safe_area.get_global_rect())
 		await process_frame
-	checks.expect(screen.ending_panel.visible and screen.progress.snapshot().ending_unlocked, "rendered next input reaches the earned ending")
+	checks.expect(
+		screen.ending_panel.visible and screen.progress.snapshot().ending_unlocked,
+		"rendered next input reaches the earned ending"
+	)
 	await save_frame("res://build/check/m3-ending.png")
 	var return_button := screen.ending_panel.get_child(screen.ending_panel.get_child_count() - 1) as Button
 	await _safe_click(return_button, screen.safe_area.get_global_rect())
@@ -131,7 +179,9 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	await _safe_click(screen.scenario_buttons.final_service, screen.safe_area.get_global_rect())
-	checks.expect(screen.briefing_label.text.contains("개별 최고 기록"), "rendered completed service shows the saved best results")
+	checks.expect(
+		screen.briefing_label.text.contains("개별 최고 기록"), "rendered completed service shows the saved best results"
+	)
 	await save_frame("res://build/check/m3-completed-catalog.png")
 	await _finish(screen, directory)
 
@@ -140,14 +190,21 @@ func _settle(screen: Control) -> void:
 	await process_frame
 	await process_frame
 	var insets := Vector2i(0, 24) if "--tablet" in OS.get_cmdline_user_args() else Vector2i(48, 30)
-	screen.call("_apply_safe_area", Rect2i(insets.x, 0, int(screen.size.x) - insets.x * 2, int(screen.size.y) - insets.y), Transform2D.IDENTITY)
+	screen.call(
+		"_apply_safe_area",
+		Rect2i(insets.x, 0, int(screen.size.x) - insets.x * 2, int(screen.size.y) - insets.y),
+		Transform2D.IDENTITY
+	)
 	await process_frame
 	await process_frame
 
 
 func _safe_click(button: Button, allowed: Rect2) -> void:
 	await process_frame
-	checks.expect(button.is_visible_in_tree() and not button.disabled and allowed.encloses(button.get_global_rect()), "M3 rendered hit target must fit in the safe area: " + button.text)
+	checks.expect(
+		button.is_visible_in_tree() and not button.disabled and allowed.encloses(button.get_global_rect()),
+		"M3 rendered hit target must fit in the safe area: " + button.text
+	)
 	await _viewport_click(button, button.get_global_rect().get_center())
 
 
@@ -156,7 +213,10 @@ func _dialog_click(button: Button, allowed: Rect2) -> void:
 	var dialog := button.get_viewport() as Window
 	var button_rect := button.get_global_rect()
 	button_rect.position += Vector2(dialog.position)
-	checks.expect(button.is_visible_in_tree() and not button.disabled and allowed.encloses(button_rect), "M3 dialog hit target must fit in the safe area: " + button.text)
+	checks.expect(
+		button.is_visible_in_tree() and not button.disabled and allowed.encloses(button_rect),
+		"M3 dialog hit target must fit in the safe area: " + button.text
+	)
 	await _viewport_click(button, button_rect.get_center())
 
 
@@ -168,7 +228,10 @@ func _viewport_click(button: Button, point: Vector2) -> void:
 	motion.global_position = point
 	root.push_input(motion, true)
 	var hovered := button.get_viewport().gui_get_hovered_control()
-	checks.expect(hovered == button or (hovered != null and button.is_ancestor_of(hovered)), "viewport input must reach the rendered button: " + button.text)
+	checks.expect(
+		hovered == button or (hovered != null and button.is_ancestor_of(hovered)),
+		"viewport input must reach the rendered button: " + button.text
+	)
 	if checks.failures > 0:
 		quit(1)
 		await process_frame

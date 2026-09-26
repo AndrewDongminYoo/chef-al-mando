@@ -20,15 +20,24 @@ func run() -> void:
 					var scenario := Experiment.scenario(scenario_id, constrained)
 					var policy := Experiment.policy(scenario_id, layout, duties)
 					var result := Policies.run_policy(scenario, policy)
-					var row := {"scenario": scenario_id, "layout": layout, "duties": duties,
-						"space_rules": constrained, "policy": policy, "accepted": result.accepted}
+					var row := {
+						"scenario": scenario_id,
+						"layout": layout,
+						"duties": duties,
+						"space_rules": constrained,
+						"policy": policy,
+						"accepted": result.accepted
+					}
 					if result.accepted:
 						var view: Dictionary = result.snapshot
 						row.accounting = view.accounting
 						row.metrics = view.metrics
 						row.hash = result.hash
 						row.selection = result.selection
-						row.goals_met = view.accounting.served >= scenario.minimum_served and view.accounting.profit >= scenario.minimum_profit
+						row.goals_met = (
+							view.accounting.served >= scenario.minimum_served
+							and view.accounting.profit >= scenario.minimum_profit
+						)
 					elif layout == "legacy" and constrained and result.reason.contains("fixed_station"):
 						row.reason = result.reason
 					else:
@@ -46,10 +55,28 @@ func run() -> void:
 	file.close()
 	for row: Dictionary in report:
 		if row.accepted:
-			print("SPACE_POLICY ", row.scenario, " ", row.layout, "/", row.duties, " rules=", row.space_rules,
-				" served=", row.accounting.served, " profit=", row.accounting.profit,
-				" moving=", row.metrics.orders.moving, " duty_wait=", row.metrics.orders.no_responsible_employee,
-				" station_wait=", row.metrics.orders.station_in_use, " goals=", row.goals_met)
+			print(
+				"SPACE_POLICY ",
+				row.scenario,
+				" ",
+				row.layout,
+				"/",
+				row.duties,
+				" rules=",
+				row.space_rules,
+				" served=",
+				row.accounting.served,
+				" profit=",
+				row.accounting.profit,
+				" moving=",
+				row.metrics.orders.moving,
+				" duty_wait=",
+				row.metrics.orders.no_responsible_employee,
+				" station_wait=",
+				row.metrics.orders.station_in_use,
+				" goals=",
+				row.goals_met
+			)
 		else:
 			print("SPACE_REJECTED ", row.scenario, " ", row.layout, " ", row.reason)
 	print("PASS: spatial policy comparison rows=", report.size())

@@ -20,7 +20,10 @@ func run(tree: SceneTree) -> void:
 func _test_hot_queue_limits() -> void:
 	var scenario: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "marinated_protein", 2).accepted, "hot queue accepts two grill preparations at capacity")
+	expect(
+		_prepare(plan, "set_prep", "marinated_protein", 2).accepted,
+		"hot queue accepts two grill preparations at capacity"
+	)
 	expect(_prepare(plan, "set_menu_priority", "grill", 2).accepted, "hot queue accepts maximum grill priority")
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "hot queue feedback fixture starts from real preparation")
@@ -29,34 +32,62 @@ func _test_hot_queue_limits() -> void:
 	var simulation := _finish_service(started, 1)
 	var report: Dictionary = ServiceAnalysis.build(started.definitions, simulation.snapshot(), started.selection)
 	var fast_simulation := _finish_service(started, 4)
-	var fast_report: Dictionary = ServiceAnalysis.build(started.definitions, fast_simulation.snapshot(), started.selection)
-	expect(fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
-		"hot queue final state and service analysis are identical at 1x and 4x")
-	expect(report.prep.marinated_protein.planned == 2 and report.prep.marinated_protein.used == 2 and report.prep.marinated_protein.remaining == 0,
-		"analysis reports selected, used, and remaining grill preparation")
-	expect(report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
-		"analysis reports the maximum grill priority and its missed orders")
-	expect(not _has_action(report.recommendations, "increase_prep", "marinated_protein"),
-		"full preparation labor never recommends impossible extra grill preparation")
-	expect(not _has_action(report.recommendations, "raise_priority", "grill"),
-		"maximum menu priority never recommends an impossible priority increase")
-	expect(_has_action(report.recommendations, "prep_at_capacity", "marinated_protein"),
-		"analysis explains that grill preparation already consumes the available labor")
-	expect(_has_action(report.recommendations, "purchase_consumed", "protein"),
-		"analysis explains when costly purchases were consumed without ingredient shortages")
-	expect(_has_action(report.recommendations, "raise_priority", "soup"),
-		"analysis keeps an actionable priority change ahead of a maximum-priority notice")
-	expect(not _has_action(report.recommendations, "priority_at_max", "grill"),
-		"a maximum-priority notice does not displace an actionable recommendation")
-	expect(report.recommendations[0].action == "purchase_consumed",
-		"an operational experiment appears before preparation and priority cap notices")
+	var fast_report: Dictionary = ServiceAnalysis.build(
+		started.definitions, fast_simulation.snapshot(), started.selection
+	)
+	expect(
+		fast_simulation.state_hash() == simulation.state_hash() and fast_report == report,
+		"hot queue final state and service analysis are identical at 1x and 4x"
+	)
+	expect(
+		(
+			report.prep.marinated_protein.planned == 2
+			and report.prep.marinated_protein.used == 2
+			and report.prep.marinated_protein.remaining == 0
+		),
+		"analysis reports selected, used, and remaining grill preparation"
+	)
+	expect(
+		report.priorities.grill.default_priority == 2 and report.priorities.grill.expired > 0,
+		"analysis reports the maximum grill priority and its missed orders"
+	)
+	expect(
+		not _has_action(report.recommendations, "increase_prep", "marinated_protein"),
+		"full preparation labor never recommends impossible extra grill preparation"
+	)
+	expect(
+		not _has_action(report.recommendations, "raise_priority", "grill"),
+		"maximum menu priority never recommends an impossible priority increase"
+	)
+	expect(
+		_has_action(report.recommendations, "prep_at_capacity", "marinated_protein"),
+		"analysis explains that grill preparation already consumes the available labor"
+	)
+	expect(
+		_has_action(report.recommendations, "purchase_consumed", "protein"),
+		"analysis explains when costly purchases were consumed without ingredient shortages"
+	)
+	expect(
+		_has_action(report.recommendations, "raise_priority", "soup"),
+		"analysis keeps an actionable priority change ahead of a maximum-priority notice"
+	)
+	expect(
+		not _has_action(report.recommendations, "priority_at_max", "grill"),
+		"a maximum-priority notice does not displace an actionable recommendation"
+	)
+	expect(
+		report.recommendations[0].action == "purchase_consumed",
+		"an operational experiment appears before preparation and priority cap notices"
+	)
 
 
 func _test_incremental_prep_advice() -> void:
 	var scenario: Resource = load("res://content/m2_first_service.tres")
 	var plan := PreparationPlan.new(scenario)
-	expect(_prepare(plan, "set_prep", "prepped_salad", 1).accepted,
-		"incremental feedback fixture prepares one salad portion")
+	expect(
+		_prepare(plan, "set_prep", "prepped_salad", 1).accepted,
+		"incremental feedback fixture prepares one salad portion"
+	)
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "incremental feedback fixture starts from real preparation")
 	if not started.accepted:
@@ -66,99 +97,204 @@ func _test_incremental_prep_advice() -> void:
 		simulation.step()
 	var report: Dictionary = ServiceAnalysis.build(started.definitions, simulation.snapshot(), started.selection)
 	var recommendation := _find_action(report.recommendations, "increase_prep", "prepped_salad")
-	expect(not recommendation.is_empty() and recommendation.amount == 1,
-		"prep feedback recommends one incremental change instead of the theoretical maximum")
+	expect(
+		not recommendation.is_empty() and recommendation.amount == 1,
+		"prep feedback recommends one incremental change instead of the theoretical maximum"
+	)
 
 
 func _test_no_priority_advice_without_evidence() -> void:
-	var priorities := {"salad": {"default_priority": 2, "expired": 1, "revenue": 500,
-		"pressure_ticks": 0, "employee_busy_ticks": 0, "station_ticks": 0, "moving_ticks": 0}}
-	expect(ServiceAnalysis._priority_recommendation(priorities).is_empty(),
-		"maximum priority without observed contention or movement produces no route advice")
-	priorities.salad = {"default_priority": 2, "expired": 1, "revenue": 500,
-		"pressure_ticks": 10, "employee_busy_ticks": 10, "station_ticks": 0, "moving_ticks": 5}
+	var priorities := {
+		"salad":
+		{
+			"default_priority": 2,
+			"expired": 1,
+			"revenue": 500,
+			"pressure_ticks": 0,
+			"employee_busy_ticks": 0,
+			"station_ticks": 0,
+			"moving_ticks": 0
+		}
+	}
+	expect(
+		ServiceAnalysis._priority_recommendation(priorities).is_empty(),
+		"maximum priority without observed contention or movement produces no route advice"
+	)
+	priorities.salad = {
+		"default_priority": 2,
+		"expired": 1,
+		"revenue": 500,
+		"pressure_ticks": 10,
+		"employee_busy_ticks": 10,
+		"station_ticks": 0,
+		"moving_ticks": 5
+	}
 	var priority_limit := ServiceAnalysis._priority_recommendation(priorities)
-	expect(priority_limit.action == "priority_at_max" and priority_limit.target_id == "salad",
-		"maximum-priority feedback redirects a missed order toward its observed bottleneck")
-	expect(priority_limit.bottleneck == "employee_busy" and priority_limit.has("bottleneck_ticks"),
-		"maximum-priority feedback identifies the largest observed bottleneck and its duration")
+	expect(
+		priority_limit.action == "priority_at_max" and priority_limit.target_id == "salad",
+		"maximum-priority feedback redirects a missed order toward its observed bottleneck"
+	)
+	expect(
+		priority_limit.bottleneck == "employee_busy" and priority_limit.has("bottleneck_ticks"),
+		"maximum-priority feedback identifies the largest observed bottleneck and its duration"
+	)
 
 
 func _test_recommendation_branches() -> void:
+	# gdlint: ignore=duplicated-load
 	var scenario: Resource = load("res://content/m2_first_service.tres")
 	var prep: Dictionary = {}
 	for item: Resource in scenario.mise_items():
-		prep[item.id] = {"planned": 0, "remaining": 0, "raw_orders": 0,
-			"labor_units": item.labor_units}
-	prep.prepped_salad = {"planned": 3, "remaining": 2, "raw_orders": 0,
-		"labor_units": scenario.ingredient_for("prepped_salad").labor_units}
+		prep[item.id] = {"planned": 0, "remaining": 0, "raw_orders": 0, "labor_units": item.labor_units}
+	prep.prepped_salad = {
+		"planned": 3,
+		"remaining": 2,
+		"raw_orders": 0,
+		"labor_units": scenario.ingredient_for("prepped_salad").labor_units
+	}
 	var prep_recommendation := ServiceAnalysis._prep_recommendation(scenario, prep, 3)
-	expect(prep_recommendation.action == "reduce_prep" and prep_recommendation.amount == 1,
-		"remaining prepared stock produces a one-portion reduction experiment")
+	expect(
+		prep_recommendation.action == "reduce_prep" and prep_recommendation.amount == 1,
+		"remaining prepared stock produces a one-portion reduction experiment"
+	)
 	var competing_prep := prep.duplicate(true)
-	competing_prep.prepped_salad = {"planned": 1, "remaining": 1, "raw_orders": 0,
-		"labor_units": scenario.ingredient_for("prepped_salad").labor_units}
-	competing_prep.prepped_grill = {"planned": 4, "remaining": 0, "raw_orders": 50,
-		"labor_units": scenario.ingredient_for("prepped_grill").labor_units}
-	var prep_change := ServiceAnalysis._prep_recommendation(
-		scenario, competing_prep, scenario.prep_labor_capacity)
-	expect(prep_change.action == "reduce_prep" and prep_change.target_id == "prepped_salad",
-		"reducible preparation wins over a higher-scoring capacity notice")
-	var purchase_increase := ServiceAnalysis._ingredient_recommendation({"protein": {
-		"purchased": 2, "remaining": 0, "related_shortage_ticks": 10, "unit_cost": 400}})
-	expect(purchase_increase.action == "increase_purchase" and purchase_increase.amount == 1,
-		"zero stock with observed ingredient shortage produces a one-unit purchase experiment")
-	var purchase_reduce := ServiceAnalysis._ingredient_recommendation({"protein": {
-		"purchased": 4, "remaining": 2, "related_shortage_ticks": 0, "unit_cost": 400}})
-	expect(purchase_reduce.action == "reduce_purchase" and purchase_reduce.amount == 1,
-		"remaining purchased stock produces a one-unit reduction experiment")
-	var priority_raise := ServiceAnalysis._priority_recommendation({"salad": {"default_priority": 1,
-		"expired": 1, "revenue": 500, "pressure_ticks": 10, "employee_busy_ticks": 10,
-		"station_ticks": 0, "moving_ticks": 5}})
-	expect(priority_raise.action == "raise_priority" and priority_raise.amount == 1,
-		"missed orders with observed contention produce a one-level priority experiment")
-	var competing_priority := ServiceAnalysis._priority_recommendation({
-		"grill": {"default_priority": 2, "expired": 10, "revenue": 1000, "pressure_ticks": 100,
-			"employee_busy_ticks": 100, "station_ticks": 0, "moving_ticks": 0},
-		"salad": {"default_priority": 1, "expired": 1, "revenue": 500, "pressure_ticks": 10,
-			"employee_busy_ticks": 10, "station_ticks": 0, "moving_ticks": 0},
-	})
-	expect(competing_priority.action == "raise_priority" and competing_priority.target_id == "salad",
-		"an actionable priority increase wins over a higher-scoring maximum-priority notice")
+	competing_prep.prepped_salad = {
+		"planned": 1,
+		"remaining": 1,
+		"raw_orders": 0,
+		"labor_units": scenario.ingredient_for("prepped_salad").labor_units
+	}
+	competing_prep.prepped_grill = {
+		"planned": 4,
+		"remaining": 0,
+		"raw_orders": 50,
+		"labor_units": scenario.ingredient_for("prepped_grill").labor_units
+	}
+	var prep_change := ServiceAnalysis._prep_recommendation(scenario, competing_prep, scenario.prep_labor_capacity)
+	expect(
+		prep_change.action == "reduce_prep" and prep_change.target_id == "prepped_salad",
+		"reducible preparation wins over a higher-scoring capacity notice"
+	)
+	var purchase_increase := ServiceAnalysis._ingredient_recommendation(
+		{"protein": {"purchased": 2, "remaining": 0, "related_shortage_ticks": 10, "unit_cost": 400}}
+	)
+	expect(
+		purchase_increase.action == "increase_purchase" and purchase_increase.amount == 1,
+		"zero stock with observed ingredient shortage produces a one-unit purchase experiment"
+	)
+	var purchase_reduce := ServiceAnalysis._ingredient_recommendation(
+		{"protein": {"purchased": 4, "remaining": 2, "related_shortage_ticks": 0, "unit_cost": 400}}
+	)
+	expect(
+		purchase_reduce.action == "reduce_purchase" and purchase_reduce.amount == 1,
+		"remaining purchased stock produces a one-unit reduction experiment"
+	)
+	var priority_raise := ServiceAnalysis._priority_recommendation(
+		{
+			"salad":
+			{
+				"default_priority": 1,
+				"expired": 1,
+				"revenue": 500,
+				"pressure_ticks": 10,
+				"employee_busy_ticks": 10,
+				"station_ticks": 0,
+				"moving_ticks": 5
+			}
+		}
+	)
+	expect(
+		priority_raise.action == "raise_priority" and priority_raise.amount == 1,
+		"missed orders with observed contention produce a one-level priority experiment"
+	)
+	var competing_priority := (
+		ServiceAnalysis
+		. _priority_recommendation(
+			{
+				"grill":
+				{
+					"default_priority": 2,
+					"expired": 10,
+					"revenue": 1000,
+					"pressure_ticks": 100,
+					"employee_busy_ticks": 100,
+					"station_ticks": 0,
+					"moving_ticks": 0
+				},
+				"salad":
+				{
+					"default_priority": 1,
+					"expired": 1,
+					"revenue": 500,
+					"pressure_ticks": 10,
+					"employee_busy_ticks": 10,
+					"station_ticks": 0,
+					"moving_ticks": 0
+				},
+			}
+		)
+	)
+	expect(
+		competing_priority.action == "raise_priority" and competing_priority.target_id == "salad",
+		"an actionable priority increase wins over a higher-scoring maximum-priority notice"
+	)
 	_test_purchase_advice_requires_valid_preparation()
 
 
 func _test_purchase_advice_requires_valid_preparation() -> void:
+	# gdlint: ignore=duplicated-load
 	var hot_queue: Resource = load("res://content/campaign/scenarios/hot_queue.tres")
 	var hot_plan := PreparationPlan.new(hot_queue)
-	expect(_prepare(hot_plan, "set_purchase", "protein", 12).accepted,
-		"budget fixture accepts the last affordable protein quantity")
+	expect(
+		_prepare(hot_plan, "set_purchase", "protein", 12).accepted,
+		"budget fixture accepts the last affordable protein quantity"
+	)
 	var over_budget: Dictionary = _prepare(hot_plan, "set_purchase", "protein", 13)
-	expect(not over_budget.accepted and over_budget.reason == "insufficient_budget",
-		"budget fixture rejects the one-unit increase reported by the review")
+	expect(
+		not over_budget.accepted and over_budget.reason == "insufficient_budget",
+		"budget fixture rejects the one-unit increase reported by the review"
+	)
 	var hot_selection: Dictionary = hot_plan.snapshot().selection
-	var shortage_view := {"inventory": {"protein": 0}, "orders": [{"recipe_id": "grill",
-		"raw_consumed": true, "missing_mise_ids": ["marinated_protein"], "state": "expired", "metrics": {"missing_ingredients": 10,
-		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
+	var shortage_view := {
+		"inventory": {"protein": 0},
+		"orders":
+		[
+			{
+				"recipe_id": "grill",
+				"raw_consumed": true,
+				"missing_mise_ids": ["marinated_protein"],
+				"state": "expired",
+				"metrics": {"missing_ingredients": 10, "responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}
+			}
+		]
+	}
 	var shortage_report: Dictionary = ServiceAnalysis.build(hot_queue, shortage_view, hot_selection)
-	expect(not _has_action(shortage_report.recommendations, "increase_purchase", "protein"),
-		"purchase feedback never exceeds the scenario budget")
+	expect(
+		not _has_action(shortage_report.recommendations, "increase_purchase", "protein"),
+		"purchase feedback never exceeds the scenario budget"
+	)
 
 	var first_shift: Resource = load("res://content/campaign/scenarios/first_shift.tres")
 	var minimum_plan := PreparationPlan.new(first_shift)
-	expect(_prepare(minimum_plan, "set_purchase", "vegetable", 1).accepted,
-		"minimum-stock fixture keeps one sellable salad")
+	expect(
+		_prepare(minimum_plan, "set_purchase", "vegetable", 1).accepted,
+		"minimum-stock fixture keeps one sellable salad"
+	)
 	var minimum_selection: Dictionary = minimum_plan.snapshot().selection
 	var invalid_selection := minimum_selection.duplicate(true)
 	invalid_selection.purchases.vegetable = 0
 	var invalid_plan := PreparationPlan.new(first_shift, invalid_selection)
 	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
-	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
-		"minimum-stock fixture rejects the one-unit reduction reported by the review")
+	expect(
+		not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
+		"minimum-stock fixture rejects the one-unit reduction reported by the review"
+	)
 	var idle_view := {"inventory": {"vegetable": 1}, "orders": []}
 	var idle_report: Dictionary = ServiceAnalysis.build(first_shift, idle_view, minimum_selection)
-	expect(not _has_action(idle_report.recommendations, "reduce_purchase", "vegetable"),
-		"purchase feedback preserves enough stock to sell every configured menu")
+	expect(
+		not _has_action(idle_report.recommendations, "reduce_purchase", "vegetable"),
+		"purchase feedback preserves enough stock to sell every configured menu"
+	)
 
 
 func _test_prep_advice_requires_valid_preparation() -> void:
@@ -169,12 +305,16 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 		{"id": "grain", "quantity": 2},
 		{"id": "mushroom", "quantity": 1},
 	]:
-		expect(_prepare(plan, "set_purchase", purchase.id, purchase.quantity).accepted,
-			"shared-stock fixture accepts its minimum purchase quantity for " + purchase.id)
+		expect(
+			_prepare(plan, "set_purchase", purchase.id, purchase.quantity).accepted,
+			"shared-stock fixture accepts its minimum purchase quantity for " + purchase.id
+		)
 	# A stocked mise item stands in for its raw input menu by menu, so three prepped_vegetable leave
 	# the two raw vegetables the soup needs; a fourth would take one of them.
-	expect(_prepare(plan, "set_prep", "prepped_vegetable", 3).accepted,
-		"shared-stock fixture accepts three prepared salads")
+	expect(
+		_prepare(plan, "set_prep", "prepped_vegetable", 3).accepted,
+		"shared-stock fixture accepts three prepared salads"
+	)
 	var started: Dictionary = _prepare(plan, "start", "", null)
 	expect(started.accepted, "shared-stock fixture starts with all configured menus sellable")
 	if not started.accepted:
@@ -183,18 +323,34 @@ func _test_prep_advice_requires_valid_preparation() -> void:
 	invalid_selection.prep_quantities.prepped_vegetable = 4
 	var invalid_plan := PreparationPlan.new(scenario, invalid_selection)
 	var unsellable: Dictionary = _prepare(invalid_plan, "start", "", null)
-	expect(not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
-		"a fourth prepared salad would consume the raw vegetables the soup needs")
-	var raw_salad_view := {"inventory": {"prepped_vegetable": 0}, "orders": [{"recipe_id": "salad",
-		"raw_consumed": true, "missing_mise_ids": ["prepped_vegetable"], "state": "expired", "metrics": {"missing_ingredients": 0,
-		"responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}}]}
+	expect(
+		not unsellable.accepted and unsellable.reason == "menu_missing_ingredients",
+		"a fourth prepared salad would consume the raw vegetables the soup needs"
+	)
+	var raw_salad_view := {
+		"inventory": {"prepped_vegetable": 0},
+		"orders":
+		[
+			{
+				"recipe_id": "salad",
+				"raw_consumed": true,
+				"missing_mise_ids": ["prepped_vegetable"],
+				"state": "expired",
+				"metrics": {"missing_ingredients": 0, "responsible_employee_busy": 0, "station_in_use": 0, "moving": 0}
+			}
+		]
+	}
 	var report: Dictionary = ServiceAnalysis.build(scenario, raw_salad_view, started.selection)
-	expect(not _has_action(report.recommendations, "increase_prep", "prepped_vegetable"),
-		"prep feedback does not consume shared stock required to keep every menu sellable")
+	expect(
+		not _has_action(report.recommendations, "increase_prep", "prepped_vegetable"),
+		"prep feedback does not consume shared stock required to keep every menu sellable"
+	)
 
 
 func _test_service_events() -> void:
-	var shortage_data: Resource = ResourceLoader.load("res://content/m1_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var shortage_data: Resource = ResourceLoader.load(
+		"res://content/m1_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	shortage_data.order_count = 2
 	shortage_data.first_arrival_tick = 1
 	shortage_data.arrival_interval_ticks = 1
@@ -202,12 +358,18 @@ func _test_service_events() -> void:
 	shortage_data.purchases.vegetable = 1
 	var shortage_sim := ServiceSim.new(shortage_data)
 	var shortage_events: Array[Dictionary] = _advance_with_events(shortage_sim, 5)
-	expect(_event_count(shortage_events, "order_wait_started") == 1,
-		"an unchanged ingredient shortage emits one transition event")
+	expect(
+		_event_count(shortage_events, "order_wait_started") == 1,
+		"an unchanged ingredient shortage emits one transition event"
+	)
 	var shortage_event := _first_event(shortage_events, "order_wait_started")
-	expect(shortage_event.get("reason") == "missing_ingredients" and shortage_event.get("recipe_id") == "salad",
-		"the shortage transition identifies its reason and menu")
-	var no_staff_data: Resource = ResourceLoader.load("res://content/m2_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	expect(
+		shortage_event.get("reason") == "missing_ingredients" and shortage_event.get("recipe_id") == "salad",
+		"the shortage transition identifies its reason and menu"
+	)
+	var no_staff_data: Resource = ResourceLoader.load(
+		"res://content/m2_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	no_staff_data.order_count = 1
 	no_staff_data.first_arrival_tick = 1
 	no_staff_data.menu_ids = ["salad"]
@@ -216,21 +378,32 @@ func _test_service_events() -> void:
 		no_staff_duties[employee.id] = "off"
 	var no_staff_sim := ServiceSim.new(no_staff_data, null, {"duties": no_staff_duties})
 	var no_staff_events := _advance_with_events(no_staff_sim, 5)
-	expect(_event_count(no_staff_events, "order_wait_started") == 0,
-		"non-ingredient wait transitions do not expand the presentation event contract")
+	expect(
+		_event_count(no_staff_events, "order_wait_started") == 0,
+		"non-ingredient wait transitions do not expand the presentation event contract"
+	)
 
-	var prepared_data: Resource = ResourceLoader.load("res://content/m2_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var prepared_data: Resource = ResourceLoader.load(
+		"res://content/m2_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	prepared_data.order_count = 1
 	prepared_data.first_arrival_tick = 1
 	prepared_data.menu_ids = ["salad"]
 	var prepared_sim := ServiceSim.new(prepared_data, null, {"prep_quantities": {"prepped_salad": 1}})
 	var prepared_events: Array[Dictionary] = _advance_with_events(prepared_sim, 20)
 	var depleted := _first_event(prepared_events, "prepared_stock_depleted")
-	expect(_event_count(prepared_events, "prepared_stock_depleted") == 1 and depleted.get("recipe_id") == "salad"
-		and depleted.get("ingredient_id") == "prepped_salad",
-		"consuming the last prepared portion emits one menu-specific depletion event")
+	expect(
+		(
+			_event_count(prepared_events, "prepared_stock_depleted") == 1
+			and depleted.get("recipe_id") == "salad"
+			and depleted.get("ingredient_id") == "prepped_salad"
+		),
+		"consuming the last prepared portion emits one menu-specific depletion event"
+	)
 
-	var expiry_data: Resource = ResourceLoader.load("res://content/m1_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var expiry_data: Resource = ResourceLoader.load(
+		"res://content/m1_first_service.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	expiry_data.order_count = 1
 	expiry_data.first_arrival_tick = 1
 	expiry_data.menu_ids = ["salad"]
@@ -238,8 +411,10 @@ func _test_service_events() -> void:
 	var expiry_sim := ServiceSim.new(expiry_data)
 	var expiry_events: Array[Dictionary] = _advance_with_events(expiry_sim, 136)
 	var ended := _first_event(expiry_events, "order_ended")
-	expect(ended.get("reason") == "deadline" and ended.get("phase_id") == "serve" and ended.get("recipe_id") == "salad",
-		"an order that expires after cooking identifies its final service phase")
+	expect(
+		ended.get("reason") == "deadline" and ended.get("phase_id") == "serve" and ended.get("recipe_id") == "salad",
+		"an order that expires after cooking identifies its final service phase"
+	)
 
 
 func _test_live_prepared_feedback(tree: SceneTree) -> void:
@@ -247,72 +422,135 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 	var screen: Control = scene.instantiate()
 	screen.set("scenario_path", "res://content/m2_first_service.tres")
 	var settings_path := "user://service_feedback_%d.json" % Time.get_ticks_usec()
-	HarnessSettingsStore.new(settings_path).save_settings({"locale": "ko", "sound_enabled": false, "text_size": "normal"})
+	HarnessSettingsStore.new(settings_path).save_settings(
+		{"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	)
 	screen.set("settings_path", settings_path)
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame
-	expect(screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
-		"live feedback fixture prepares one salad portion")
+	expect(
+		screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
+		"live feedback fixture prepares one salad portion"
+	)
 	screen.get("start_button").pressed.emit()
 	screen.call("advance", 2.0)
 	var board: Control = screen.get("board")
 	var chatter: Variant = board.get("chatter")
-	expect(screen.get("duty_labels")[0].text.contains("채소 샐러드") and screen.get("duty_labels")[0].text.contains("프렙 재료 챙기는 중"),
-		"live feedback names prepared pickup work")
-	expect(chatter is Dictionary and chatter.get("kind") == "prepared_stock_depleted" and chatter.get("text", "").contains("프렙 다 썼다"),
-		"the board shows a localized chef bubble when prepared stock runs out")
+	expect(
+		(
+			screen.get("duty_labels")[0].text.contains("채소 샐러드")
+			and screen.get("duty_labels")[0].text.contains("프렙 재료 챙기는 중")
+		),
+		"live feedback names prepared pickup work"
+	)
+	expect(
+		(
+			chatter is Dictionary
+			and chatter.get("kind") == "prepared_stock_depleted"
+			and chatter.get("text", "").contains("프렙 다 썼다")
+		),
+		"the board shows a localized chef bubble when prepared stock runs out"
+	)
 	var badges: Variant = board.get("employee_badges")
-	expect(badges is Dictionary and badges.get("employee_01", {}).get("recipe_id") == "salad"
-		and not badges.get("employee_01", {}).has("phase"),
-		"the board keeps the active recipe icon without a redundant phase badge")
-	while screen.get("simulation").snapshot().orders[0].phase_id != "cook" or screen.get("simulation").snapshot().orders[0].state != "working":
+	expect(
+		(
+			badges is Dictionary
+			and badges.get("employee_01", {}).get("recipe_id") == "salad"
+			and not badges.get("employee_01", {}).has("phase")
+		),
+		"the board keeps the active recipe icon without a redundant phase badge"
+	)
+	while (
+		screen.get("simulation").snapshot().orders[0].phase_id != "cook"
+		or screen.get("simulation").snapshot().orders[0].state != "working"
+	):
 		screen.call("advance", 0.1)
-	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중"),
-		"live feedback names the active cooking station")
+	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중"), "live feedback names the active cooking station")
 	var active_employee: Dictionary = screen.get("simulation").snapshot().employees[0]
-	expect(screen.call("submit_command", "set_duty", active_employee.id, active_employee.duty).accepted,
-		"live feedback fixture queues a duty change during active cooking")
+	expect(
+		screen.call("submit_command", "set_duty", active_employee.id, active_employee.duty).accepted,
+		"live feedback fixture queues a duty change during active cooking"
+	)
 	screen.call("advance", 0.1)
-	expect(screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중")
-		and screen.get("duty_labels")[0].text.contains("현재 공정 후 담당 변경"),
-		"pending duty feedback preserves the current menu and cooking activity")
-	while screen.get("simulation").snapshot().orders[0].phase_id != "serve" or screen.get("simulation").snapshot().orders[0].state != "moving":
+	expect(
+		(
+			screen.get("duty_labels")[0].text.contains("찬 조리대에서 조리 중")
+			and screen.get("duty_labels")[0].text.contains("현재 공정 후 담당 변경")
+		),
+		"pending duty feedback preserves the current menu and cooking activity"
+	)
+	while (
+		screen.get("simulation").snapshot().orders[0].phase_id != "serve"
+		or screen.get("simulation").snapshot().orders[0].state != "moving"
+	):
 		screen.call("advance", 0.1)
-	expect(screen.get("duty_labels")[0].text.contains("제공대로 운반 중"),
-		"live feedback distinguishes carrying a completed dish to the pass")
-	var partial_capacity_report := {"prep": {"prepped_soup": {"used": 2, "raw_orders": 1,
-		"labor_units": 2}}, "labor_used": 5, "labor_capacity": 6}
+	expect(
+		screen.get("duty_labels")[0].text.contains("제공대로 운반 중"),
+		"live feedback distinguishes carrying a completed dish to the pass"
+	)
+	var partial_capacity_report := {
+		"prep": {"prepped_soup": {"used": 2, "raw_orders": 1, "labor_units": 2}}, "labor_used": 5, "labor_capacity": 6
+	}
 	var partial_capacity := {"action": "prep_at_capacity", "target_id": "prepped_soup"}
 	var capacity_text: String = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
-	expect(capacity_text.contains("프렙 1개를 더 만들 수 없습니다") and capacity_text.contains("필요한 노동량은 2")
-		and capacity_text.contains("남은 노동량은 1")
-		and not capacity_text.contains("1는"),
-		"partial prep capacity explains the remaining and required labor in natural Korean")
+	expect(
+		(
+			capacity_text.contains("프렙 1개를 더 만들 수 없습니다")
+			and capacity_text.contains("필요한 노동량은 2")
+			and capacity_text.contains("남은 노동량은 1")
+			and not capacity_text.contains("1는")
+		),
+		"partial prep capacity explains the remaining and required labor in natural Korean"
+	)
 	var purchase_report := {"ingredients": {"vegetable": {"purchased": 3, "used": 3}}}
-	var purchase_text: String = screen.call("_recommendation_text", purchase_report,
-		{"action": "purchase_consumed", "target_id": "vegetable"})
-	expect(purchase_text.contains("채소 3개를 모두 사용") and purchase_text.contains("채소 발주량은 유지하세요")
-		and purchase_text.contains("프렙, 우선순위, 배치") and not purchase_text.contains("운영 선택 하나"),
-		"consumed-purchase feedback names the preserved quantity and concrete experiment choices")
-	var priority_report := {"priorities": {"soup": {"default_priority": 1,
-		"expired": 3, "pressure_ticks": 1350}}}
-	var priority_text: String = screen.call("_recommendation_text", priority_report,
-		{"action": "raise_priority", "target_id": "soup", "amount": 1})
-	expect(priority_text.contains("작업 대기 135.0초") and priority_text.contains("곡물 수프의 기본 우선순위를 2로")
-		and not priority_text.contains("경합"),
-		"priority feedback names the observed wait and the next absolute setting")
-	expect(screen.get("app_preferences").update_settings({"locale": "en"}).accepted,
-		"live feedback fixture switches to English")
+	var purchase_text: String = screen.call(
+		"_recommendation_text", purchase_report, {"action": "purchase_consumed", "target_id": "vegetable"}
+	)
+	expect(
+		(
+			purchase_text.contains("채소 3개를 모두 사용")
+			and purchase_text.contains("채소 발주량은 유지하세요")
+			and purchase_text.contains("프렙, 우선순위, 배치")
+			and not purchase_text.contains("운영 선택 하나")
+		),
+		"consumed-purchase feedback names the preserved quantity and concrete experiment choices"
+	)
+	var priority_report := {"priorities": {"soup": {"default_priority": 1, "expired": 3, "pressure_ticks": 1350}}}
+	var priority_text: String = screen.call(
+		"_recommendation_text", priority_report, {"action": "raise_priority", "target_id": "soup", "amount": 1}
+	)
+	expect(
+		(
+			priority_text.contains("작업 대기 135.0초")
+			and priority_text.contains("곡물 수프의 기본 우선순위를 2로")
+			and not priority_text.contains("경합")
+		),
+		"priority feedback names the observed wait and the next absolute setting"
+	)
+	expect(
+		screen.get("app_preferences").update_settings({"locale": "en"}).accepted,
+		"live feedback fixture switches to English"
+	)
 	chatter = board.get("chatter")
-	expect(screen.get("duty_labels")[0].text.contains("carrying the dish to the pass")
-		and chatter is Dictionary and chatter.get("text", "").contains("prep is gone"),
-		"locale refresh retranslates the employee activity and visible chef bubble")
+	expect(
+		(
+			screen.get("duty_labels")[0].text.contains("carrying the dish to the pass")
+			and chatter is Dictionary
+			and chatter.get("text", "").contains("prep is gone")
+		),
+		"locale refresh retranslates the employee activity and visible chef bubble"
+	)
 	capacity_text = screen.call("_recommendation_text", partial_capacity_report, partial_capacity)
-	expect(capacity_text.contains("needs 2 prep capacity") and capacity_text.contains("with 1 left")
-		and capacity_text.contains("if available")
-		and not capacity_text.contains("full"),
-		"partial prep capacity explains the remaining and required labor in English")
+	expect(
+		(
+			capacity_text.contains("needs 2 prep capacity")
+			and capacity_text.contains("with 1 left")
+			and capacity_text.contains("if available")
+			and not capacity_text.contains("full")
+		),
+		"partial prep capacity explains the remaining and required labor in English"
+	)
 	screen.get("pause_button").pressed.emit()
 	screen.call("_process", 2.19)
 	expect(not board.get("chatter").is_empty(), "the chef bubble remains visible before 2.2 real seconds")
@@ -325,23 +563,30 @@ func _test_live_prepared_feedback(tree: SceneTree) -> void:
 
 
 func _test_fast_chatter_lifetime(tree: SceneTree) -> void:
+	# gdlint: ignore=duplicated-load
 	var scene: PackedScene = load("res://presentation/main.tscn")
 	var screen: Control = scene.instantiate()
 	screen.set("scenario_path", "res://content/m2_first_service.tres")
 	var settings_path := "user://service_feedback_fast_%d.json" % Time.get_ticks_usec()
-	HarnessSettingsStore.new(settings_path).save_settings({"locale": "ko", "sound_enabled": false, "text_size": "normal"})
+	HarnessSettingsStore.new(settings_path).save_settings(
+		{"locale": "ko", "sound_enabled": false, "text_size": "normal"}
+	)
 	screen.set("settings_path", settings_path)
 	tree.root.add_child(screen)
 	screen.set_process(false)
 	await tree.process_frame
-	expect(screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
-		"fast chatter fixture prepares one salad portion")
+	expect(
+		screen.call("submit_preparation", "set_prep", "prepped_salad", 1).accepted,
+		"fast chatter fixture prepares one salad portion"
+	)
 	screen.get("start_button").pressed.emit()
 	screen.get("speed_buttons")[2].pressed.emit()
 	screen.call("advance", 0.5)
 	var board: Control = screen.get("board")
-	expect(board.get("chatter").get("kind", "") == "prepared_stock_depleted",
-		"the 4x driver preserves the prepared-stock event")
+	expect(
+		board.get("chatter").get("kind", "") == "prepared_stock_depleted",
+		"the 4x driver preserves the prepared-stock event"
+	)
 	screen.get("pause_button").pressed.emit()
 	screen.call("_process", 2.19)
 	expect(not board.get("chatter").is_empty(), "the chef bubble remains visible before 2.2 real seconds at 4x")
@@ -353,8 +598,16 @@ func _test_fast_chatter_lifetime(tree: SceneTree) -> void:
 
 
 func _prepare(plan: RefCounted, kind: String, target_id: String, value: Variant) -> Dictionary:
-	return plan.call("apply_command", {"kind": kind, "target_id": target_id, "value": value,
-		"apply_tick": 0, "sequence": plan.call("snapshot").sequence + 1})
+	return plan.call(
+		"apply_command",
+		{
+			"kind": kind,
+			"target_id": target_id,
+			"value": value,
+			"apply_tick": 0,
+			"sequence": plan.call("snapshot").sequence + 1
+		}
+	)
 
 
 func _has_action(recommendations: Array, action: String, target_id: String) -> bool:

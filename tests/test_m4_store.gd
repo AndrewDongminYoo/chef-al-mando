@@ -7,7 +7,8 @@ const ServiceSession := preload("res://persistence/service_session.gd")
 const ServiceSim := preload("res://sim/service_sim.gd")
 
 
-class FailedStore extends "res://persistence/campaign_store.gd":
+class FailedStore:
+	extends "res://persistence/campaign_store.gd"
 	var failure: String = ""
 
 	func _write_text(target: String, text: String) -> Error:
@@ -18,15 +19,15 @@ class FailedStore extends "res://persistence/campaign_store.gd":
 		return super._write_text(target, text)
 
 	func _replace_file(source: String, target: String) -> Error:
-		if (failure == "backup" and target == file_path + ".backup") \
-			or (failure == "replace" and target == file_path):
+		if (failure == "backup" and target == file_path + ".backup") or (failure == "replace" and target == file_path):
 			return ERR_CANT_CREATE
 		return super._replace_file(source, target)
 
 
 ## Rewrites the staged primary after this store validated the session, so that the read-back holds a
 ## session or records that the store has not restored.
-class TamperedStore extends "res://persistence/campaign_store.gd":
+class TamperedStore:
+	extends "res://persistence/campaign_store.gd"
 	var tamper: String = ""
 
 	func _write_text(target: String, text: String) -> Error:
@@ -43,59 +44,91 @@ class TamperedStore extends "res://persistence/campaign_store.gd":
 
 
 func run(_tree: SceneTree) -> void:
-	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var campaign: Resource = ResourceLoader.load(
+		"res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	var directory := "user://test_m4_store_%d" % Time.get_ticks_usec()
 	expect(DirAccess.make_dir_recursive_absolute(directory) == OK, "M4 store fixture directory is created")
 	var file_path := directory + "/campaign_records.json"
 	var first: Resource = campaign.scenario_for("first_shift")
-	var records := {"first_shift": {"completed": true, "best_served": first.minimum_served,
-		"best_profit": first.minimum_profit}}
+	var records := {
+		"first_shift": {"completed": true, "best_served": first.minimum_served, "best_profit": first.minimum_profit}
+	}
 	_test_content_update(campaign, directory)
 	var schema_one := {"schema_version": 1, "content_version": 4, "sim_version": 1, "records": records}
 	_write(file_path, JSON.stringify(schema_one))
 	var original_bytes := FileAccess.get_file_as_bytes(file_path)
 	var loaded: Dictionary = CampaignStore.new(campaign, file_path).load_records()
-	expect(loaded.accepted and loaded.has("active_session") and loaded.active_session == null,
-		"schema 1 loads with no active session")
+	expect(
+		loaded.accepted and loaded.has("active_session") and loaded.active_session == null,
+		"schema 1 loads with no active session"
+	)
 	expect(FileAccess.get_file_as_bytes(file_path) == original_bytes, "reading schema 1 leaves its bytes unchanged")
-	expect(CampaignStore.new(campaign, file_path).save_records(records).accepted,
-		"the next successful records write upgrades schema 1")
+	expect(
+		CampaignStore.new(campaign, file_path).save_records(records).accepted,
+		"the next successful records write upgrades schema 1"
+	)
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(file_path))
-	expect(migrated is Dictionary and migrated.size() == 6 and migrated.schema_version == 4
-		and migrated.content_version == 7 and migrated.sim_version == 1
-		and migrated.has("records") and migrated.has("active_session") and migrated.active_session == null
-		and migrated.has("attempts") and migrated.attempts == {},
-		"schema 1 upgrades to the exact schema 4 envelope")
-	expect(CampaignStore.new(campaign, file_path).load_records().records == records,
-		"schema 1 record metrics remain exact after migration")
+	expect(
+		(
+			migrated is Dictionary
+			and migrated.size() == 6
+			and migrated.schema_version == 4
+			and migrated.content_version == 7
+			and migrated.sim_version == 1
+			and migrated.has("records")
+			and migrated.has("active_session")
+			and migrated.active_session == null
+			and migrated.has("attempts")
+			and migrated.attempts == {}
+		),
+		"schema 1 upgrades to the exact schema 4 envelope"
+	)
+	expect(
+		CampaignStore.new(campaign, file_path).load_records().records == records,
+		"schema 1 record metrics remain exact after migration"
+	)
 	var session := _later_session(campaign, 1)
-	var schema_two := {"schema_version": 2, "content_version": 7, "sim_version": 1,
-		"records": records, "active_session": session}
+	var schema_two := {
+		"schema_version": 2, "content_version": 7, "sim_version": 1, "records": records, "active_session": session
+	}
 	_write(file_path, JSON.stringify(schema_two))
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	var restored: Dictionary = ServiceSession.restore(campaign, loaded.get("active_session", {}), loaded.records)
 	var expected_restore: Dictionary = ServiceSession.restore(campaign, session, records)
-	expect(loaded.accepted and _same_restore(restored, expected_restore),
-		"a fresh reader restores an unlocked later service from normalized JSON records")
+	expect(
+		loaded.accepted and _same_restore(restored, expected_restore),
+		"a fresh reader restores an unlocked later service from normalized JSON records"
+	)
 	var improved := records.duplicate(true)
 	improved.first_shift.best_served += 1
-	expect(CampaignStore.new(campaign, file_path).save_records(improved).accepted,
-		"a records-only write accepts a valid active session")
+	expect(
+		CampaignStore.new(campaign, file_path).save_records(improved).accepted,
+		"a records-only write accepts a valid active session"
+	)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	restored = ServiceSession.restore(campaign, loaded.get("active_session", {}), loaded.records)
 	expected_restore = ServiceSession.restore(campaign, session, improved)
 	expect(loaded.accepted and loaded.records == improved, "a records-only write updates only the primary records")
-	expect(_same_restore(restored, expected_restore),
-		"a records-only write preserves a restorable active session in the primary")
+	expect(
+		_same_restore(restored, expected_restore),
+		"a records-only write preserves a restorable active session in the primary"
+	)
 	var backup := CampaignStore.new(campaign, file_path + ".backup").load_records()
 	var backup_restore: Dictionary = ServiceSession.restore(campaign, backup.get("active_session", {}), backup.records)
 	expected_restore = ServiceSession.restore(campaign, session, records)
-	expect(backup.accepted and backup.records == records and _same_restore(backup_restore, expected_restore),
-		"a records-only write preserves the previous full envelope in the backup")
+	expect(
+		backup.accepted and backup.records == records and _same_restore(backup_restore, expected_restore),
+		"a records-only write preserves the previous full envelope in the backup"
+	)
 	var primary_bytes := FileAccess.get_file_as_bytes(file_path)
-	expect(not CampaignStore.new(campaign, file_path).save_records({}).accepted
-		and FileAccess.get_file_as_bytes(file_path) == primary_bytes,
-		"a records-only write rejects records that would lock the preserved session")
+	expect(
+		(
+			not CampaignStore.new(campaign, file_path).save_records({}).accepted
+			and FileAccess.get_file_as_bytes(file_path) == primary_bytes
+		),
+		"a records-only write rejects records that would lock the preserved session"
+	)
 	var session_store := CampaignStore.new(campaign, file_path)
 	if not session_store.has_method("save_active_session") or not session_store.has_method("clear_active_session"):
 		expect(false, "the campaign store exposes atomic session save and clear operations")
@@ -105,34 +138,49 @@ func run(_tree: SceneTree) -> void:
 	replacement_session.speed = 4
 	var baseline_restore := ServiceSession.restore(campaign, session, records)
 	var replacement_restore := ServiceSession.restore(campaign, replacement_session, records)
-	expect(baseline_restore.accepted and replacement_restore.accepted
-		and baseline_restore.simulation.state_hash() != replacement_restore.simulation.state_hash(),
-		"baseline and replacement fixtures have different simulation states")
+	expect(
+		(
+			baseline_restore.accepted
+			and replacement_restore.accepted
+			and baseline_restore.simulation.state_hash() != replacement_restore.simulation.state_hash()
+		),
+		"baseline and replacement fixtures have different simulation states"
+	)
 	var save_result: Dictionary = session_store.call("save_active_session", replacement_session, records)
 	expect(save_result.accepted, "active session and records save in one operation: " + save_result.reason)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	restored = _restore_loaded(campaign, loaded)
 	expected_restore = ServiceSession.restore(campaign, replacement_session, records)
-	expect(loaded.accepted and loaded.records == records and _same_restore(restored, expected_restore),
-		"a fresh reader sees the atomically saved session and records")
+	expect(
+		loaded.accepted and loaded.records == records and _same_restore(restored, expected_restore),
+		"a fresh reader sees the atomically saved session and records"
+	)
 	var clear_result: Dictionary = session_store.call("clear_active_session")
 	expect(clear_result.accepted, "the active session can be cleared explicitly: " + clear_result.reason)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
-	expect(loaded.accepted and loaded.records == records and loaded.active_session == null,
-		"clearing a session preserves valid disk records")
-	expect(session_store.call("save_active_session", null, improved).accepted,
-		"saving an explicit null session can update records")
+	expect(
+		loaded.accepted and loaded.records == records and loaded.active_session == null,
+		"clearing a session preserves valid disk records"
+	)
+	expect(
+		session_store.call("save_active_session", null, improved).accepted,
+		"saving an explicit null session can update records"
+	)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
-	expect(loaded.accepted and loaded.records == improved and loaded.active_session == null,
-		"a fresh reader sees the explicit null session")
+	expect(
+		loaded.accepted and loaded.records == improved and loaded.active_session == null,
+		"a fresh reader sees the explicit null session"
+	)
 	var closed_session := _closed_session(campaign)
 	save_result = session_store.call("save_active_session", closed_session, {})
 	expect(save_result.accepted, "a closed session is accepted for idempotent result handling: " + save_result.reason)
 	loaded = CampaignStore.new(campaign, file_path).load_records()
 	restored = _restore_loaded(campaign, loaded)
 	expected_restore = ServiceSession.restore(campaign, closed_session, {})
-	expect(loaded.accepted and _same_restore(restored, expected_restore) and restored.simulation.closed,
-		"a fresh reader restores a closed session")
+	expect(
+		loaded.accepted and _same_restore(restored, expected_restore) and restored.simulation.closed,
+		"a fresh reader restores a closed session"
+	)
 	_test_write_failures(campaign, directory, records, session, replacement_session)
 	_test_restore_shortcuts(campaign, directory, records, session, replacement_session)
 	_test_recovery(campaign, directory, records, improved, session, replacement_session)
@@ -162,123 +210,297 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 		var record: Dictionary = migrated_records[scenario_id]
 		if record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit:
 			record.legacy_completed = true
-	expect(migrated_records.first_shift.size() == 3 and migrated_records.hot_queue.size() == 4,
-		"a content 1 completion that still meets the current targets needs no marker while a raised target does")
-	_write(target, JSON.stringify({"schema_version": 3, "content_version": 1, "sim_version": 1,
-		"records": legacy_records, "active_session": active_session}))
+	expect(
+		migrated_records.first_shift.size() == 3 and migrated_records.hot_queue.size() == 4,
+		"a content 1 completion that still meets the current targets needs no marker while a raised target does"
+	)
+	_write(
+		target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 1,
+				"sim_version": 1,
+				"records": legacy_records,
+				"active_session": active_session
+			}
+		)
+	)
 	var original_bytes := FileAccess.get_file_as_bytes(target)
 	var loaded: Dictionary = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == migrated_records and loaded.active_session == null,
-		"a content update keeps records completed under the previous targets and restarts the active service")
-	expect(FileAccess.get_file_as_bytes(target) == original_bytes, "a content update leaves the old file unchanged until the next write")
-	expect(CampaignStore.new(campaign, target).save_records(migrated_records).accepted,
-		"the next write migrates previous-target completion records to the current content version")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == migrated_records
+			and loaded.active_session == null
+		),
+		"a content update keeps records completed under the previous targets and restarts the active service"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(target) == original_bytes,
+		"a content update leaves the old file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, target).save_records(migrated_records).accepted,
+		"the next write migrates previous-target completion records to the current content version"
+	)
 	loaded = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == migrated_records,
-		"migrated previous-target completion records remain exact on later loads")
+	expect(
+		loaded.accepted and loaded.reason == "loaded" and loaded.records == migrated_records,
+		"migrated previous-target completion records remain exact on later loads"
+	)
 	var version_two_target := directory + "/content_version_two.json"
 	var current_records := {}
 	for scenario: Resource in campaign.scenarios:
-		current_records[scenario.id] = {"completed": true,
-			"best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit}
-	_write(version_two_target, JSON.stringify({"schema_version": 3, "content_version": 2,
-		"sim_version": 1, "records": current_records, "active_session": active_session}))
+		current_records[scenario.id] = {
+			"completed": true, "best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit
+		}
+	_write(
+		version_two_target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 2,
+				"sim_version": 1,
+				"records": current_records,
+				"active_session": active_session
+			}
+		)
+	)
 	var version_two_bytes := FileAccess.get_file_as_bytes(version_two_target)
 	loaded = CampaignStore.new(campaign, version_two_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"the pressure retune preserves version 2 records, including the final service, and restarts its active service")
-	expect(FileAccess.get_file_as_bytes(version_two_target) == version_two_bytes,
-		"a content update leaves the version 2 file unchanged until the next write")
-	expect(CampaignStore.new(campaign, version_two_target).save_records(current_records).accepted,
-		"the next write upgrades a version 2 record to the current content version")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"the pressure retune preserves version 2 records, including the final service, and restarts its active service"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_two_target) == version_two_bytes,
+		"a content update leaves the version 2 file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, version_two_target).save_records(current_records).accepted,
+		"the next write upgrades a version 2 record to the current content version"
+	)
 	var version_two_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_two_target))
-	expect(version_two_migrated is Dictionary and version_two_migrated.content_version == 7,
-		"a migrated version 2 record writes the current content version")
+	expect(
+		version_two_migrated is Dictionary and version_two_migrated.content_version == 7,
+		"a migrated version 2 record writes the current content version"
+	)
 	var version_three_target := directory + "/content_version_three.json"
-	_write(version_three_target, JSON.stringify({"schema_version": 3, "content_version": 3,
-		"sim_version": 1, "records": current_records, "active_session": active_session}))
+	_write(
+		version_three_target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 3,
+				"sim_version": 1,
+				"records": current_records,
+				"active_session": active_session
+			}
+		)
+	)
 	var version_three_bytes := FileAccess.get_file_as_bytes(version_three_target)
 	loaded = CampaignStore.new(campaign, version_three_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"the mise restructure restarts every version 3 session because prep quantities are keyed by mise item")
-	expect(FileAccess.get_file_as_bytes(version_three_target) == version_three_bytes,
-		"a content update leaves the version 3 file unchanged until the next write")
-	expect(CampaignStore.new(campaign, version_three_target).save_records(current_records).accepted,
-		"the next write upgrades a version 3 record to the current content version")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"the mise restructure restarts every version 3 session because prep quantities are keyed by mise item"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_three_target) == version_three_bytes,
+		"a content update leaves the version 3 file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, version_three_target).save_records(current_records).accepted,
+		"the next write upgrades a version 3 record to the current content version"
+	)
 	var version_three_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_three_target))
-	expect(version_three_migrated is Dictionary and version_three_migrated.content_version == 7,
-		"a migrated version 3 record writes the current content version")
+	expect(
+		version_three_migrated is Dictionary and version_three_migrated.content_version == 7,
+		"a migrated version 3 record writes the current content version"
+	)
 	var version_three_hot_queue_target := directory + "/content_version_three_hot_queue.json"
 	var hot_queue_session := _scenario_session(campaign, "hot_queue")
-	_write(version_three_hot_queue_target, JSON.stringify({"schema_version": 3, "content_version": 3,
-		"sim_version": 1, "records": current_records, "active_session": hot_queue_session}))
+	_write(
+		version_three_hot_queue_target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 3,
+				"sim_version": 1,
+				"records": current_records,
+				"active_session": hot_queue_session
+			}
+		)
+	)
 	var version_three_hot_queue_bytes := FileAccess.get_file_as_bytes(version_three_hot_queue_target)
 	loaded = CampaignStore.new(campaign, version_three_hot_queue_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"the hot queue preparation update restarts a version 3 hot queue session")
-	expect(FileAccess.get_file_as_bytes(version_three_hot_queue_target) == version_three_hot_queue_bytes,
-		"restarting a version 3 hot queue session leaves the old file unchanged until the next write")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"the hot queue preparation update restarts a version 3 hot queue session"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_three_hot_queue_target) == version_three_hot_queue_bytes,
+		"restarting a version 3 hot queue session leaves the old file unchanged until the next write"
+	)
 	var version_four_target := directory + "/content_version_four.json"
 	var version_four_session := _scenario_session(campaign, "lunch_prep")
 	version_four_session["preparation"]["prep_quantities"] = {"salad": 0, "soup": 1, "grain_salad": 0}
-	_write(version_four_target, JSON.stringify({"schema_version": 4, "content_version": 4, "sim_version": 1,
-		"records": current_records, "attempts": {}, "active_session": version_four_session}))
+	_write(
+		version_four_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 4,
+				"sim_version": 1,
+				"records": current_records,
+				"attempts": {},
+				"active_session": version_four_session
+			}
+		)
+	)
 	var version_four_bytes := FileAccess.get_file_as_bytes(version_four_target)
 	loaded = CampaignStore.new(campaign, version_four_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"a version 4 session keyed by recipe restarts instead of failing as corrupt")
-	expect(FileAccess.get_file_as_bytes(version_four_target) == version_four_bytes,
-		"restarting a version 4 session leaves the old file unchanged until the next write")
-	expect(CampaignStore.new(campaign, version_four_target).save_records(current_records).accepted,
-		"the next write upgrades a version 4 record to content version 7")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"a version 4 session keyed by recipe restarts instead of failing as corrupt"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_four_target) == version_four_bytes,
+		"restarting a version 4 session leaves the old file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, version_four_target).save_records(current_records).accepted,
+		"the next write upgrades a version 4 record to content version 7"
+	)
 	var version_four_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_four_target))
-	expect(version_four_migrated is Dictionary and version_four_migrated.content_version == 7,
-		"a migrated version 4 record writes content version 7")
+	expect(
+		version_four_migrated is Dictionary and version_four_migrated.content_version == 7,
+		"a migrated version 4 record writes content version 7"
+	)
 	var version_five_target := directory + "/content_version_five.json"
 	var version_five_session := _scenario_session(campaign, "lunch_prep")
-	_write(version_five_target, JSON.stringify({"schema_version": 4, "content_version": 5, "sim_version": 1,
-		"records": current_records, "attempts": {}, "active_session": version_five_session}))
+	_write(
+		version_five_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 5,
+				"sim_version": 1,
+				"records": current_records,
+				"attempts": {},
+				"active_session": version_five_session
+			}
+		)
+	)
 	var version_five_bytes := FileAccess.get_file_as_bytes(version_five_target)
 	loaded = CampaignStore.new(campaign, version_five_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"partial prep restarts a version 5 session because its order snapshot and consumption rules changed")
-	expect(FileAccess.get_file_as_bytes(version_five_target) == version_five_bytes,
-		"restarting a version 5 session leaves the old file unchanged until the next write")
-	expect(CampaignStore.new(campaign, version_five_target).save_records(current_records).accepted,
-		"the next write upgrades a version 5 record to content version 7")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"partial prep restarts a version 5 session because its order snapshot and consumption rules changed"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_five_target) == version_five_bytes,
+		"restarting a version 5 session leaves the old file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, version_five_target).save_records(current_records).accepted,
+		"the next write upgrades a version 5 record to content version 7"
+	)
 	var version_five_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_five_target))
-	expect(version_five_migrated is Dictionary and version_five_migrated.content_version == 7,
-		"a migrated version 5 record writes content version 7")
+	expect(
+		version_five_migrated is Dictionary and version_five_migrated.content_version == 7,
+		"a migrated version 5 record writes content version 7"
+	)
 	var version_six_target := directory + "/content_version_six.json"
 	var version_six_session := _scenario_session(campaign, "lunch_prep")
-	_write(version_six_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": current_records, "attempts": {}, "active_session": version_six_session}))
+	_write(
+		version_six_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": current_records,
+				"attempts": {},
+				"active_session": version_six_session
+			}
+		)
+	)
 	var version_six_bytes := FileAccess.get_file_as_bytes(version_six_target)
 	loaded = CampaignStore.new(campaign, version_six_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"authored forecast slack restarts a version 6 session because a seeded schedule no longer matches its snapshot")
-	expect(FileAccess.get_file_as_bytes(version_six_target) == version_six_bytes,
-		"restarting a version 6 session leaves the old file unchanged until the next write")
-	expect(CampaignStore.new(campaign, version_six_target).save_records(current_records).accepted,
-		"the next write upgrades a version 6 record to content version 7")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"authored forecast slack restarts a version 6 session because a seeded schedule no longer matches its snapshot"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(version_six_target) == version_six_bytes,
+		"restarting a version 6 session leaves the old file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, version_six_target).save_records(current_records).accepted,
+		"the next write upgrades a version 6 record to content version 7"
+	)
 	var version_six_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_six_target))
-	expect(version_six_migrated is Dictionary and version_six_migrated.content_version == 7,
-		"a migrated version 6 record writes content version 7")
+	expect(
+		version_six_migrated is Dictionary and version_six_migrated.content_version == 7,
+		"a migrated version 6 record writes content version 7"
+	)
 	var version_three_corrupt_target := directory + "/content_version_three_corrupt_session.json"
 	var corrupt_session: Dictionary = active_session.duplicate(true)
 	corrupt_session.speed = 3
-	_write(version_three_corrupt_target, JSON.stringify({"schema_version": 3, "content_version": 3,
-		"sim_version": 1, "records": current_records, "active_session": corrupt_session}))
+	_write(
+		version_three_corrupt_target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 3,
+				"sim_version": 1,
+				"records": current_records,
+				"active_session": corrupt_session
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, version_three_corrupt_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == current_records
-		and loaded.active_session == null,
-		"the mise restructure restarts a corrupt version 3 session without needing to validate it")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"the mise restructure restarts a corrupt version 3 session without needing to validate it"
+	)
 	var first: Resource = campaign.scenario_for("first_shift")
 	var corrupt_legacy_cases := {
 		"served": {"completed": true, "best_served": 9, "best_profit": 1000},
@@ -287,53 +509,115 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	for label: String in corrupt_legacy_cases:
 		var corrupt_legacy_target := directory + "/invalid_legacy_completion_" + label + ".json"
 		var corrupt_legacy_records := {"first_shift": corrupt_legacy_cases[label]}
-		_write(corrupt_legacy_target, JSON.stringify({"schema_version": 3, "content_version": 1,
-			"sim_version": 1, "records": corrupt_legacy_records, "active_session": null}))
-		_write(corrupt_legacy_target + ".backup", JSON.stringify({"schema_version": 3,
-			"content_version": 4, "sim_version": 1, "records": {}, "active_session": null}))
+		_write(
+			corrupt_legacy_target,
+			JSON.stringify(
+				{
+					"schema_version": 3,
+					"content_version": 1,
+					"sim_version": 1,
+					"records": corrupt_legacy_records,
+					"active_session": null
+				}
+			)
+		)
+		_write(
+			corrupt_legacy_target + ".backup",
+			JSON.stringify(
+				{"schema_version": 3, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null}
+			)
+		)
 		var corrupt_legacy_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target)
 		var valid_backup_bytes := FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup")
 		var corrupt_legacy_store := CampaignStore.new(campaign, corrupt_legacy_target)
 		loaded = corrupt_legacy_store.load_records()
-		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
-			"a legacy completion below its original %s target is corrupt and offers its valid backup" % label)
-		expect(FileAccess.get_file_as_bytes(corrupt_legacy_target) == corrupt_legacy_bytes
-			and FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup") == valid_backup_bytes,
-			"legacy %s rejection preserves primary and backup bytes" % label)
-		expect(corrupt_legacy_store.recover_backup().accepted,
-			"explicit recovery replaces a corrupt legacy %s completion with its valid backup" % label)
+		expect(
+			not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a legacy completion below its original %s target is corrupt and offers its valid backup" % label
+		)
+		expect(
+			(
+				FileAccess.get_file_as_bytes(corrupt_legacy_target) == corrupt_legacy_bytes
+				and FileAccess.get_file_as_bytes(corrupt_legacy_target + ".backup") == valid_backup_bytes
+			),
+			"legacy %s rejection preserves primary and backup bytes" % label
+		)
+		expect(
+			corrupt_legacy_store.recover_backup().accepted,
+			"explicit recovery replaces a corrupt legacy %s completion with its valid backup" % label
+		)
 		var forged_target := directory + "/forged_legacy_marker_" + label + ".json"
 		var forged_records := corrupt_legacy_records.duplicate(true)
 		forged_records.first_shift.legacy_completed = true
-		_write(forged_target, JSON.stringify({"schema_version": 3, "content_version": 4,
-			"sim_version": 1, "records": forged_records, "active_session": null}))
-		_write(forged_target + ".backup", JSON.stringify({"schema_version": 3,
-			"content_version": 4, "sim_version": 1, "records": {}, "active_session": null}))
+		_write(
+			forged_target,
+			JSON.stringify(
+				{
+					"schema_version": 3,
+					"content_version": 4,
+					"sim_version": 1,
+					"records": forged_records,
+					"active_session": null
+				}
+			)
+		)
+		_write(
+			forged_target + ".backup",
+			JSON.stringify(
+				{"schema_version": 3, "content_version": 4, "sim_version": 1, "records": {}, "active_session": null}
+			)
+		)
 		var forged_bytes := FileAccess.get_file_as_bytes(forged_target)
 		var forged_backup_bytes := FileAccess.get_file_as_bytes(forged_target + ".backup")
 		var forged_store := CampaignStore.new(campaign, forged_target)
 		loaded = forged_store.load_records()
-		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
-			"a current file cannot forge a legacy marker below its original %s target" % label)
-		expect(FileAccess.get_file_as_bytes(forged_target) == forged_bytes
-			and FileAccess.get_file_as_bytes(forged_target + ".backup") == forged_backup_bytes,
-			"forged legacy %s rejection preserves primary and backup bytes" % label)
-		expect(forged_store.recover_backup().accepted,
-			"explicit recovery replaces a forged legacy %s marker with its valid backup" % label)
+		expect(
+			not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a current file cannot forge a legacy marker below its original %s target" % label
+		)
+		expect(
+			(
+				FileAccess.get_file_as_bytes(forged_target) == forged_bytes
+				and FileAccess.get_file_as_bytes(forged_target + ".backup") == forged_backup_bytes
+			),
+			"forged legacy %s rejection preserves primary and backup bytes" % label
+		)
+		expect(
+			forged_store.recover_backup().accepted,
+			"explicit recovery replaces a forged legacy %s marker with its valid backup" % label
+		)
 	var invalid_target := directory + "/invalid_current_completion.json"
-	var invalid_records := {"first_shift": {"completed": true,
-		"best_served": first.minimum_served - 1, "best_profit": -first.starting_budget}}
-	_write(invalid_target, JSON.stringify({"schema_version": 3, "content_version": 4, "sim_version": 1,
-		"records": invalid_records, "active_session": null}))
+	var invalid_records := {
+		"first_shift":
+		{"completed": true, "best_served": first.minimum_served - 1, "best_profit": -first.starting_budget}
+	}
+	_write(
+		invalid_target,
+		JSON.stringify(
+			{
+				"schema_version": 3,
+				"content_version": 4,
+				"sim_version": 1,
+				"records": invalid_records,
+				"active_session": null
+			}
+		)
+	)
 	var invalid_bytes := FileAccess.get_file_as_bytes(invalid_target)
 	var invalid_store := CampaignStore.new(campaign, invalid_target)
 	loaded = invalid_store.load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a current content file cannot claim completion below the current targets")
-	expect(not invalid_store.save_records({}).accepted and FileAccess.get_file_as_bytes(invalid_target) == invalid_bytes,
-		"an ordinary save cannot replace a current file with an invalid completion")
-	expect(not invalid_store.recover_backup().accepted and FileAccess.get_file_as_bytes(invalid_target) == invalid_bytes,
-		"recovery cannot replace an invalid current completion without a valid backup")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a current content file cannot claim completion below the current targets"
+	)
+	expect(
+		not invalid_store.save_records({}).accepted and FileAccess.get_file_as_bytes(invalid_target) == invalid_bytes,
+		"an ordinary save cannot replace a current file with an invalid completion"
+	)
+	expect(
+		not invalid_store.recover_backup().accepted and FileAccess.get_file_as_bytes(invalid_target) == invalid_bytes,
+		"recovery cannot replace an invalid current completion without a valid backup"
+	)
 	_test_raised_targets(campaign, directory)
 
 
@@ -344,115 +628,293 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	var hot_queue: Resource = campaign.scenario_for("hot_queue")
 	var cap: int = hot_queue.maximum_profit(12)
-	expect(hot_queue.minimum_served > 12 and hot_queue.minimum_profit > 4750 and cap >= 4750,
-		"the raised hot queue targets sit above the content 6 targets and the content 6 targets sit under the current cap")
+	expect(
+		hot_queue.minimum_served > 12 and hot_queue.minimum_profit > 4750 and cap >= 4750,
+		"the raised hot queue targets sit above the content 6 targets and the content 6 targets sit under the current cap"
+	)
 	var earlier_records := {}
 	for scenario_id: String in ["first_shift", "lunch_prep"]:
 		var scenario: Resource = campaign.scenario_for(scenario_id)
-		earlier_records[scenario_id] = {"completed": true,
-			"best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit}
+		earlier_records[scenario_id] = {
+			"completed": true, "best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit
+		}
 	var old_target_records := earlier_records.duplicate(true)
 	old_target_records.hot_queue = {"completed": true, "best_served": 12, "best_profit": 4750}
 	var marked_records := old_target_records.duplicate(true)
 	marked_records.hot_queue.legacy_completed = true
 	var target := directory + "/content_version_six_old_hot_queue_targets.json"
-	_write(target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": old_target_records, "attempts": {}, "active_session": null}))
+	_write(
+		target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": old_target_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	var original_bytes := FileAccess.get_file_as_bytes(target)
 	var loaded: Dictionary = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.active_session == null
-		and loaded.records == marked_records and loaded.records.hot_queue.legacy_completed == true,
-		"a content 6 hot queue completion at the old targets loads with the legacy marker and the other records unchanged")
-	expect(FileAccess.get_file_as_bytes(target) == original_bytes,
-		"marking an old-target hot queue completion leaves the content 6 file unchanged until the next write")
-	expect(CampaignStore.new(campaign, target).save_records(loaded.records).accepted,
-		"the next write keeps an old-target hot queue completion")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.active_session == null
+			and loaded.records == marked_records
+			and loaded.records.hot_queue.legacy_completed == true
+		),
+		"a content 6 hot queue completion at the old targets loads with the legacy marker and the other records unchanged"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(target) == original_bytes,
+		"marking an old-target hot queue completion leaves the content 6 file unchanged until the next write"
+	)
+	expect(
+		CampaignStore.new(campaign, target).save_records(loaded.records).accepted,
+		"the next write keeps an old-target hot queue completion"
+	)
 	var migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(target))
-	expect(migrated is Dictionary and migrated.content_version == 7 and migrated.records.hot_queue.size() == 4
-		and migrated.records.hot_queue.legacy_completed == true,
-		"the upgraded content 7 file carries the hot queue legacy marker")
+	expect(
+		(
+			migrated is Dictionary
+			and migrated.content_version == 7
+			and migrated.records.hot_queue.size() == 4
+			and migrated.records.hot_queue.legacy_completed == true
+		),
+		"the upgraded content 7 file carries the hot queue legacy marker"
+	)
 	loaded = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == marked_records,
-		"a migrated old-target hot queue completion remains exact on later loads")
+	expect(
+		loaded.accepted and loaded.reason == "loaded" and loaded.records == marked_records,
+		"a migrated old-target hot queue completion remains exact on later loads"
+	)
 	# The 12 / 4,750 pair only shipped at content 3, so a document from an earlier content version
 	# cannot claim it even though 12 / 4,750 is otherwise a valid shipped pair.
 	var content_one_target := directory + "/content_version_one_hot_queue_content_three_pair.json"
-	_write(content_one_target, JSON.stringify({"schema_version": 4, "content_version": 1, "sim_version": 1,
-		"records": old_target_records, "attempts": {}, "active_session": null}))
+	_write(
+		content_one_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 1,
+				"sim_version": 1,
+				"records": old_target_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, content_one_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 1 hot queue completion at 12 served / 4,750 profit is corrupt because content 1 only shipped 14 / 1,500")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 1 hot queue completion at 12 served / 4,750 profit is corrupt because content 1 only shipped 14 / 1,500"
+	)
 	var content_two_target := directory + "/content_version_two_hot_queue_content_three_pair.json"
-	_write(content_two_target, JSON.stringify({"schema_version": 4, "content_version": 2, "sim_version": 1,
-		"records": old_target_records, "attempts": {}, "active_session": null}))
+	_write(
+		content_two_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 2,
+				"sim_version": 1,
+				"records": old_target_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, content_two_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 2 hot queue completion at 12 served / 4,750 profit is corrupt because content 2 shipped 12 / 5,000, not 12 / 4,750")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		# gdlint: ignore=max-line-length
+		"a content 2 hot queue completion at 12 served / 4,750 profit is corrupt because content 2 shipped 12 / 5,000, not 12 / 4,750"
+	)
 	var content_three_target := directory + "/content_version_three_hot_queue_content_three_pair.json"
-	_write(content_three_target, JSON.stringify({"schema_version": 4, "content_version": 3, "sim_version": 1,
-		"records": old_target_records, "attempts": {}, "active_session": null}))
+	_write(
+		content_three_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 3,
+				"sim_version": 1,
+				"records": old_target_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, content_three_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records,
-		"a content 3 hot queue completion at 12 served / 4,750 profit is exactly its own shipped pair and loads with the legacy marker")
+	expect(
+		loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records,
+		# gdlint: ignore=max-line-length
+		"a content 3 hot queue completion at 12 served / 4,750 profit is exactly its own shipped pair and loads with the legacy marker"
+	)
 	var below_floor_target := directory + "/content_version_six_hot_queue_below_floor.json"
 	var below_floor_records := old_target_records.duplicate(true)
 	below_floor_records.hot_queue.best_served = 11
-	_write(below_floor_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": below_floor_records, "attempts": {}, "active_session": null}))
+	_write(
+		below_floor_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": below_floor_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, below_floor_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 6 hot queue completion below every shipped target is corrupt")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 hot queue completion below every shipped target is corrupt"
+	)
 	var legacy_cap: int = CampaignProgress.legacy_maximum_profit("hot_queue", 12)
-	expect(legacy_cap > cap + 1, "the content 6 hot queue cap sits above the current cap so an old-best fixture is meaningful")
+	expect(
+		legacy_cap > cap + 1,
+		"the content 6 hot queue cap sits above the current cap so an old-best fixture is meaningful"
+	)
 	var above_cap_target := directory + "/content_version_six_hot_queue_above_cap.json"
 	var above_cap_records := old_target_records.duplicate(true)
 	above_cap_records.hot_queue.best_profit = cap + 1
 	var kept_records := marked_records.duplicate(true)
 	kept_records.hot_queue.best_profit = cap + 1
-	_write(above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": above_cap_records, "attempts": {}, "active_session": null}))
+	_write(
+		above_cap_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": above_cap_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, above_cap_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == kept_records,
-		"a content 6 hot queue best profit between the current and the content 6 cap loads unchanged and stays completed")
-	expect(CampaignStore.new(campaign, above_cap_target).save_records(loaded.records).accepted
-		and CampaignStore.new(campaign, above_cap_target).load_records().records == kept_records,
-		"an old hot queue best profit above the current cap writes and reloads unchanged")
+	expect(
+		loaded.accepted and loaded.reason == "content_updated" and loaded.records == kept_records,
+		"a content 6 hot queue best profit between the current and the content 6 cap loads unchanged and stays completed"
+	)
+	expect(
+		(
+			CampaignStore.new(campaign, above_cap_target).save_records(loaded.records).accepted
+			and CampaignStore.new(campaign, above_cap_target).load_records().records == kept_records
+		),
+		"an old hot queue best profit above the current cap writes and reloads unchanged"
+	)
 	var current_above_cap_target := directory + "/content_version_seven_hot_queue_above_cap.json"
-	_write(current_above_cap_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
-		"records": kept_records, "attempts": {}, "active_session": null}))
+	_write(
+		current_above_cap_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 7,
+				"sim_version": 1,
+				"records": kept_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, current_above_cap_target).load_records()
-	expect(loaded.accepted and loaded.reason == "loaded" and loaded.records == kept_records,
-		"a content 7 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version")
+	expect(
+		loaded.accepted and loaded.reason == "loaded" and loaded.records == kept_records,
+		# gdlint: ignore=max-line-length
+		"a content 7 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version"
+	)
 	var above_legacy_cap_target := directory + "/content_version_six_hot_queue_above_legacy_cap.json"
 	var above_legacy_cap_records := old_target_records.duplicate(true)
 	above_legacy_cap_records.hot_queue.best_profit = legacy_cap + 50
-	_write(above_legacy_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": above_legacy_cap_records, "attempts": {}, "active_session": null}))
+	_write(
+		above_legacy_cap_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": above_legacy_cap_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, above_legacy_cap_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 6 hot queue best profit above the content 6 cap is corrupt")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 hot queue best profit above the content 6 cap is corrupt"
+	)
 	var unchanged_cap_target := directory + "/content_version_six_first_shift_above_cap.json"
 	var first: Resource = campaign.scenario_for("first_shift")
 	var unchanged_cap_records := {"first_shift": {"completed": true, "best_served": 10, "best_profit": 4000}}
 	expect(first.maximum_profit(10) < 4000, "the first shift fixture profit sits above its cap")
-	_write(unchanged_cap_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": unchanged_cap_records, "attempts": {}, "active_session": null}))
+	_write(
+		unchanged_cap_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": unchanged_cap_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, unchanged_cap_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 6 best profit above the cap of a service whose cap never dropped is corrupt")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 6 best profit above the cap of a service whose cap never dropped is corrupt"
+	)
 	var current_target := directory + "/content_version_seven_old_hot_queue_targets.json"
-	_write(current_target, JSON.stringify({"schema_version": 4, "content_version": 7, "sim_version": 1,
-		"records": old_target_records, "attempts": {}, "active_session": null}))
+	_write(
+		current_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 7,
+				"sim_version": 1,
+				"records": old_target_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, current_target).load_records()
-	expect(not loaded.accepted and loaded.reason == "corrupt_records",
-		"a content 7 file cannot claim a hot queue completion at the content 6 targets without the marker")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records",
+		"a content 7 file cannot claim a hot queue completion at the content 6 targets without the marker"
+	)
 	var premarked_target := directory + "/content_version_six_premarked_hot_queue.json"
-	_write(premarked_target, JSON.stringify({"schema_version": 4, "content_version": 6, "sim_version": 1,
-		"records": marked_records, "attempts": {}, "active_session": null}))
+	_write(
+		premarked_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 6,
+				"sim_version": 1,
+				"records": marked_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
 	loaded = CampaignStore.new(campaign, premarked_target).load_records()
-	expect(loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records
-		and loaded.active_session == null,
-		"a content 6 hot queue record that already carries the legacy marker loads with the marker kept and the record unchanged")
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == marked_records
+			and loaded.active_session == null
+		),
+		# gdlint: ignore=max-line-length
+		"a content 6 hot queue record that already carries the legacy marker loads with the marker kept and the record unchanged"
+	)
 
 
 func _write(target: String, text: String) -> void:
@@ -467,8 +929,7 @@ func _later_session(campaign: Resource, tick_count: int = 1) -> Dictionary:
 
 func _scenario_session(campaign: Resource, scenario_id: String, tick_count: int = 1) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for(scenario_id))
-	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
 	expect(started.accepted, "the scenario store fixture starts: %s" % scenario_id)
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
 	for _step: int in range(tick_count):
@@ -478,8 +939,7 @@ func _scenario_session(campaign: Resource, scenario_id: String, tick_count: int 
 
 func _closed_session(campaign: Resource) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
-	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
 	expect(started.accepted, "the closed-session store fixture starts")
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
 	while not simulation.closed:
@@ -489,17 +949,23 @@ func _closed_session(campaign: Resource) -> Dictionary:
 
 func _moving_reserved_session(campaign: Resource) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
-	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
 	expect(started.accepted, "the reservation recovery fixture starts")
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
-	while simulation.tick < 300 and (simulation.snapshot().orders.is_empty()
-		or simulation.snapshot().orders[0].state != "moving"):
+	while (
+		simulation.tick < 300
+		and (simulation.snapshot().orders.is_empty() or simulation.snapshot().orders[0].state != "moving")
+	):
 		simulation.step()
 	var state: Dictionary = simulation.export_state()
-	expect(state.orders[0].state == "moving" and state.orders[0].ingredients_reserved
-		and state.orders[0].reserved_inputs.vegetable == 1,
-		"the reservation recovery fixture contains a real moving reservation")
+	expect(
+		(
+			state.orders[0].state == "moving"
+			and state.orders[0].ingredients_reserved
+			and state.orders[0].reserved_inputs.vegetable == 1
+		),
+		"the reservation recovery fixture contains a real moving reservation"
+	)
 	return ServiceSession.capture("first_shift", started.selection, simulation, 1, 0)
 
 
@@ -516,135 +982,219 @@ func _restore_loaded(campaign: Resource, loaded: Dictionary) -> Dictionary:
 
 
 func _same_restore(actual: Dictionary, expected: Dictionary) -> bool:
-	return actual.get("accepted", false) and expected.get("accepted", false) \
-		and actual.scenario_id == expected.scenario_id and actual.speed == expected.speed \
-		and actual.accumulator_us == expected.accumulator_us and actual.selection == expected.selection \
+	return (
+		actual.get("accepted", false)
+		and expected.get("accepted", false)
+		and actual.scenario_id == expected.scenario_id
+		and actual.speed == expected.speed
+		and actual.accumulator_us == expected.accumulator_us
+		and actual.selection == expected.selection
 		and actual.simulation.state_hash() == expected.simulation.state_hash()
+	)
 
 
-func _test_write_failures(campaign: Resource, directory: String, records: Dictionary,
-	baseline_session: Dictionary, replacement_session: Dictionary) -> void:
-	var expected_reasons := {"write": "write_failed", "invalid_temp": "verification_failed",
-		"backup": "backup_failed", "replace": "replace_failed"}
+func _test_write_failures(
+	campaign: Resource,
+	directory: String,
+	records: Dictionary,
+	baseline_session: Dictionary,
+	replacement_session: Dictionary
+) -> void:
+	var expected_reasons := {
+		"write": "write_failed",
+		"invalid_temp": "verification_failed",
+		"backup": "backup_failed",
+		"replace": "replace_failed"
+	}
 	for failure: String in expected_reasons:
 		var target := directory + "/failure_%s.json" % failure
-		expect(CampaignStore.new(campaign, target).save_active_session(baseline_session, records).accepted,
-			"the failure fixture writes a valid baseline: " + failure)
+		expect(
+			CampaignStore.new(campaign, target).save_active_session(baseline_session, records).accepted,
+			"the failure fixture writes a valid baseline: " + failure
+		)
 		var original_bytes := FileAccess.get_file_as_bytes(target)
 		var failing := FailedStore.new(campaign, target)
 		failing.failure = failure
 		var result: Dictionary = failing.save_active_session(replacement_session, records)
-		expect(not result.accepted and result.reason == expected_reasons[failure],
-			"the injected file operation reports its failure: " + failure)
-		expect(FileAccess.get_file_as_bytes(target) == original_bytes,
-			"a failed save preserves the primary bytes: " + failure)
+		expect(
+			not result.accepted and result.reason == expected_reasons[failure],
+			"the injected file operation reports its failure: " + failure
+		)
+		expect(
+			FileAccess.get_file_as_bytes(target) == original_bytes,
+			"a failed save preserves the primary bytes: " + failure
+		)
 		var loaded := CampaignStore.new(campaign, target).load_records()
 		var actual_restore := _restore_loaded(campaign, loaded)
 		var expected_restore := ServiceSession.restore(campaign, baseline_session, records)
-		expect(loaded.accepted and _same_restore(actual_restore, expected_restore),
-			"a fresh reader sees the full pre-failure session: " + failure)
-		expect(not FileAccess.file_exists(target + ".tmp") and not FileAccess.file_exists(target + ".backup.tmp"),
-			"a failed save removes staged temporary files: " + failure)
+		expect(
+			loaded.accepted and _same_restore(actual_restore, expected_restore),
+			"a fresh reader sees the full pre-failure session: " + failure
+		)
+		expect(
+			not FileAccess.file_exists(target + ".tmp") and not FileAccess.file_exists(target + ".backup.tmp"),
+			"a failed save removes staged temporary files: " + failure
+		)
 		failing.failure = ""
-		expect(failing.save_active_session(replacement_session, records).accepted,
-			"the failed file operation can be retried: " + failure)
+		expect(
+			failing.save_active_session(replacement_session, records).accepted,
+			"the failed file operation can be retried: " + failure
+		)
 		loaded = CampaignStore.new(campaign, target).load_records()
 		actual_restore = _restore_loaded(campaign, loaded)
 		expected_restore = ServiceSession.restore(campaign, replacement_session, records)
-		expect(loaded.accepted and _same_restore(actual_restore, expected_restore),
-			"a fresh reader sees the retried full session: " + failure)
+		expect(
+			loaded.accepted and _same_restore(actual_restore, expected_restore),
+			"a fresh reader sees the retried full session: " + failure
+		)
 
 
 # CampaignStore skips ServiceSession.restore for a session it has already restored under the same
 # records. Each case gives the store a session or records it has not restored and expects the rejection
 # that a full restore produces.
-func _test_restore_shortcuts(campaign: Resource, directory: String, records: Dictionary,
-	session: Dictionary, replacement_session: Dictionary) -> void:
+func _test_restore_shortcuts(
+	campaign: Resource, directory: String, records: Dictionary, session: Dictionary, replacement_session: Dictionary
+) -> void:
 	for tamper: String in ["speed", "records"]:
 		var target := directory + "/shortcut_read_back_%s.json" % tamper
 		var store := TamperedStore.new(campaign, target)
-		expect(store.save_active_session(session, records).accepted, "the read-back fixture writes a baseline: " + tamper)
+		expect(
+			store.save_active_session(session, records).accepted, "the read-back fixture writes a baseline: " + tamper
+		)
 		var original_bytes := FileAccess.get_file_as_bytes(target)
 		store.tamper = tamper
 		var result: Dictionary = store.save_active_session(replacement_session, records)
-		expect(not result.accepted and result.reason == "verification_failed",
-			"a staged file that differs from the validated session fails verification: " + tamper)
-		expect(FileAccess.get_file_as_bytes(target) == original_bytes and not FileAccess.file_exists(target + ".tmp"),
-			"a failed read-back keeps the primary and removes the staged file: " + tamper)
+		expect(
+			not result.accepted and result.reason == "verification_failed",
+			"a staged file that differs from the validated session fails verification: " + tamper
+		)
+		expect(
+			FileAccess.get_file_as_bytes(target) == original_bytes and not FileAccess.file_exists(target + ".tmp"),
+			"a failed read-back keeps the primary and removes the staged file: " + tamper
+		)
 	for tamper: String in ["speed", "records"]:
 		var target := directory + "/shortcut_primary_%s.json" % tamper
 		var store := CampaignStore.new(campaign, target)
-		expect(store.save_active_session(session, records).accepted
-			and store.save_active_session(replacement_session, records).accepted,
-			"the primary fixture writes two sessions through one store: " + tamper)
+		expect(
+			(
+				store.save_active_session(session, records).accepted
+				and store.save_active_session(replacement_session, records).accepted
+			),
+			"the primary fixture writes two sessions through one store: " + tamper
+		)
 		var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(target))
 		_write(target, JSON.stringify(TamperedStore._tampered(document, tamper), "\t", true))
 		var tampered_bytes := FileAccess.get_file_as_bytes(target)
 		var result: Dictionary = store.save_active_session(session, records)
-		expect(not result.accepted and result.reason == "corrupt_records",
-			"a store that wrote the previous primary still refuses an edited primary: " + tamper)
-		expect(not store.load_records().accepted and FileAccess.get_file_as_bytes(target) == tampered_bytes,
-			"the same store does not load or replace the edited primary: " + tamper)
+		expect(
+			not result.accepted and result.reason == "corrupt_records",
+			"a store that wrote the previous primary still refuses an edited primary: " + tamper
+		)
+		expect(
+			not store.load_records().accepted and FileAccess.get_file_as_bytes(target) == tampered_bytes,
+			"the same store does not load or replace the edited primary: " + tamper
+		)
 	var target := directory + "/shortcut_string_name.json"
 	var store := CampaignStore.new(campaign, target)
 	expect(store.save_active_session(session, records).accepted, "the StringName fixture writes a baseline")
 	var twin: Dictionary = {}
 	for key: String in session:
 		twin[StringName(key)] = session[key]
-	expect(JSON.stringify(twin) == JSON.stringify(session) and not ServiceSession.restore(campaign, twin, records).accepted,
-		"the StringName twin has the saved session's JSON text but does not restore")
+	expect(
+		(
+			JSON.stringify(twin) == JSON.stringify(session)
+			and not ServiceSession.restore(campaign, twin, records).accepted
+		),
+		"the StringName twin has the saved session's JSON text but does not restore"
+	)
 	var original_bytes := FileAccess.get_file_as_bytes(target)
 	var result: Dictionary = store.save_active_session(twin, records)
-	expect(not result.accepted and result.reason == "invalid_session"
-		and FileAccess.get_file_as_bytes(target) == original_bytes,
-		"a session that fails restore is rejected before any write even when its JSON twin was saved")
+	expect(
+		(
+			not result.accepted
+			and result.reason == "invalid_session"
+			and FileAccess.get_file_as_bytes(target) == original_bytes
+		),
+		"a session that fails restore is rejected before any write even when its JSON twin was saved"
+	)
 
 
-func _test_recovery(campaign: Resource, directory: String, records: Dictionary, improved: Dictionary,
-	backup_session: Dictionary, primary_session: Dictionary) -> void:
+func _test_recovery(
+	campaign: Resource,
+	directory: String,
+	records: Dictionary,
+	improved: Dictionary,
+	backup_session: Dictionary,
+	primary_session: Dictionary
+) -> void:
 	var target := directory + "/recovery.json"
 	var store := CampaignStore.new(campaign, target)
-	expect(store.save_active_session(backup_session, records).accepted,
-		"the recovery fixture writes the future backup envelope")
-	expect(store.save_active_session(primary_session, improved).accepted,
-		"the recovery fixture replaces the primary envelope")
+	expect(
+		store.save_active_session(backup_session, records).accepted,
+		"the recovery fixture writes the future backup envelope"
+	)
+	expect(
+		store.save_active_session(primary_session, improved).accepted,
+		"the recovery fixture replaces the primary envelope"
+	)
 	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
 	_write(target, "{broken primary")
 	var corrupt_bytes := FileAccess.get_file_as_bytes(target)
 	var loaded := CampaignStore.new(campaign, target).load_records()
-	expect(not loaded.accepted and loaded.can_recover,
-		"a corrupt primary offers explicit recovery without loading its backup")
+	expect(
+		not loaded.accepted and loaded.can_recover,
+		"a corrupt primary offers explicit recovery without loading its backup"
+	)
 	for operation: String in ["save_records", "save_active_session", "clear_active_session"]:
 		var result := _mutation(CampaignStore.new(campaign, target), operation, primary_session, improved)
-		expect(not result.accepted and FileAccess.get_file_as_bytes(target) == corrupt_bytes,
-			"ordinary mutation preserves a corrupt primary: " + operation)
+		expect(
+			not result.accepted and FileAccess.get_file_as_bytes(target) == corrupt_bytes,
+			"ordinary mutation preserves a corrupt primary: " + operation
+		)
 	var failed_recovery := FailedStore.new(campaign, target)
 	failed_recovery.failure = "replace"
 	var recovery_result: Dictionary = failed_recovery.recover_backup()
-	expect(not recovery_result.accepted and recovery_result.reason == "replace_failed"
-		and FileAccess.get_file_as_bytes(target) == corrupt_bytes
-		and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"a failed explicit recovery preserves corrupt primary and full backup bytes")
+	expect(
+		(
+			not recovery_result.accepted
+			and recovery_result.reason == "replace_failed"
+			and FileAccess.get_file_as_bytes(target) == corrupt_bytes
+			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes
+		),
+		"a failed explicit recovery preserves corrupt primary and full backup bytes"
+	)
 	failed_recovery.failure = ""
 	expect(failed_recovery.recover_backup().accepted, "explicit recovery can be retried")
 	loaded = CampaignStore.new(campaign, target).load_records()
 	var expected_restore := ServiceSession.restore(campaign, backup_session, records)
-	expect(loaded.accepted and loaded.records == records
-		and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
-		"explicit recovery restores the full backup envelope")
-	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"explicit recovery leaves the backup bytes unchanged")
+	expect(
+		(
+			loaded.accepted
+			and loaded.records == records
+			and _same_restore(_restore_loaded(campaign, loaded), expected_restore)
+		),
+		"explicit recovery restores the full backup envelope"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"explicit recovery leaves the backup bytes unchanged"
+	)
 	expect(DirAccess.remove_absolute(target) == OK, "the missing-primary fixture removes only its primary")
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(not loaded.accepted and loaded.can_recover, "a missing primary with a valid backup requires recovery")
 	var missing_result := CampaignStore.new(campaign, target).save_active_session(primary_session, improved)
-	expect(not missing_result.accepted and not FileAccess.file_exists(target),
-		"ordinary mutation cannot replace a missing primary that has a backup")
-	expect(CampaignStore.new(campaign, target).recover_backup().accepted,
-		"explicit recovery restores a missing primary")
+	expect(
+		not missing_result.accepted and not FileAccess.file_exists(target),
+		"ordinary mutation cannot replace a missing primary that has a backup"
+	)
+	expect(
+		CampaignStore.new(campaign, target).recover_backup().accepted, "explicit recovery restores a missing primary"
+	)
 	loaded = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
-		"a fresh reader restores the full session after missing-primary recovery")
+	expect(
+		loaded.accepted and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
+		"a fresh reader restores the full session after missing-primary recovery"
+	)
 	_write(target, "{broken primary")
 	_write(target + ".backup", "{broken backup")
 	var corrupt_backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
@@ -653,79 +1203,133 @@ func _test_recovery(campaign: Resource, directory: String, records: Dictionary, 
 	expect(not loaded.accepted and not loaded.can_recover, "two corrupt files do not offer recovery")
 	for operation: String in ["save_records", "save_active_session", "clear_active_session", "recover_backup"]:
 		var result := _mutation(CampaignStore.new(campaign, target), operation, primary_session, records)
-		expect(not result.accepted and FileAccess.get_file_as_bytes(target) == corrupt_bytes
-			and FileAccess.get_file_as_bytes(target + ".backup") == corrupt_backup_bytes,
-			"mutation preserves corrupt primary and backup bytes: " + operation)
+		expect(
+			(
+				not result.accepted
+				and FileAccess.get_file_as_bytes(target) == corrupt_bytes
+				and FileAccess.get_file_as_bytes(target + ".backup") == corrupt_backup_bytes
+			),
+			"mutation preserves corrupt primary and backup bytes: " + operation
+		)
 	expect(DirAccess.remove_absolute(target + ".backup") == OK, "the missing-backup fixture removes only its backup")
 	loaded = CampaignStore.new(campaign, target).load_records()
-	expect(not loaded.accepted and not loaded.can_recover and not CampaignStore.new(campaign, target).recover_backup().accepted
-		and FileAccess.get_file_as_bytes(target) == corrupt_bytes,
-		"a corrupt primary with no backup stays preserved and cannot recover")
+	expect(
+		(
+			not loaded.accepted
+			and not loaded.can_recover
+			and not CampaignStore.new(campaign, target).recover_backup().accepted
+			and FileAccess.get_file_as_bytes(target) == corrupt_bytes
+		),
+		"a corrupt primary with no backup stays preserved and cannot recover"
+	)
 	expect(DirAccess.remove_absolute(target) == OK, "the new-campaign fixture removes the corrupt primary")
 	loaded = CampaignStore.new(campaign, target).load_records()
-	expect(loaded.accepted and loaded.reason == "new_campaign" and loaded.active_session == null,
-		"missing primary and backup start a new schema 2 campaign view")
+	expect(
+		loaded.accepted and loaded.reason == "new_campaign" and loaded.active_session == null,
+		"missing primary and backup start a new schema 2 campaign view"
+	)
 
 
 func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
-	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session}))
-	expect(valid_document is Dictionary
-		and valid_document.active_session.simulation.orders[0].reserved_inputs.vegetable is float,
-		"the store recovery fixture round-trips the reservation through actual JSON")
+	var valid_document: Variant = JSON.parse_string(
+		JSON.stringify(
+			{
+				"schema_version": 2,
+				"content_version": 7,
+				"sim_version": 1,
+				"records": {},
+				"active_session": valid_session
+			}
+		)
+	)
+	expect(
+		(
+			valid_document is Dictionary
+			and valid_document.active_session.simulation.orders[0].reserved_inputs.vegetable is float
+		),
+		"the store recovery fixture round-trips the reservation through actual JSON"
+	)
 	var target := directory + "/reserved_input_type.json"
 	var valid_text := JSON.stringify(valid_document)
 	_write(target + ".backup", valid_text)
 	var corrupted_document: Variant = JSON.parse_string(valid_text)
 	corrupted_document.active_session.simulation.orders[0].reserved_inputs.vegetable = "x"
-	expect(corrupted_document.active_session.simulation.orders[0].reserved_inputs.vegetable is String,
-		"the primary file fixture contains the JSON string reservation")
+	expect(
+		corrupted_document.active_session.simulation.orders[0].reserved_inputs.vegetable is String,
+		"the primary file fixture contains the JSON string reservation"
+	)
 	_write(target, JSON.stringify(corrupted_document))
 	var primary_bytes := FileAccess.get_file_as_bytes(target)
 	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
 	var store := CampaignStore.new(campaign, target)
 	var loaded: Dictionary = store.load_records()
 	print("M4_RESERVED_INPUT_STORE_RESULT " + JSON.stringify(loaded))
-	expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
-		"the store reports corrupt records and offers its valid backup")
-	expect(FileAccess.get_file_as_bytes(target) == primary_bytes
-		and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"the failed store load preserves the primary and backup bytes")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+		"the store reports corrupt records and offers its valid backup"
+	)
+	expect(
+		(
+			FileAccess.get_file_as_bytes(target) == primary_bytes
+			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes
+		),
+		"the failed store load preserves the primary and backup bytes"
+	)
 	var recovered: Dictionary = store.recover_backup()
 	print("M4_RESERVED_INPUT_RECOVERY_RESULT accepted=%s reason=%s" % [recovered.accepted, recovered.reason])
-	expect(recovered.accepted and recovered.reason == "recovered",
-		"explicit recovery replaces the invalid reservation session from backup")
+	expect(
+		recovered.accepted and recovered.reason == "recovered",
+		"explicit recovery replaces the invalid reservation session from backup"
+	)
 	loaded = CampaignStore.new(campaign, target).load_records()
 	var expected_restore := ServiceSession.restore(campaign, valid_session, {})
-	expect(loaded.accepted and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
-		"the recovered reservation session restores to the original simulation hash")
-	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"explicit reservation recovery preserves the backup bytes")
+	expect(
+		loaded.accepted and _same_restore(_restore_loaded(campaign, loaded), expected_restore),
+		"the recovered reservation session restores to the original simulation hash"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"explicit reservation recovery preserves the backup bytes"
+	)
 
 
 func _test_task_path_json_recovery(campaign: Resource, directory: String) -> void:
 	var valid_session := _moving_reserved_session(campaign)
-	var valid_document: Variant = JSON.parse_string(JSON.stringify({"schema_version": 2,
-		"content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session}))
+	var valid_document: Variant = JSON.parse_string(
+		JSON.stringify(
+			{
+				"schema_version": 2,
+				"content_version": 7,
+				"sim_version": 1,
+				"records": {},
+				"active_session": valid_session
+			}
+		)
+	)
 	var valid_task: Dictionary = valid_document.active_session.simulation.tasks[0]
-	expect(valid_task.path_index == 0.0 and valid_task.collection_index == -1.0
-		and valid_task.path.size() >= 2,
-		"the task-path store fixture round-trips real partial movement through JSON")
+	expect(
+		valid_task.path_index == 0.0 and valid_task.collection_index == -1.0 and valid_task.path.size() >= 2,
+		"the task-path store fixture round-trips real partial movement through JSON"
+	)
 	var target := directory + "/task_path.json"
 	var valid_text := JSON.stringify(valid_document)
 	_write(target + ".backup", valid_text)
 	var corrupted_document: Variant = JSON.parse_string(valid_text)
 	var corrupted_task: Dictionary = corrupted_document.active_session.simulation.tasks[0]
 	var insertion_index: int = int(corrupted_task.path_index) + 2
-	corrupted_task.path.insert(insertion_index,
-		corrupted_task.path[int(corrupted_task.path_index)].duplicate(true))
-	corrupted_task.path.insert(insertion_index + 1,
-		corrupted_task.path[int(corrupted_task.path_index) + 1].duplicate(true))
-	expect(corrupted_task.path.size() == valid_task.path.size() + 2
-		and corrupted_task.path[0] == corrupted_task.path[2]
-		and corrupted_task.path[1] == corrupted_task.path[3],
-		"the primary JSON contains a connected task-path detour")
+	corrupted_task.path.insert(insertion_index, corrupted_task.path[int(corrupted_task.path_index)].duplicate(true))
+	corrupted_task.path.insert(
+		insertion_index + 1, corrupted_task.path[int(corrupted_task.path_index) + 1].duplicate(true)
+	)
+	expect(
+		(
+			corrupted_task.path.size() == valid_task.path.size() + 2
+			and corrupted_task.path[0] == corrupted_task.path[2]
+			and corrupted_task.path[1] == corrupted_task.path[3]
+		),
+		"the primary JSON contains a connected task-path detour"
+	)
 	_write(target, JSON.stringify(corrupted_document))
 	var primary_bytes := FileAccess.get_file_as_bytes(target)
 	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
@@ -734,39 +1338,64 @@ func _test_task_path_json_recovery(campaign: Resource, directory: String) -> voi
 	var store := CampaignStore.new(campaign, target)
 	var loaded: Dictionary = store.load_records()
 	print("M4_PATH_STORE_RESULT " + JSON.stringify(loaded))
-	expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
-		"the store reports the invalid task path and offers its valid backup")
-	expect(FileAccess.get_file_as_bytes(target) == primary_bytes
-		and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"the rejected task path preserves the primary and backup bytes")
+	expect(
+		not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+		"the store reports the invalid task path and offers its valid backup"
+	)
+	expect(
+		(
+			FileAccess.get_file_as_bytes(target) == primary_bytes
+			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes
+		),
+		"the rejected task path preserves the primary and backup bytes"
+	)
 	var recovered: Dictionary = store.recover_backup()
-	print("M4_PATH_RECOVERY_RESULT accepted=%s reason=%s source_hash=%s" % [
-		recovered.accepted, recovered.reason, expected_hash])
-	expect(recovered.accepted and recovered.reason == "recovered",
-		"explicit recovery replaces the invalid task path session from backup")
+	print(
+		(
+			"M4_PATH_RECOVERY_RESULT accepted=%s reason=%s source_hash=%s"
+			% [recovered.accepted, recovered.reason, expected_hash]
+		)
+	)
+	expect(
+		recovered.accepted and recovered.reason == "recovered",
+		"explicit recovery replaces the invalid task path session from backup"
+	)
 	loaded = CampaignStore.new(campaign, target).load_records()
 	var actual_restore := _restore_loaded(campaign, loaded)
-	expect(loaded.accepted and expected_restore.accepted and _same_restore(actual_restore, expected_restore),
-		"the recovered task-path session restores to the original simulation hash")
-	expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-		"explicit task-path recovery preserves the backup bytes")
+	expect(
+		loaded.accepted and expected_restore.accepted and _same_restore(actual_restore, expected_restore),
+		"the recovered task-path session restores to the original simulation hash"
+	)
+	expect(
+		FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+		"explicit task-path recovery preserves the backup bytes"
+	)
 
 
 func _test_movement_and_result_json_recovery(campaign: Resource, directory: String) -> void:
 	for corruption: String in ["progress", "result_position"]:
-		var valid_session := _moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
-		var document := {"schema_version": 2, "content_version": 7, "sim_version": 1,
-			"records": {}, "active_session": valid_session}
+		var valid_session := (
+			_moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
+		)
+		var document := {
+			"schema_version": 2, "content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session
+		}
 		var valid_text := JSON.stringify(document)
 		var corrupted: Variant = JSON.parse_string(valid_text)
 		if corruption == "progress":
-			expect(corrupted.active_session.simulation.employees[0].progress == 1.0,
-				"the progress store fixture contains real partial movement after JSON normalization")
+			expect(
+				corrupted.active_session.simulation.employees[0].progress == 1.0,
+				"the progress store fixture contains real partial movement after JSON normalization"
+			)
 			corrupted.active_session.simulation.employees[0].progress = 4
 		else:
-			expect(corrupted.active_session.simulation.orders[0].state == "waiting"
-				and corrupted.active_session.simulation.orders[0].metrics.no_route == 0.0,
-				"the result store fixture waits after completed work without a path failure")
+			expect(
+				(
+					corrupted.active_session.simulation.orders[0].state == "waiting"
+					and corrupted.active_session.simulation.orders[0].metrics.no_route == 0.0
+				),
+				"the result store fixture waits after completed work without a path failure"
+			)
 			corrupted.active_session.simulation.orders[0].result_position = [3, 3]
 		var target := directory + "/relationship_" + corruption + ".json"
 		_write(target + ".backup", valid_text)
@@ -777,34 +1406,60 @@ func _test_movement_and_result_json_recovery(campaign: Resource, directory: Stri
 		var store := CampaignStore.new(campaign, target)
 		var loaded := store.load_records()
 		print("M4_RELATIONSHIP_STORE_RESULT %s %s" % [corruption, JSON.stringify(loaded)])
-		expect(not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
-			"a corrupt movement or result relationship offers the valid backup: " + corruption)
-		expect(FileAccess.get_file_as_bytes(target) == primary_bytes
-			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-			"relationship rejection preserves primary and backup bytes: " + corruption)
+		expect(
+			not loaded.accepted and loaded.reason == "corrupt_records" and loaded.can_recover,
+			"a corrupt movement or result relationship offers the valid backup: " + corruption
+		)
+		expect(
+			(
+				FileAccess.get_file_as_bytes(target) == primary_bytes
+				and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes
+			),
+			"relationship rejection preserves primary and backup bytes: " + corruption
+		)
 		var recovered := store.recover_backup()
-		expect(recovered.accepted and recovered.reason == "recovered",
-			"explicit recovery replaces the corrupt relationship: " + corruption)
+		expect(
+			recovered.accepted and recovered.reason == "recovered",
+			"explicit recovery replaces the corrupt relationship: " + corruption
+		)
 		loaded = CampaignStore.new(campaign, target).load_records()
-		expect(_same_restore(_restore_loaded(campaign, loaded), expected),
-			"relationship recovery restores the original simulation hash: " + corruption)
-		expect(FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-			"relationship recovery preserves the valid backup bytes: " + corruption)
+		expect(
+			_same_restore(_restore_loaded(campaign, loaded), expected),
+			"relationship recovery restores the original simulation hash: " + corruption
+		)
+		expect(
+			FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
+			"relationship recovery preserves the valid backup bytes: " + corruption
+		)
 
 
 func _waiting_result_session(campaign: Resource) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for("first_shift"))
-	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
 	expect(started.accepted, "the result recovery fixture starts")
 	var simulation := ServiceSim.new(started.definitions, null, started.options)
-	while simulation.tick < 300 and (simulation.snapshot().orders.is_empty()
-		or simulation.snapshot().orders[0].state != "working"):
+	while (
+		simulation.tick < 300
+		and (simulation.snapshot().orders.is_empty() or simulation.snapshot().orders[0].state != "working")
+	):
 		simulation.step()
 	for sequence: int in [1, 2]:
-		expect(simulation.enqueue_command({"kind": "set_duty", "target_id": "employee_0%d" % sequence,
-			"value": "off", "apply_tick": simulation.tick + 1, "sequence": sequence}).accepted,
-			"the result recovery fixture waits for the next responsible employee")
+		expect(
+			(
+				simulation
+				. enqueue_command(
+					{
+						"kind": "set_duty",
+						"target_id": "employee_0%d" % sequence,
+						"value": "off",
+						"apply_tick": simulation.tick + 1,
+						"sequence": sequence
+					}
+				)
+				. accepted
+			),
+			"the result recovery fixture waits for the next responsible employee"
+		)
 	while simulation.tick < 500:
 		simulation.step()
 		if simulation.snapshot().orders[0].state == "waiting" and simulation.snapshot().orders[0].phase_index > 0:
@@ -812,10 +1467,16 @@ func _waiting_result_session(campaign: Resource) -> Dictionary:
 	return ServiceSession.capture("first_shift", started.selection, simulation, 1, 0)
 
 
-func _test_future_versions(campaign: Resource, directory: String, records: Dictionary,
-	active_session: Dictionary) -> void:
-	var valid_document := {"schema_version": 2, "content_version": 4, "sim_version": 1,
-		"records": records, "active_session": active_session}
+func _test_future_versions(
+	campaign: Resource, directory: String, records: Dictionary, active_session: Dictionary
+) -> void:
+	var valid_document := {
+		"schema_version": 2,
+		"content_version": 4,
+		"sim_version": 1,
+		"records": records,
+		"active_session": active_session
+	}
 	var future_document := valid_document.duplicate(true)
 	future_document.schema_version = 99
 	var target := directory + "/future_primary.json"
@@ -828,17 +1489,24 @@ func _test_future_versions(campaign: Resource, directory: String, records: Dicti
 	_assert_protected_files(campaign, target, active_session, records, "future backup")
 
 
-func _assert_protected_files(campaign: Resource, target: String, active_session: Dictionary,
-	records: Dictionary, label: String) -> void:
+func _assert_protected_files(
+	campaign: Resource, target: String, active_session: Dictionary, records: Dictionary, label: String
+) -> void:
 	var primary_bytes := FileAccess.get_file_as_bytes(target)
 	var backup_bytes := FileAccess.get_file_as_bytes(target + ".backup")
 	for operation: String in ["save_records", "save_active_session", "clear_active_session", "recover_backup"]:
 		var result := _mutation(CampaignStore.new(campaign, target), operation, active_session, records)
-		expect(not result.accepted and result.reason == "future_version",
-			"every mutation rejects an unknown %s: %s" % [label, operation])
-		expect(FileAccess.get_file_as_bytes(target) == primary_bytes
-			and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes,
-			"every rejected mutation preserves %s bytes: %s" % [label, operation])
+		expect(
+			not result.accepted and result.reason == "future_version",
+			"every mutation rejects an unknown %s: %s" % [label, operation]
+		)
+		expect(
+			(
+				FileAccess.get_file_as_bytes(target) == primary_bytes
+				and FileAccess.get_file_as_bytes(target + ".backup") == backup_bytes
+			),
+			"every rejected mutation preserves %s bytes: %s" % [label, operation]
+		)
 
 
 func _mutation(store: RefCounted, operation: String, active_session: Dictionary, records: Dictionary) -> Dictionary:

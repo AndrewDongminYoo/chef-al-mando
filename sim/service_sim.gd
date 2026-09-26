@@ -10,12 +10,20 @@ const TERMINAL: Array[String] = ["served", "cancelled", "expired"]
 const DUTIES: Array[String] = ["all", "cold", "hot", "off"]
 const ORDER_STATES: Array[String] = ["waiting", "moving", "working", "served", "cancelled", "expired"]
 const WAIT_REASONS: Array[String] = ["", "missing_ingredients", "no_responsible_employee", "station_in_use", "no_route"]
-const METRIC_KEYS: Array[String] = ["missing_ingredients", "no_responsible_employee", "station_in_use", "no_route",
-	"responsible_employee_busy", "moving", "working"]
+const METRIC_KEYS: Array[String] = [
+	"missing_ingredients",
+	"no_responsible_employee",
+	"station_in_use",
+	"no_route",
+	"responsible_employee_busy",
+	"moving",
+	"working"
+]
 const MOVE_TICKS: int = 5
 
 
-class OrderState extends RefCounted:
+class OrderState:
+	extends RefCounted
 	var id: String
 	var recipe: RecipeDef
 	var phases: Array[ProcessDef]
@@ -36,15 +44,23 @@ class OrderState extends RefCounted:
 	var intermediate_ready: bool = false
 	var intermediate_consumed: bool = false
 	var ended_tick: int = -1
-	var metrics: Dictionary[String, int] = {"missing_ingredients": 0, "no_responsible_employee": 0,
-		"station_in_use": 0, "no_route": 0, "responsible_employee_busy": 0, "moving": 0, "working": 0}
+	var metrics: Dictionary[String, int] = {
+		"missing_ingredients": 0,
+		"no_responsible_employee": 0,
+		"station_in_use": 0,
+		"no_route": 0,
+		"responsible_employee_busy": 0,
+		"moving": 0,
+		"working": 0
+	}
 	var ingredients_reserved: bool = false
 	var has_result: bool = false
 	var result_position: Vector2i = Vector2i.ZERO
 	var carrying: bool = false
 
 
-class EmployeeState extends RefCounted:
+class EmployeeState:
+	extends RefCounted
 	var id: String
 	var tile: Vector2i
 	var next_tile: Vector2i
@@ -54,7 +70,8 @@ class EmployeeState extends RefCounted:
 	var order_id: String = ""
 
 
-class TaskState extends RefCounted:
+class TaskState:
+	extends RefCounted
 	var order_id: String
 	var employee_id: String
 	var station: StationDef
@@ -118,7 +135,9 @@ func _init(data: Definitions, routes: GridRoutes = null, preparation: Dictionary
 		_employee_by_id[employee.id] = employee
 	_employees.sort_custom(func(a: EmployeeState, b: EmployeeState) -> bool: return a.id < b.id)
 	for ingredient: Definitions.IngredientDef in data.ingredients:
-		_inventory[ingredient.id] = data.purchases.get(ingredient.id, 0) if initial.is_empty() else initial.inventory[ingredient.id]
+		_inventory[ingredient.id] = (
+			data.purchases.get(ingredient.id, 0) if initial.is_empty() else initial.inventory[ingredient.id]
+		)
 		_reserved[ingredient.id] = 0
 
 
@@ -126,12 +145,20 @@ func enqueue_command(command: Dictionary) -> Dictionary:
 	var reason := _validate_command(command, true)
 	if not reason.is_empty():
 		return {"accepted": false, "reason": reason}
-	_commands.append({"kind": command.kind, "target_id": command.target_id,
-		"value": null if command.kind == "cancel_order" else command.value,
-		"apply_tick": command.apply_tick, "sequence": command.sequence})
+	_commands.append(
+		{
+			"kind": command.kind,
+			"target_id": command.target_id,
+			"value": null if command.kind == "cancel_order" else command.value,
+			"apply_tick": command.apply_tick,
+			"sequence": command.sequence
+		}
+	)
 	_last_sequence = command.sequence
-	_commands.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return a.sequence < b.sequence if a.apply_tick == b.apply_tick else a.apply_tick < b.apply_tick)
+	_commands.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return a.sequence < b.sequence if a.apply_tick == b.apply_tick else a.apply_tick < b.apply_tick
+	)
 	return {"accepted": true, "reason": ""}
 
 
@@ -141,7 +168,12 @@ func _validate_command(command: Dictionary, enqueue: bool) -> String:
 	for field: String in ["kind", "target_id", "apply_tick", "sequence", "value"]:
 		if not command.has(field):
 			return "invalid_command"
-	if not command.kind is String or not command.target_id is String or not command.apply_tick is int or not command.sequence is int:
+	if (
+		not command.kind is String
+		or not command.target_id is String
+		or not command.apply_tick is int
+		or not command.sequence is int
+	):
 		return "invalid_command"
 	if enqueue and (command.apply_tick <= tick or command.sequence <= _last_sequence):
 		return "invalid_command_order"
@@ -236,7 +268,11 @@ func _complete_work() -> void:
 			order.intermediate_ready = true
 		_release_task(order)
 		order.phase_index += 1
-		if order.uses_prepared and order.phase_index < order.phases.size() and order.phases[order.phase_index].id == "prep":
+		if (
+			order.uses_prepared
+			and order.phase_index < order.phases.size()
+			and order.phases[order.phase_index].id == "prep"
+		):
 			order.phase_index += 1
 		if order.phase_index == order.phases.size():
 			order.state = "served"
@@ -258,12 +294,14 @@ func _assign_work() -> void:
 	for order: OrderState in _orders:
 		if order.state == "waiting":
 			candidates.append(order)
-	candidates.sort_custom(func(a: OrderState, b: OrderState) -> bool:
-		if a.priority != b.priority:
-			return a.priority > b.priority
-		if a.deadline_tick != b.deadline_tick:
-			return a.deadline_tick < b.deadline_tick
-		return a.id < b.id)
+	candidates.sort_custom(
+		func(a: OrderState, b: OrderState) -> bool:
+			if a.priority != b.priority:
+				return a.priority > b.priority
+			if a.deadline_tick != b.deadline_tick:
+				return a.deadline_tick < b.deadline_tick
+			return a.id < b.id
+	)
 	for order: OrderState in candidates:
 		_try_assignment(order)
 
@@ -323,8 +361,15 @@ func _try_assignment(order: OrderState) -> void:
 
 func _set_wait(order: OrderState, reason: String, detail: String = "") -> void:
 	if reason == "missing_ingredients" and (order.wait_reason != reason or order.wait_detail != detail):
-		_events.append({"kind": "order_wait_started", "order_id": order.id,
-			"recipe_id": order.recipe.id, "reason": reason, "detail": detail})
+		_events.append(
+			{
+				"kind": "order_wait_started",
+				"order_id": order.id,
+				"recipe_id": order.recipe.id,
+				"reason": reason,
+				"detail": detail
+			}
+		)
 	order.wait_reason = reason
 	order.wait_detail = detail
 
@@ -334,7 +379,9 @@ func _available_inputs(order: OrderState) -> Dictionary[String, int]:
 	for ingredient_id: String in _inventory:
 		available[ingredient_id] = _inventory[ingredient_id] - _reserved[ingredient_id]
 	var inputs: Dictionary[String, int] = {}
-	inputs.assign(PreparationPlan.mise_inputs_for(_data, order.recipe, PreparationPlan.missing_mise_ids(available, order.recipe)))
+	inputs.assign(
+		PreparationPlan.mise_inputs_for(_data, order.recipe, PreparationPlan.missing_mise_ids(available, order.recipe))
+	)
 	for ingredient_id: String in inputs:
 		if available[ingredient_id] < inputs[ingredient_id]:
 			return {}
@@ -378,8 +425,15 @@ func _begin_work(order: OrderState, task: TaskState) -> void:
 		order.intermediate_ready = order.uses_prepared
 		for mise_id: String in order.recipe.mise_ids:
 			if mise_id not in order.missing_mise_ids and _inventory[mise_id] == 0:
-				_events.append({"kind": "prepared_stock_depleted", "order_id": order.id,
-					"recipe_id": order.recipe.id, "ingredient_id": mise_id, "employee_id": task.employee_id})
+				_events.append(
+					{
+						"kind": "prepared_stock_depleted",
+						"order_id": order.id,
+						"recipe_id": order.recipe.id,
+						"ingredient_id": mise_id,
+						"employee_id": task.employee_id
+					}
+				)
 	if order.phases[order.phase_index].id == "cook" and order.intermediate_ready:
 		order.intermediate_ready = false
 		order.intermediate_consumed = true
@@ -419,7 +473,9 @@ func _move_employees() -> void:
 			task.path_index += 1
 			if task.path_index == task.collection_index:
 				order.carrying = true
-			employee.next_tile = task.path[task.path_index + 1] if task.path_index + 1 < task.path.size() else employee.tile
+			employee.next_tile = (
+				task.path[task.path_index + 1] if task.path_index + 1 < task.path.size() else employee.tile
+			)
 
 
 func _release_task(order: OrderState) -> void:
@@ -457,8 +513,16 @@ func _terminate_order(order: OrderState, terminal: String, reason: String) -> vo
 	order.has_result = false
 	order.intermediate_ready = false
 	order.ended_tick = tick
-	_events.append({"kind": "order_ended", "order_id": order.id, "recipe_id": order.recipe.id,
-		"employee_id": employee_id, "phase_id": phase_id, "reason": reason})
+	_events.append(
+		{
+			"kind": "order_ended",
+			"order_id": order.id,
+			"recipe_id": order.recipe.id,
+			"employee_id": employee_id,
+			"phase_id": phase_id,
+			"reason": reason
+		}
+	)
 
 
 func _accounting() -> Dictionary:
@@ -476,9 +540,17 @@ func _accounting() -> Dictionary:
 			waste_cost += ingredient.unit_cost * _inventory.get(ingredient.id, 0)
 	var purchased_cost := _data.purchased_cost()
 	var profit := _revenue - purchased_cost - _data.labor_cost
-	return {"revenue": _revenue, "purchased_cost": purchased_cost, "labor_cost": _data.labor_cost,
-		"profit": profit, "cash": _data.starting_budget + profit, "waste_cost": waste_cost,
-		"served": counts.served, "cancelled": counts.cancelled, "expired": counts.expired}
+	return {
+		"revenue": _revenue,
+		"purchased_cost": purchased_cost,
+		"labor_cost": _data.labor_cost,
+		"profit": profit,
+		"cash": _data.starting_budget + profit,
+		"waste_cost": waste_cost,
+		"served": counts.served,
+		"cancelled": counts.cancelled,
+		"expired": counts.expired
+	}
 
 
 func _accumulate_metrics() -> void:
@@ -494,8 +566,15 @@ func _accumulate_metrics() -> void:
 
 
 func _metrics() -> Dictionary:
-	var totals: Dictionary[String, int] = {"missing_ingredients": 0, "no_responsible_employee": 0,
-		"station_in_use": 0, "no_route": 0, "responsible_employee_busy": 0, "moving": 0, "working": 0}
+	var totals: Dictionary[String, int] = {
+		"missing_ingredients": 0,
+		"no_responsible_employee": 0,
+		"station_in_use": 0,
+		"no_route": 0,
+		"responsible_employee_busy": 0,
+		"moving": 0,
+		"working": 0
+	}
 	for order: OrderState in _orders:
 		for key: String in totals:
 			totals[key] += order.metrics[key]
@@ -509,46 +588,94 @@ func snapshot() -> Dictionary:
 	var sorted_orders: Array[OrderState] = _orders.duplicate()
 	# Sort by the number in `order_NN` so that `order_100` follows `order_99`; restore pairs saved
 	# orders with the schedule by position. For two-digit ids this equals the former string order.
-	sorted_orders.sort_custom(func(a: OrderState, b: OrderState) -> bool:
-		var a_index := a.id.trim_prefix("order_").to_int()
-		var b_index := b.id.trim_prefix("order_").to_int()
-		if a_index != b_index:
-			return a_index < b_index
-		return a.id < b.id)
+	sorted_orders.sort_custom(
+		func(a: OrderState, b: OrderState) -> bool:
+			var a_index := a.id.trim_prefix("order_").to_int()
+			var b_index := b.id.trim_prefix("order_").to_int()
+			if a_index != b_index:
+				return a_index < b_index
+			return a.id < b.id
+	)
 	for order: OrderState in sorted_orders:
 		var task: TaskState = _tasks.get(order.id)
-		orders.append({"id": order.id, "recipe_id": order.recipe.id, "name": order.recipe.display_name,
-			"arrival_tick": order.arrival_tick, "deadline_tick": order.deadline_tick,
-			"state": order.state, "terminal_reason": order.terminal_reason,
-			"phase_index": order.phase_index, "phase_id": order.phases[order.phase_index].id if order.phase_index < order.phases.size() else "",
-			"priority": order.priority, "wait_reason": order.wait_reason, "wait_detail": order.wait_detail,
-			"raw_consumed": order.raw_consumed, "ingredients_reserved": order.ingredients_reserved,
-			"input_consumed": order.input_consumed, "uses_prepared": order.uses_prepared,
-			"missing_mise_ids": order.missing_mise_ids.duplicate(),
-			"reserved_inputs": order.reserved_inputs.duplicate(), "consumed_cost": order.consumed_cost,
-			"intermediate_ready": order.intermediate_ready, "intermediate_consumed": order.intermediate_consumed,
-			"ended_tick": order.ended_tick, "metrics": order.metrics.duplicate(),
-			"has_result": order.has_result, "result_position": _tile_array(order.result_position), "carrying": order.carrying,
-			"employee_id": task.employee_id if task != null else "",
-			"station_id": task.station.id if task != null else "",
-			"completion_tick": task.completion_tick if task != null else -1})
+		orders.append(
+			{
+				"id": order.id,
+				"recipe_id": order.recipe.id,
+				"name": order.recipe.display_name,
+				"arrival_tick": order.arrival_tick,
+				"deadline_tick": order.deadline_tick,
+				"state": order.state,
+				"terminal_reason": order.terminal_reason,
+				"phase_index": order.phase_index,
+				"phase_id": order.phases[order.phase_index].id if order.phase_index < order.phases.size() else "",
+				"priority": order.priority,
+				"wait_reason": order.wait_reason,
+				"wait_detail": order.wait_detail,
+				"raw_consumed": order.raw_consumed,
+				"ingredients_reserved": order.ingredients_reserved,
+				"input_consumed": order.input_consumed,
+				"uses_prepared": order.uses_prepared,
+				"missing_mise_ids": order.missing_mise_ids.duplicate(),
+				"reserved_inputs": order.reserved_inputs.duplicate(),
+				"consumed_cost": order.consumed_cost,
+				"intermediate_ready": order.intermediate_ready,
+				"intermediate_consumed": order.intermediate_consumed,
+				"ended_tick": order.ended_tick,
+				"metrics": order.metrics.duplicate(),
+				"has_result": order.has_result,
+				"result_position": _tile_array(order.result_position),
+				"carrying": order.carrying,
+				"employee_id": task.employee_id if task != null else "",
+				"station_id": task.station.id if task != null else "",
+				"completion_tick": task.completion_tick if task != null else -1
+			}
+		)
 		if task != null:
 			var path: Array[Array] = []
 			for tile: Vector2i in task.path:
 				path.append(_tile_array(tile))
-			tasks.append({"order_id": order.id, "employee_id": task.employee_id,
-				"station_id": task.station.id, "work_position": _tile_array(task.station.work_position),
-				"path": path, "path_index": task.path_index, "collection_index": task.collection_index,
-				"started_tick": task.started_tick, "completion_tick": task.completion_tick})
+			tasks.append(
+				{
+					"order_id": order.id,
+					"employee_id": task.employee_id,
+					"station_id": task.station.id,
+					"work_position": _tile_array(task.station.work_position),
+					"path": path,
+					"path_index": task.path_index,
+					"collection_index": task.collection_index,
+					"started_tick": task.started_tick,
+					"completion_tick": task.completion_tick
+				}
+			)
 	for employee: EmployeeState in _employees:
-		employees.append({"id": employee.id, "tile": _tile_array(employee.tile),
-			"next_tile": _tile_array(employee.next_tile), "progress": employee.progress,
-			"duty": employee.duty, "pending_duty": employee.pending_duty, "order_id": employee.order_id})
-	return {"tick": tick, "closed": closed, "schedule_cursor": _schedule_cursor,
-		"orders": orders, "employees": employees, "tasks": tasks,
-		"inventory": _inventory.duplicate(), "reserved": _reserved.duplicate(),
-		"accounting": _accounting(), "metrics": _metrics(), "commands": _commands.duplicate(true),
-		"last_sequence": _last_sequence, "events": _events.duplicate(true), "errors": errors.duplicate()}
+		employees.append(
+			{
+				"id": employee.id,
+				"tile": _tile_array(employee.tile),
+				"next_tile": _tile_array(employee.next_tile),
+				"progress": employee.progress,
+				"duty": employee.duty,
+				"pending_duty": employee.pending_duty,
+				"order_id": employee.order_id
+			}
+		)
+	return {
+		"tick": tick,
+		"closed": closed,
+		"schedule_cursor": _schedule_cursor,
+		"orders": orders,
+		"employees": employees,
+		"tasks": tasks,
+		"inventory": _inventory.duplicate(),
+		"reserved": _reserved.duplicate(),
+		"accounting": _accounting(),
+		"metrics": _metrics(),
+		"commands": _commands.duplicate(true),
+		"last_sequence": _last_sequence,
+		"events": _events.duplicate(true),
+		"errors": errors.duplicate()
+	}
 
 
 func export_state() -> Dictionary:
@@ -585,15 +712,25 @@ static func restore(data: Definitions, state: Dictionary, preparation: Dictionar
 	var commands_all_pending: bool = state.last_sequence == state.commands.size()
 	for saved_employee: Dictionary in state.employees:
 		var initial_employee: EmployeeState = simulation._employee_by_id[saved_employee.id]
-		if state.schedule_cursor == 0 and (_array_tile(saved_employee.tile) != initial_employee.tile \
-			or _array_tile(saved_employee.next_tile) != initial_employee.tile):
+		if (
+			state.schedule_cursor == 0
+			and (
+				_array_tile(saved_employee.tile) != initial_employee.tile
+				or _array_tile(saved_employee.next_tile) != initial_employee.tile
+			)
+		):
 			return {"accepted": false, "reason": "invalid_employee"}
-		if commands_all_pending and (saved_employee.duty != initial_employee.duty \
-			or not saved_employee.pending_duty.is_empty()):
+		if (
+			commands_all_pending
+			and (saved_employee.duty != initial_employee.duty or not saved_employee.pending_duty.is_empty())
+		):
 			return {"accepted": false, "reason": "invalid_employee"}
 	if commands_all_pending:
 		for saved_order: Dictionary in state.orders:
-			if saved_order.priority != simulation._menu_priorities.get(saved_order.recipe_id, 1) or saved_order.state == "cancelled":
+			if (
+				saved_order.priority != simulation._menu_priorities.get(saved_order.recipe_id, 1)
+				or saved_order.state == "cancelled"
+			):
 				return {"accepted": false, "reason": "invalid_order"}
 	simulation.tick = state.tick
 	simulation.closed = state.closed
@@ -676,11 +813,28 @@ static func restore(data: Definitions, state: Dictionary, preparation: Dictionar
 
 
 static func _basic_restore_error(state: Dictionary) -> String:
-	var fields: Array[String] = ["tick", "closed", "prng_state", "schedule_cursor", "orders", "employees", "tasks",
-		"inventory", "reserved", "commands", "last_sequence", "station_reserved_ticks"]
+	var fields: Array[String] = [
+		"tick",
+		"closed",
+		"prng_state",
+		"schedule_cursor",
+		"orders",
+		"employees",
+		"tasks",
+		"inventory",
+		"reserved",
+		"commands",
+		"last_sequence",
+		"station_reserved_ticks"
+	]
 	if not _exact_fields(state, fields):
 		return "invalid_state"
-	if not state.tick is int or not state.closed is bool or state.prng_state != null or not state.schedule_cursor is int:
+	if (
+		not state.tick is int
+		or not state.closed is bool
+		or state.prng_state != null
+		or not state.schedule_cursor is int
+	):
 		return "invalid_state"
 	if not state.orders is Array or not state.employees is Array or not state.tasks is Array:
 		return "invalid_state"
@@ -710,8 +864,9 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 	var work_position_tasks: Dictionary = {}
 	var routes := GridRoutes.new(data.grid_size, data.blocked_tiles())
 	for saved_task: Variant in state.tasks:
-		var task_reason := _task_restore_error(data, routes, saved_task, task_by_order, employee_tasks,
-			station_tasks, work_position_tasks)
+		var task_reason := _task_restore_error(
+			data, routes, saved_task, task_by_order, employee_tasks, station_tasks, work_position_tasks
+		)
 		if not task_reason.is_empty():
 			return task_reason
 	var order_ids: Dictionary = {}
@@ -720,7 +875,9 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 	for ingredient: Definitions.IngredientDef in data.ingredients:
 		expected_reserved[ingredient.id] = 0
 	for index: int in state.orders.size():
-		var order_reason := _order_restore_error(data, routes, state, state.orders[index], schedule[index], task_by_order)
+		var order_reason := _order_restore_error(
+			data, routes, state, state.orders[index], schedule[index], task_by_order
+		)
 		if not order_reason.is_empty():
 			return order_reason
 		var saved_order: Dictionary = state.orders[index]
@@ -735,7 +892,10 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 	for ingredient_id: String in expected_reserved:
 		if not state.reserved.get(ingredient_id) is int or state.reserved[ingredient_id] < 0:
 			return "invalid_reservation"
-		if not state.inventory.get(ingredient_id) is int or state.reserved[ingredient_id] > state.inventory[ingredient_id]:
+		if (
+			not state.inventory.get(ingredient_id) is int
+			or state.reserved[ingredient_id] > state.inventory[ingredient_id]
+		):
 			return "invalid_reservation"
 	if state.reserved != expected_reserved:
 		return "invalid_reservation"
@@ -766,11 +926,25 @@ static func _state_restore_error(data: Definitions, state: Dictionary) -> String
 	return ""
 
 
-static func _task_restore_error(data: Definitions, routes: GridRoutes, saved_task: Variant,
-	task_by_order: Dictionary, employee_tasks: Dictionary, station_tasks: Dictionary,
-	work_position_tasks: Dictionary) -> String:
-	var fields: Array[String] = ["order_id", "employee_id", "station_id", "path", "path_index", "collection_index",
-		"started_tick", "completion_tick"]
+static func _task_restore_error(
+	data: Definitions,
+	routes: GridRoutes,
+	saved_task: Variant,
+	task_by_order: Dictionary,
+	employee_tasks: Dictionary,
+	station_tasks: Dictionary,
+	work_position_tasks: Dictionary
+) -> String:
+	var fields: Array[String] = [
+		"order_id",
+		"employee_id",
+		"station_id",
+		"path",
+		"path_index",
+		"collection_index",
+		"started_tick",
+		"completion_tick"
+	]
 	if not _exact_fields(saved_task, fields):
 		return "invalid_task"
 	if not saved_task.order_id is String or not saved_task.employee_id is String or not saved_task.station_id is String:
@@ -779,7 +953,11 @@ static func _task_restore_error(data: Definitions, routes: GridRoutes, saved_tas
 		return "invalid_task"
 	if not saved_task.started_tick is int or not saved_task.completion_tick is int or saved_task.path.is_empty():
 		return "invalid_task"
-	if task_by_order.has(saved_task.order_id) or employee_tasks.has(saved_task.employee_id) or station_tasks.has(saved_task.station_id):
+	if (
+		task_by_order.has(saved_task.order_id)
+		or employee_tasks.has(saved_task.employee_id)
+		or station_tasks.has(saved_task.station_id)
+	):
 		return "invalid_task_link"
 	var station := _station_for(data, saved_task.station_id)
 	if station == null:
@@ -811,8 +989,7 @@ static func _task_restore_error(data: Definitions, routes: GridRoutes, saved_tas
 		var collection_tile := _array_tile(saved_task.path[saved_task.collection_index])
 		var first_path := routes.path_between(origin, collection_tile)
 		var onward_path := routes.path_between(collection_tile, station.work_position)
-		if first_path.is_empty() or onward_path.is_empty() \
-			or saved_task.collection_index != first_path.size() - 1:
+		if first_path.is_empty() or onward_path.is_empty() or saved_task.collection_index != first_path.size() - 1:
 			return "invalid_path"
 		canonical_path = first_path
 		canonical_path.append_array(onward_path.slice(1))
@@ -830,12 +1007,39 @@ static func _task_restore_error(data: Definitions, routes: GridRoutes, saved_tas
 	return ""
 
 
-static func _order_restore_error(data: Definitions, routes: GridRoutes, state: Dictionary, saved_order: Variant,
-	scheduled: Dictionary, task_by_order: Dictionary) -> String:
-	var fields: Array[String] = ["id", "recipe_id", "arrival_tick", "deadline_tick", "state", "terminal_reason",
-		"phase_index", "priority", "wait_reason", "wait_detail", "raw_consumed", "ingredients_reserved",
-		"input_consumed", "uses_prepared", "missing_mise_ids", "reserved_inputs", "intermediate_ready", "intermediate_consumed",
-		"ended_tick", "metrics", "has_result", "result_position", "carrying"]
+static func _order_restore_error(
+	data: Definitions,
+	routes: GridRoutes,
+	state: Dictionary,
+	saved_order: Variant,
+	scheduled: Dictionary,
+	task_by_order: Dictionary
+) -> String:
+	var fields: Array[String] = [
+		"id",
+		"recipe_id",
+		"arrival_tick",
+		"deadline_tick",
+		"state",
+		"terminal_reason",
+		"phase_index",
+		"priority",
+		"wait_reason",
+		"wait_detail",
+		"raw_consumed",
+		"ingredients_reserved",
+		"input_consumed",
+		"uses_prepared",
+		"missing_mise_ids",
+		"reserved_inputs",
+		"intermediate_ready",
+		"intermediate_consumed",
+		"ended_tick",
+		"metrics",
+		"has_result",
+		"result_position",
+		"carrying"
+	]
 	if not _exact_fields(saved_order, fields):
 		return "invalid_order"
 	if not saved_order.id is String or not saved_order.recipe_id is String:
@@ -845,8 +1049,11 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			return "invalid_order"
 	if saved_order.id != scheduled.id:
 		return "invalid_order"
-	if saved_order.recipe_id != scheduled.recipe_id or saved_order.arrival_tick != scheduled.arrival_tick \
-		or saved_order.deadline_tick != scheduled.deadline_tick:
+	if (
+		saved_order.recipe_id != scheduled.recipe_id
+		or saved_order.arrival_tick != scheduled.arrival_tick
+		or saved_order.deadline_tick != scheduled.deadline_tick
+	):
 		return "invalid_schedule"
 	var recipe: RecipeDef = data.recipe_for(saved_order.recipe_id)
 	if recipe == null or not saved_order.state is String or saved_order.state not in ORDER_STATES:
@@ -864,18 +1071,26 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 	if saved_order.state in TERMINAL:
 		if saved_order.ended_tick < saved_order.arrival_tick or saved_order.ended_tick > state.tick:
 			return "invalid_order"
-		if saved_order.state == "served" and (saved_order.ended_tick >= saved_order.deadline_tick \
-			or saved_order.ended_tick >= data.closing_tick):
+		if (
+			saved_order.state == "served"
+			and (saved_order.ended_tick >= saved_order.deadline_tick or saved_order.ended_tick >= data.closing_tick)
+		):
 			return "invalid_order"
 		if saved_order.state == "cancelled" and saved_order.terminal_reason != "player_cancelled":
 			return "invalid_order"
 		if saved_order.state == "expired" and saved_order.terminal_reason not in ["deadline", "service_closed"]:
 			return "invalid_order"
-		if saved_order.state == "expired" and saved_order.terminal_reason == "deadline" \
-			and saved_order.ended_tick != saved_order.deadline_tick:
+		if (
+			saved_order.state == "expired"
+			and saved_order.terminal_reason == "deadline"
+			and saved_order.ended_tick != saved_order.deadline_tick
+		):
 			return "invalid_order"
-		if saved_order.state == "expired" and saved_order.terminal_reason == "service_closed" \
-			and (saved_order.ended_tick != data.closing_tick or saved_order.deadline_tick <= data.closing_tick):
+		if (
+			saved_order.state == "expired"
+			and saved_order.terminal_reason == "service_closed"
+			and (saved_order.ended_tick != data.closing_tick or saved_order.deadline_tick <= data.closing_tick)
+		):
 			return "invalid_order"
 	else:
 		if not saved_order.terminal_reason.is_empty() or saved_order.ended_tick != -1:
@@ -886,12 +1101,23 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 		return "invalid_order"
 	if not saved_order.wait_detail is String or saved_order.wait_detail not in ["", "responsible_employee_busy"]:
 		return "invalid_order"
-	if saved_order.state != "waiting" and (not saved_order.wait_reason.is_empty() or not saved_order.wait_detail.is_empty()):
+	if (
+		saved_order.state != "waiting"
+		and (not saved_order.wait_reason.is_empty() or not saved_order.wait_detail.is_empty())
+	):
 		return "invalid_order"
 	if not saved_order.wait_detail.is_empty() and saved_order.wait_reason != "no_responsible_employee":
 		return "invalid_order"
-	for field: String in ["raw_consumed", "ingredients_reserved", "input_consumed", "uses_prepared",
-		"intermediate_ready", "intermediate_consumed", "has_result", "carrying"]:
+	for field: String in [
+		"raw_consumed",
+		"ingredients_reserved",
+		"input_consumed",
+		"uses_prepared",
+		"intermediate_ready",
+		"intermediate_consumed",
+		"has_result",
+		"carrying"
+	]:
 		if not saved_order[field] is bool:
 			return "invalid_order"
 	if not saved_order.reserved_inputs is Dictionary:
@@ -904,8 +1130,10 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 			expected_missing.append(mise_id)
 	if saved_order.missing_mise_ids != expected_missing:
 		return "invalid_consumption"
-	if (saved_order.ingredients_reserved or saved_order.input_consumed) \
-		and saved_order.uses_prepared != (not recipe.mise_ids.is_empty() and saved_order.missing_mise_ids.is_empty()):
+	if (
+		(saved_order.ingredients_reserved or saved_order.input_consumed)
+		and saved_order.uses_prepared != (not recipe.mise_ids.is_empty() and saved_order.missing_mise_ids.is_empty())
+	):
 		return "invalid_consumption"
 	if not saved_order.metrics is Dictionary or not _valid_tile(saved_order.result_position):
 		return "invalid_order"
@@ -941,12 +1169,17 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 				expected_intermediate_consumed = true
 			if phases[index].id == "prep":
 				expected_intermediate_ready = true
-		if saved_order.state == "working" and phases[saved_order.phase_index].id == "cook" \
-			and expected_intermediate_ready:
+		if (
+			saved_order.state == "working"
+			and phases[saved_order.phase_index].id == "cook"
+			and expected_intermediate_ready
+		):
 			expected_intermediate_ready = false
 			expected_intermediate_consumed = true
-		if saved_order.intermediate_ready != expected_intermediate_ready \
-			or saved_order.intermediate_consumed != expected_intermediate_consumed:
+		if (
+			saved_order.intermediate_ready != expected_intermediate_ready
+			or saved_order.intermediate_consumed != expected_intermediate_consumed
+		):
 			return "invalid_consumption"
 	if saved_order.has_result and not routes.is_walkable(_array_tile(saved_order.result_position)):
 		return "invalid_order"
@@ -968,8 +1201,10 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 		var result_at_completed_station := false
 		if previous_index >= 0:
 			for completed_station: StationDef in data.stations:
-				if completed_station.role == phases[previous_index].station_role \
-					and completed_station.work_position == _array_tile(saved_order.result_position):
+				if (
+					completed_station.role == phases[previous_index].station_role
+					and completed_station.work_position == _array_tile(saved_order.result_position)
+				):
 					result_at_completed_station = true
 		if not result_at_completed_station:
 			return "invalid_order"
@@ -995,8 +1230,16 @@ static func _order_restore_error(data: Definitions, routes: GridRoutes, state: D
 				return "invalid_task"
 			if task.path_index != task.path.size() - 1 or task.started_tick < 0 or task.started_tick > state.tick:
 				return "invalid_task"
-			if task.completion_tick != task.started_tick + _phase_duration(recipe, phases[saved_order.phase_index], saved_order.missing_mise_ids) \
-				or task.completion_tick <= state.tick:
+			if (
+				(
+					task.completion_tick
+					!= (
+						task.started_tick
+						+ _phase_duration(recipe, phases[saved_order.phase_index], saved_order.missing_mise_ids)
+					)
+				)
+				or task.completion_tick <= state.tick
+			):
 				return "invalid_task"
 			var expected_working_ticks: int = state.tick - task.started_tick + 1
 			for index: int in saved_order.phase_index:
@@ -1015,15 +1258,25 @@ static func _valid_metrics(metrics: Dictionary, saved_order: Dictionary, current
 			return false
 	if metrics.responsible_employee_busy > metrics.no_responsible_employee:
 		return false
-	var primary: int = metrics.missing_ingredients + metrics.no_responsible_employee + metrics.station_in_use \
-		+ metrics.no_route + metrics.moving + metrics.working
-	var expected: int = saved_order.ended_tick - saved_order.arrival_tick if saved_order.state in TERMINAL \
+	var primary: int = (
+		metrics.missing_ingredients
+		+ metrics.no_responsible_employee
+		+ metrics.station_in_use
+		+ metrics.no_route
+		+ metrics.moving
+		+ metrics.working
+	)
+	var expected: int = (
+		saved_order.ended_tick - saved_order.arrival_tick
+		if saved_order.state in TERMINAL
 		else current_tick - saved_order.arrival_tick + 1
+	)
 	return primary == expected
 
 
-static func _employees_restore_error(data: Definitions, routes: GridRoutes, employees: Array,
-	task_by_order: Dictionary, order_ids: Dictionary) -> String:
+static func _employees_restore_error(
+	data: Definitions, routes: GridRoutes, employees: Array, task_by_order: Dictionary, order_ids: Dictionary
+) -> String:
 	if employees.size() != data.employees.size():
 		return "invalid_employee"
 	var employee_by_id: Dictionary = {}
@@ -1033,23 +1286,34 @@ static func _employees_restore_error(data: Definitions, routes: GridRoutes, empl
 			return "invalid_employee"
 		if not saved_employee.id is String or employee_by_id.has(saved_employee.id):
 			return "invalid_employee"
-		if not _employee_exists(data, saved_employee.id) or not _valid_tile(saved_employee.tile) \
-			or not _valid_tile(saved_employee.next_tile):
+		if (
+			not _employee_exists(data, saved_employee.id)
+			or not _valid_tile(saved_employee.tile)
+			or not _valid_tile(saved_employee.next_tile)
+		):
 			return "invalid_employee"
-		if not routes.is_walkable(_array_tile(saved_employee.tile)) or not routes.is_walkable(_array_tile(saved_employee.next_tile)):
+		if (
+			not routes.is_walkable(_array_tile(saved_employee.tile))
+			or not routes.is_walkable(_array_tile(saved_employee.next_tile))
+		):
 			return "invalid_path"
 		if not saved_employee.progress is int or saved_employee.progress < 0 or saved_employee.progress >= MOVE_TICKS:
 			return "invalid_employee"
 		if not saved_employee.duty is String or saved_employee.duty not in DUTIES:
 			return "invalid_employee"
-		if not saved_employee.pending_duty is String or (not saved_employee.pending_duty.is_empty() \
-			and saved_employee.pending_duty not in DUTIES):
+		if (
+			not saved_employee.pending_duty is String
+			or (not saved_employee.pending_duty.is_empty() and saved_employee.pending_duty not in DUTIES)
+		):
 			return "invalid_employee"
 		if not saved_employee.order_id is String:
 			return "invalid_employee"
 		if saved_employee.order_id.is_empty():
-			if saved_employee.progress != 0 or saved_employee.tile != saved_employee.next_tile \
-				or not saved_employee.pending_duty.is_empty():
+			if (
+				saved_employee.progress != 0
+				or saved_employee.tile != saved_employee.next_tile
+				or not saved_employee.pending_duty.is_empty()
+			):
 				return "invalid_employee"
 		else:
 			if not order_ids.has(saved_employee.order_id) or not task_by_order.has(saved_employee.order_id):
@@ -1063,14 +1327,20 @@ static func _employees_restore_error(data: Definitions, routes: GridRoutes, empl
 				return "invalid_task_link"
 			if _array_tile(task.path[task.path_index]) != _array_tile(saved_employee.tile):
 				return "invalid_path"
-			var expected_next := _array_tile(task.path[task.path_index + 1]) \
-				if task.path_index + 1 < task.path.size() else _array_tile(saved_employee.tile)
+			var expected_next := (
+				_array_tile(task.path[task.path_index + 1])
+				if task.path_index + 1 < task.path.size()
+				else _array_tile(saved_employee.tile)
+			)
 			if _array_tile(saved_employee.next_tile) != expected_next:
 				return "invalid_path"
 			if task.started_tick >= 0 and saved_employee.progress != 0:
 				return "invalid_employee"
-			if saved_order.state == "moving" and saved_order.metrics.no_route == 0 \
-				and saved_employee.progress != saved_order.metrics.moving % MOVE_TICKS:
+			if (
+				saved_order.state == "moving"
+				and saved_order.metrics.no_route == 0
+				and saved_employee.progress != saved_order.metrics.moving % MOVE_TICKS
+			):
 				return "invalid_employee"
 		employee_by_id[saved_employee.id] = saved_employee
 	for task: Dictionary in task_by_order.values():
@@ -1089,23 +1359,40 @@ static func _commands_restore_error(state: Dictionary, order_ids: Dictionary, da
 		var fields: Array[String] = ["kind", "target_id", "apply_tick", "sequence", "value"]
 		if not _exact_fields(saved_command, fields):
 			return "invalid_command"
-		if not saved_command.kind is String or not saved_command.target_id is String \
-			or not saved_command.apply_tick is int or not saved_command.sequence is int:
+		if (
+			not saved_command.kind is String
+			or not saved_command.target_id is String
+			or not saved_command.apply_tick is int
+			or not saved_command.sequence is int
+		):
 			return "invalid_command"
-		if saved_command.apply_tick <= state.tick or saved_command.sequence <= 0 \
-			or saved_command.sequence > state.last_sequence or sequences.has(saved_command.sequence):
+		if (
+			saved_command.apply_tick <= state.tick
+			or saved_command.sequence <= 0
+			or saved_command.sequence > state.last_sequence
+			or sequences.has(saved_command.sequence)
+		):
 			return "invalid_command_sequence"
-		if saved_command.apply_tick < previous_apply_tick or (saved_command.apply_tick == previous_apply_tick \
-			and saved_command.sequence <= previous_sequence):
+		if (
+			saved_command.apply_tick < previous_apply_tick
+			or (saved_command.apply_tick == previous_apply_tick and saved_command.sequence <= previous_sequence)
+		):
 			return "invalid_command_sequence"
 		match saved_command.kind:
 			"set_duty":
-				if not _employee_exists(data, saved_command.target_id) or not saved_command.value is String \
-					or saved_command.value not in DUTIES:
+				if (
+					not _employee_exists(data, saved_command.target_id)
+					or not saved_command.value is String
+					or saved_command.value not in DUTIES
+				):
 					return "invalid_command"
 			"set_priority":
-				if not order_ids.has(saved_command.target_id) or not saved_command.value is int \
-					or saved_command.value < 0 or saved_command.value > 2:
+				if (
+					not order_ids.has(saved_command.target_id)
+					or not saved_command.value is int
+					or saved_command.value < 0
+					or saved_command.value > 2
+				):
 					return "invalid_command"
 			"cancel_order":
 				if not order_ids.has(saved_command.target_id) or saved_command.value != null:

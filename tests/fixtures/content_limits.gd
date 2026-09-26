@@ -1,4 +1,5 @@
 extends RefCounted
+# gdlint: disable=max-line-length
 
 ## The limits CampaignProgress.validate_records applied under every shipped content version, one row
 ## per version: order_count, starting_budget, the target pair and maximum_profit(served) for each

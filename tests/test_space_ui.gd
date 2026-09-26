@@ -19,13 +19,22 @@ func run(tree: SceneTree) -> void:
 	var preview: Variant = panel.get("placement_preview")
 	expect(preview is Label, "spatial preparation shows placement rules before a tap")
 	if preview is Label:
-		expect(preview.text.contains("작업 위치") and preview.text.contains("냉식대"), "placement preview explains shared work positions and cold-hot clearance")
+		expect(
+			preview.text.contains("작업 위치") and preview.text.contains("냉식대"),
+			"placement preview explains shared work positions and cold-hot clearance"
+		)
 		expect(preview.text.contains("고정"), "fixed-station preview explains why movement is unavailable")
-	expect(panel.move_buttons.left.disabled and panel.move_buttons.rotate.disabled, "fixed station controls reflect the preview before input")
+	expect(
+		panel.move_buttons.left.disabled and panel.move_buttons.rotate.disabled,
+		"fixed station controls reflect the preview before input"
+	)
 	plan.apply_command({"kind": "move_station", "target_id": "hot_01", "value": "left", "apply_tick": 0, "sequence": 1})
 	panel.refresh(plan.snapshot())
 	panel.select_station("hot_01")
-	expect(panel.move_buttons.left.disabled and not panel.move_buttons.right.disabled, "only the direction that breaks clearance is disabled")
+	expect(
+		panel.move_buttons.left.disabled and not panel.move_buttons.right.disabled,
+		"only the direction that breaks clearance is disabled"
+	)
 	if preview is Label:
 		expect(preview.text.contains("냉식대와 화구 사이"), "the invalid direction names its clearance rule")
 	panel.queue_free()

@@ -8,7 +8,8 @@ const ServiceSim := preload("res://sim/service_sim.gd")
 const RECORDS := {"first_shift": {"completed": true, "best_served": 11, "best_profit": 1200}}
 
 
-class ReplaceBoundaryStore extends CampaignStore:
+class ReplaceBoundaryStore:
+	extends CampaignStore
 	var marker_path: String = ""
 
 	func _replace_file(source: String, target: String) -> Error:
@@ -53,8 +54,11 @@ func _writer(arguments: Dictionary) -> void:
 		return
 	var preferences := AppPreferences.new(arguments.settings)
 	var saved_settings := preferences.update_settings({"locale": "en", "sound_enabled": false, "text_size": "large"})
-	if not saved_settings.accepted or preferences.snapshot() != {"locale": "en", "sound_enabled": false, "text_size": "large"} \
-		or TranslationServer.get_locale() != "en":
+	if (
+		not saved_settings.accepted
+		or preferences.snapshot() != {"locale": "en", "sound_enabled": false, "text_size": "large"}
+		or TranslationServer.get_locale() != "en"
+	):
 		_fail("writer settings fixture did not save and apply English preferences")
 		return
 	var partial_session := ServiceSession.capture("first_shift", fixture.selection, fixture.partial, 4, 43210)
@@ -70,8 +74,12 @@ func _writer(arguments: Dictionary) -> void:
 	var restored_working := ServiceSession.restore(fixture.campaign, working_store.load_records().active_session, {})
 	var partial_hash: String = fixture.partial.state_hash()
 	var working_hash: String = fixture.working.state_hash()
-	if not restored_partial.accepted or not restored_working.accepted \
-		or restored_partial.simulation.state_hash() != partial_hash or restored_working.simulation.state_hash() != working_hash:
+	if (
+		not restored_partial.accepted
+		or not restored_working.accepted
+		or restored_partial.simulation.state_hash() != partial_hash
+		or restored_working.simulation.state_hash() != working_hash
+	):
 		_fail("writer could not read back both saved simulation fixtures")
 		return
 	var partial_tick: int = fixture.partial.tick
@@ -82,14 +90,31 @@ func _writer(arguments: Dictionary) -> void:
 	if final_hash.is_empty():
 		_fail("writer fixture did not close after partial movement")
 		return
-	var status := {"immediate_hash": immediate_hash, "final_hash": final_hash,
-		"working_hash": working_hash, "working_final_hash": working_final_hash,
-		"partial_movement": fixture.partial_movement, "active_work": fixture.active_work}
-	if not _write_json(arguments.status, status) or not _write_json(arguments.marker,
-		{"kind": "writer_ready", "partial_movement": fixture.partial_movement, "active_work": fixture.active_work,
-			"partial_tick": partial_tick, "working_tick": working_tick,
-			"partial_hash": partial_hash, "working_hash": working_hash,
-			"saved_partial_hash": restored_partial.simulation.state_hash(), "saved_working_hash": restored_working.simulation.state_hash()}):
+	var status := {
+		"immediate_hash": immediate_hash,
+		"final_hash": final_hash,
+		"working_hash": working_hash,
+		"working_final_hash": working_final_hash,
+		"partial_movement": fixture.partial_movement,
+		"active_work": fixture.active_work
+	}
+	if (
+		not _write_json(arguments.status, status)
+		or not _write_json(
+			arguments.marker,
+			{
+				"kind": "writer_ready",
+				"partial_movement": fixture.partial_movement,
+				"active_work": fixture.active_work,
+				"partial_tick": partial_tick,
+				"working_tick": working_tick,
+				"partial_hash": partial_hash,
+				"working_hash": working_hash,
+				"saved_partial_hash": restored_partial.simulation.state_hash(),
+				"saved_working_hash": restored_working.simulation.state_hash()
+			}
+		)
+	):
 		_fail("writer could not write its completion evidence")
 		return
 	print("M4 writer reached its saved partial checkpoint")
@@ -102,22 +127,36 @@ func _reader(arguments: Dictionary) -> void:
 	var campaign := _campaign()
 	var preferences := AppPreferences.new(arguments.settings)
 	var loaded_settings := preferences.load_settings()
-	if expected.is_empty() or campaign == null or not loaded_settings.accepted \
-		or preferences.snapshot() != {"locale": "en", "sound_enabled": false, "text_size": "large"} \
-		or TranslationServer.get_locale() != "en":
+	if (
+		expected.is_empty()
+		or campaign == null
+		or not loaded_settings.accepted
+		or preferences.snapshot() != {"locale": "en", "sound_enabled": false, "text_size": "large"}
+		or TranslationServer.get_locale() != "en"
+	):
 		_fail("fresh reader did not load the independent English settings fixture")
 		return
 	var loaded := CampaignStore.new(campaign, arguments.save).load_records()
 	var working_loaded := CampaignStore.new(campaign, str(arguments.save) + ".working").load_records()
 	var saved_document: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save))
-	var saved_content_version: int = int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	var saved_content_version: int = (
+		int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	)
 	if saved_content_version < CampaignStore.VERSIONS.content_version:
-		if not loaded.accepted or loaded.reason != "content_updated" or loaded.active_session != null \
-			or loaded.records != RECORDS:
+		if (
+			not loaded.accepted
+			or loaded.reason != "content_updated"
+			or loaded.active_session != null
+			or loaded.records != RECORDS
+		):
 			_fail("fresh reader did not restart the older content service while keeping records")
 			return
 		var store := CampaignStore.new(campaign, arguments.save)
-		var rewritten: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save)) if store.save_records(loaded.records).accepted else null
+		var rewritten: Variant = (
+			JSON.parse_string(FileAccess.get_file_as_string(arguments.save))
+			if store.save_records(loaded.records).accepted
+			else null
+		)
 		if not rewritten is Dictionary or int(rewritten.content_version) != CampaignStore.VERSIONS.content_version:
 			_fail("fresh reader did not upgrade the older content file on its next write")
 			return
@@ -125,14 +164,22 @@ func _reader(arguments: Dictionary) -> void:
 		TranslationServer.set_locale("ko")
 		quit(0)
 		return
-	if not loaded.accepted or not working_loaded.accepted or not loaded.active_session is Dictionary \
-		or not working_loaded.active_session is Dictionary:
+	if (
+		not loaded.accepted
+		or not working_loaded.accepted
+		or not loaded.active_session is Dictionary
+		or not working_loaded.active_session is Dictionary
+	):
 		_fail("fresh reader did not load the saved campaign session")
 		return
 	var restored := ServiceSession.restore(campaign, loaded.active_session, loaded.records)
 	var restored_working := ServiceSession.restore(campaign, working_loaded.active_session, working_loaded.records)
-	if not restored.accepted or not restored_working.accepted or restored.simulation.state_hash() != expected.immediate_hash \
-		or restored_working.simulation.state_hash() != expected.working_hash:
+	if (
+		not restored.accepted
+		or not restored_working.accepted
+		or restored.simulation.state_hash() != expected.immediate_hash
+		or restored_working.simulation.state_hash() != expected.working_hash
+	):
 		_fail("fresh reader hash differs immediately after restoration")
 		return
 	var final_hash := _finish_hash(restored.simulation)
@@ -175,30 +222,49 @@ func _interrupt_reader(arguments: Dictionary) -> void:
 	var primary := CampaignStore.new(campaign, arguments.save).load_records()
 	var backup := CampaignStore.new(campaign, arguments.save + ".backup").load_records()
 	var saved_document: Variant = JSON.parse_string(FileAccess.get_file_as_string(arguments.save))
-	var saved_content_version: int = int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	var saved_content_version: int = (
+		int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
+	)
 	if saved_content_version < CampaignStore.VERSIONS.content_version:
-		if not primary.accepted or primary.reason != "content_updated" or primary.active_session != null or primary.records != {} \
-			or not backup.accepted or backup.reason != "content_updated" or backup.active_session != null or backup.records != {}:
+		if (
+			not primary.accepted
+			or primary.reason != "content_updated"
+			or primary.active_session != null
+			or primary.records != {}
+			or not backup.accepted
+			or backup.reason != "content_updated"
+			or backup.active_session != null
+			or backup.records != {}
+		):
 			_fail("interrupted reader did not restart the older content primary and backup while keeping records")
 			return
 		print("PASS: interrupted reader restarts the older content service and keeps records")
 		TranslationServer.set_locale("ko")
 		quit(0)
 		return
-	if not primary.accepted or not backup.accepted or not primary.active_session is Dictionary \
-		or not backup.active_session is Dictionary:
+	if (
+		not primary.accepted
+		or not backup.accepted
+		or not primary.active_session is Dictionary
+		or not backup.active_session is Dictionary
+	):
 		_fail("interrupted primary or backup is not independently valid")
 		return
 	var primary_restored := ServiceSession.restore(campaign, primary.active_session, primary.records)
 	var backup_restored := ServiceSession.restore(campaign, backup.active_session, backup.records)
-	if not primary_restored.accepted or not backup_restored.accepted \
-		or primary_restored.simulation.state_hash() != expected.baseline_hash \
-		or backup_restored.simulation.state_hash() != expected.baseline_hash:
+	if (
+		not primary_restored.accepted
+		or not backup_restored.accepted
+		or primary_restored.simulation.state_hash() != expected.baseline_hash
+		or backup_restored.simulation.state_hash() != expected.baseline_hash
+	):
 		_fail("interrupted save changed the recoverable primary or backup session")
 		return
 	var incomplete: String = str(arguments.save) + ".incomplete"
-	if not _copy_file(arguments.save + ".backup", incomplete + ".backup") \
-		or not _write_text(incomplete + ".tmp", "{incomplete temporary file"):
+	if (
+		not _copy_file(arguments.save + ".backup", incomplete + ".backup")
+		or not _write_text(incomplete + ".tmp", "{incomplete temporary file")
+	):
 		_fail("incomplete temporary-file fixture could not be created")
 		return
 	var blocked := CampaignStore.new(campaign, incomplete).load_records()
@@ -210,7 +276,9 @@ func _interrupt_reader(arguments: Dictionary) -> void:
 	if not recovered.accepted or not restored_recovery.accepted or not restored_recovery.active_session is Dictionary:
 		_fail("backup recovery could not replace an incomplete temporary-file fixture")
 		return
-	var recovered_session := ServiceSession.restore(campaign, restored_recovery.active_session, restored_recovery.records)
+	var recovered_session := ServiceSession.restore(
+		campaign, restored_recovery.active_session, restored_recovery.records
+	)
 	if not recovered_session.accepted or recovered_session.simulation.state_hash() != expected.baseline_hash:
 		_fail("backup recovery did not restore the original valid session")
 		return
@@ -245,13 +313,23 @@ func _fixture() -> Dictionary:
 			break
 	if not partial_movement or not active_work:
 		return {"accepted": false, "reason": "real first-shift fixture lacks partial movement or active work"}
-	return {"accepted": true, "campaign": campaign, "selection": started.selection,
-		"definitions": started.definitions, "options": started.options, "partial": partial, "working": active,
-		"partial_movement": partial_movement, "active_work": active_work}
+	return {
+		"accepted": true,
+		"campaign": campaign,
+		"selection": started.selection,
+		"definitions": started.definitions,
+		"options": started.options,
+		"partial": partial,
+		"working": active,
+		"partial_movement": partial_movement,
+		"active_work": active_work
+	}
 
 
 func _campaign() -> Resource:
-	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var campaign: Resource = ResourceLoader.load(
+		"res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	if campaign == null or not campaign.validate().is_empty():
 		return null
 	return campaign

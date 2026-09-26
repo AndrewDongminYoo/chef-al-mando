@@ -43,7 +43,10 @@ static func recipe_ids(scenario: Resource, service_seed: int) -> PackedStringArr
 	for _move: int in moves:
 		var donors: PackedStringArray = []
 		for recipe_id: String in scenario.menu_ids:
-			if counts[recipe_id] > ranges[recipe_id]["min"] and not _receivers(scenario, counts, ranges, recipe_id).is_empty():
+			if (
+				counts[recipe_id] > ranges[recipe_id]["min"]
+				and not _receivers(scenario, counts, ranges, recipe_id).is_empty()
+			):
 				donors.append(recipe_id)
 		if donors.is_empty():
 			break

@@ -29,12 +29,28 @@ func load_records() -> Dictionary:
 		return primary
 	var backup := _read(file_path + ".backup")
 	if primary.reason == "missing" and backup.reason == "missing":
-		return {"accepted": true, "reason": "new_campaign", "records": {}, "attempts": {}, "active_session": null, "can_recover": false}
-	var protected: bool = primary.reason in ["future_version", "unsupported_version", "read_failed"] or backup.reason in ["future_version", "unsupported_version"]
+		return {
+			"accepted": true,
+			"reason": "new_campaign",
+			"records": {},
+			"attempts": {},
+			"active_session": null,
+			"can_recover": false
+		}
+	var protected: bool = (
+		primary.reason in ["future_version", "unsupported_version", "read_failed"]
+		or backup.reason in ["future_version", "unsupported_version"]
+	)
 	var reason: String = primary.reason
 	if primary.reason == "missing" and backup.reason in ["future_version", "unsupported_version"]:
 		reason = backup.reason
-	return {"accepted": false, "reason": reason, "records": {}, "attempts": {}, "can_recover": backup.accepted and not protected}
+	return {
+		"accepted": false,
+		"reason": reason,
+		"records": {},
+		"attempts": {},
+		"can_recover": backup.accepted and not protected
+	}
 
 
 func save_records(records: Dictionary, attempts: Variant = null) -> Dictionary:
@@ -104,8 +120,13 @@ func _commit(records: Dictionary, active_session: Variant, attempts: Dictionary,
 	if _replace_file(temporary, file_path) != OK:
 		DirAccess.remove_absolute(temporary)
 		return _failure("replace_failed")
-	return {"accepted": true, "reason": "saved", "records": records.duplicate(true), "attempts": attempts.duplicate(true),
-		"active_session": active_session.duplicate(true) if active_session is Dictionary else null}
+	return {
+		"accepted": true,
+		"reason": "saved",
+		"records": records.duplicate(true),
+		"attempts": attempts.duplicate(true),
+		"active_session": active_session.duplicate(true) if active_session is Dictionary else null
+	}
 
 
 func recover_backup() -> Dictionary:
@@ -127,8 +148,13 @@ func recover_backup() -> Dictionary:
 	if _replace_file(temporary, file_path) != OK:
 		DirAccess.remove_absolute(temporary)
 		return _failure("replace_failed")
-	return {"accepted": true, "reason": "recovered", "records": backup.records.duplicate(true), "attempts": backup.attempts.duplicate(true),
-		"active_session": backup.active_session.duplicate(true) if backup.active_session is Dictionary else null}
+	return {
+		"accepted": true,
+		"reason": "recovered",
+		"records": backup.records.duplicate(true),
+		"attempts": backup.attempts.duplicate(true),
+		"active_session": backup.active_session.duplicate(true) if backup.active_session is Dictionary else null
+	}
 
 
 func _prepare_file(target: String, records: Dictionary, active_session: Variant, attempts: Dictionary) -> Dictionary:
@@ -143,7 +169,12 @@ func _prepare_file(target: String, records: Dictionary, active_session: Variant,
 	var expected_session: Variant = null
 	if active_session is Dictionary:
 		expected_session = JSON.parse_string(JSON.stringify(active_session))
-	if not verified.accepted or verified.records != records or verified.active_session != expected_session or verified.attempts != attempts:
+	if (
+		not verified.accepted
+		or verified.records != records
+		or verified.active_session != expected_session
+		or verified.attempts != attempts
+	):
 		DirAccess.remove_absolute(target)
 		return _failure("verification_failed")
 	return {"accepted": true}
@@ -213,8 +244,10 @@ func _read(target: String) -> Dictionary:
 			# satisfies one target pair shipped at or before this document's own content_version;
 			# anything else is corrupt. Best results are never rewritten here: an old best above the
 			# current cap stays valid through the legacy cap in CampaignProgress.validate_records.
-			if record.get("completed") == true \
-				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+			if (
+				record.get("completed") == true
+				and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit)
+			):
 				if not CampaignProgress.meets_legacy_completion_targets(key, record, int(document.content_version)):
 					return _failure("corrupt_records")
 				record.legacy_completed = true
@@ -240,8 +273,14 @@ func _read(target: String) -> Dictionary:
 				# (primary, staged backup, recovery) produces a schema 4 session the guard above accepts.
 				if not active_session.has("service_seed"):
 					active_session["service_seed"] = 0
-	return {"accepted": true, "reason": "content_updated" if content_updated else "loaded", "records": records,
-		"attempts": attempts, "active_session": active_session, "can_recover": false}
+	return {
+		"accepted": true,
+		"reason": "content_updated" if content_updated else "loaded",
+		"records": records,
+		"attempts": attempts,
+		"active_session": active_session,
+		"can_recover": false
+	}
 
 
 func _content_update_restarts_session(source_content_version: int, _active_session: Dictionary) -> bool:
@@ -313,4 +352,6 @@ func _replace_file(source: String, target: String) -> Error:
 
 
 func _failure(reason: String) -> Dictionary:
-	return {"accepted": false, "reason": reason, "records": {}, "attempts": {}, "active_session": null, "can_recover": false}
+	return {
+		"accepted": false, "reason": reason, "records": {}, "attempts": {}, "active_session": null, "can_recover": false
+	}

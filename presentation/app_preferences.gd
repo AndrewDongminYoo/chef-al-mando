@@ -2,6 +2,7 @@ extends RefCounted
 
 const SettingsStore := preload("res://persistence/settings_store.gd")
 
+# gdlint: ignore=class-definitions-order
 signal changed
 
 var store: SettingsStore

@@ -20,22 +20,47 @@ func run(_tree: SceneTree) -> void:
 		if not run.accepted:
 			continue
 		var view: Dictionary = run.snapshot
-		expect(view.closed and view.errors.is_empty() and view.tick == 3000, "the actual service closes without errors: " + scenario.id)
+		expect(
+			view.closed and view.errors.is_empty() and view.tick == 3000,
+			"the actual service closes without errors: " + scenario.id
+		)
 		expect(view.orders.size() == scenario.order_count, "all scheduled orders appear in the real service")
 		var result := progress.record_result(scenario.id, view)
-		expect(result.accepted and result.get("passed", false), "the reference policy passes both goals: " + scenario.id)
+		expect(
+			result.accepted and result.get("passed", false), "the reference policy passes both goals: " + scenario.id
+		)
 		expect(store.save_records(progress.snapshot().records).accepted, "a real service result saves at closing")
 		var loaded := CampaignStore.new(campaign, file_path).load_records()
-		expect(loaded.accepted and loaded.records == progress.snapshot().records, "a new store reads each real completed service")
+		expect(
+			loaded.accepted and loaded.records == progress.snapshot().records,
+			"a new store reads each real completed service"
+		)
 		progress = CampaignProgress.new(campaign, loaded.records)
 		for quantity: int in view.inventory.values():
 			expect(quantity >= 0, "campaign inventory remains nonnegative")
-		expect(view.accounting.profit == view.accounting.revenue - view.accounting.purchased_cost - view.accounting.labor_cost, "campaign closing uses the existing accounting equation")
+		expect(
+			(
+				view.accounting.profit
+				== view.accounting.revenue - view.accounting.purchased_cost - view.accounting.labor_cost
+			),
+			"campaign closing uses the existing accounting equation"
+		)
 		var repeat := Policies.run_policy(scenario, policy)
 		var fast := Policies.run_policy(scenario, policy, 4)
-		expect(repeat.accepted and repeat.hash == run.hash, "fixed campaign policy repeats the final state hash: " + scenario.id)
-		expect(fast.accepted and fast.hash == run.hash, "one and four speed match at the same campaign ticks: " + scenario.id)
-		print("M3_PLAYTHROUGH ", scenario.id, " ", JSON.stringify({"accounting": view.accounting, "metrics": view.metrics, "hash": run.hash}, "", true))
+		expect(
+			repeat.accepted and repeat.hash == run.hash,
+			"fixed campaign policy repeats the final state hash: " + scenario.id
+		)
+		expect(
+			fast.accepted and fast.hash == run.hash,
+			"one and four speed match at the same campaign ticks: " + scenario.id
+		)
+		print(
+			"M3_PLAYTHROUGH ",
+			scenario.id,
+			" ",
+			JSON.stringify({"accounting": view.accounting, "metrics": view.metrics, "hash": run.hash}, "", true)
+		)
 		var alternatives: Array[Dictionary] = Policies.alternative_policies(scenario.id)
 		expect(alternatives.size() >= 2, "each campaign stage defines at least three clear strategies: " + scenario.id)
 		var policy_hashes: Array[String] = [run.hash]
@@ -43,64 +68,133 @@ func run(_tree: SceneTree) -> void:
 		for index: int in alternatives.size():
 			var alternative: Dictionary = alternatives[index]
 			var alternative_run := Policies.run_policy(scenario, alternative)
-			expect(not policies.has(alternative) and alternative_run.accepted,
-				"the alternative policy executes with distinct player choices: %s %d" % [scenario.id, index])
+			expect(
+				not policies.has(alternative) and alternative_run.accepted,
+				"the alternative policy executes with distinct player choices: %s %d" % [scenario.id, index]
+			)
 			if not alternative_run.accepted:
 				continue
 			var alternative_view: Dictionary = alternative_run.snapshot
-			expect(alternative_view.accounting.served >= scenario.minimum_served
-				and alternative_view.accounting.profit >= scenario.minimum_profit,
-				"the alternative policy passes both goals: %s %d" % [scenario.id, index])
-			expect(not policy_hashes.has(alternative_run.hash),
-				"the alternative policy produces a pairwise-distinct final state: %s %d" % [scenario.id, index])
+			expect(
+				(
+					alternative_view.accounting.served >= scenario.minimum_served
+					and alternative_view.accounting.profit >= scenario.minimum_profit
+				),
+				"the alternative policy passes both goals: %s %d" % [scenario.id, index]
+			)
+			expect(
+				not policy_hashes.has(alternative_run.hash),
+				"the alternative policy produces a pairwise-distinct final state: %s %d" % [scenario.id, index]
+			)
 			var alternative_repeat := Policies.run_policy(scenario, alternative)
 			var alternative_fast := Policies.run_policy(scenario, alternative, 4)
-			expect(alternative_repeat.accepted and alternative_repeat.hash == alternative_run.hash,
-				"the alternative policy repeats its final state: %s %d" % [scenario.id, index])
-			expect(alternative_fast.accepted and alternative_fast.hash == alternative_run.hash,
-				"the alternative policy matches at one and four speed: %s %d" % [scenario.id, index])
+			expect(
+				alternative_repeat.accepted and alternative_repeat.hash == alternative_run.hash,
+				"the alternative policy repeats its final state: %s %d" % [scenario.id, index]
+			)
+			expect(
+				alternative_fast.accepted and alternative_fast.hash == alternative_run.hash,
+				"the alternative policy matches at one and four speed: %s %d" % [scenario.id, index]
+			)
 			policy_hashes.append(alternative_run.hash)
 			policies.append(alternative)
-			print("M3_STRATEGY ", scenario.id, " ", JSON.stringify({
-				"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
-				"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
+			print(
+				"M3_STRATEGY ",
+				scenario.id,
+				" ",
+				JSON.stringify(
+					{
+						"alternative": {"accounting": alternative_view.accounting, "metrics": alternative_view.metrics},
+						"reference": {"accounting": view.accounting, "metrics": view.metrics}
+					},
+					"",
+					true
+				)
+			)
 		if campaign.scenarios.find(scenario) >= 2:
 			var no_plan := Policies.run_policy(scenario)
 			expect(no_plan.accepted, "the no-plan comparison runs: " + scenario.id)
 			if no_plan.accepted:
 				var no_plan_view: Dictionary = no_plan.snapshot
-				var no_plan_passes: bool = no_plan_view.accounting.served >= scenario.minimum_served and no_plan_view.accounting.profit >= scenario.minimum_profit
+				var no_plan_passes: bool = (
+					no_plan_view.accounting.served >= scenario.minimum_served
+					and no_plan_view.accounting.profit >= scenario.minimum_profit
+				)
 				expect(not no_plan_passes, "a pressure service requires a scenario-specific plan: " + scenario.id)
-				expect(SeedGate.no_plan_misses(scenario, no_plan),
-					"a no-plan service misses by at least two orders or 1500 profit: " + scenario.id)
-				expect(view.accounting.served - scenario.minimum_served <= 2
-					and view.accounting.profit - scenario.minimum_profit <= 3000,
-					"the reference policy passes with at most two extra orders and 3000 extra profit: " + scenario.id)
-				expect(no_plan_view.accounting != view.accounting or no_plan_view.metrics != view.metrics,
-					"the reference plan changes the pressure-service result: " + scenario.id)
-				print("M3_PRESSURE ", scenario.id, " ", JSON.stringify({
-					"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
-					"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
-					"reference": {"accounting": view.accounting, "metrics": view.metrics}}, "", true))
+				expect(
+					SeedGate.no_plan_misses(scenario, no_plan),
+					"a no-plan service misses by at least two orders or 1500 profit: " + scenario.id
+				)
+				expect(
+					(
+						view.accounting.served - scenario.minimum_served <= 2
+						and view.accounting.profit - scenario.minimum_profit <= 3000
+					),
+					"the reference policy passes with at most two extra orders and 3000 extra profit: " + scenario.id
+				)
+				expect(
+					no_plan_view.accounting != view.accounting or no_plan_view.metrics != view.metrics,
+					"the reference plan changes the pressure-service result: " + scenario.id
+				)
+				print(
+					"M3_PRESSURE ",
+					scenario.id,
+					" ",
+					JSON.stringify(
+						{
+							"goals": {"served": scenario.minimum_served, "profit": scenario.minimum_profit},
+							"no_plan": {"accounting": no_plan_view.accounting, "metrics": no_plan_view.metrics},
+							"reference": {"accounting": view.accounting, "metrics": view.metrics}
+						},
+						"",
+						true
+					)
+				)
 				if Policies.LEVER_KINDS.has(scenario.id):
 					var levers: Array = Policies.LEVER_KINDS[scenario.id]
 					for subset: Array in Policies.lever_subsets(scenario.id):
 						var stripped: Dictionary = Policies.without_lever_policy(scenario.id, subset)
-						expect(stripped != policy, "the reference policy uses its lever %s: %s" % [str(subset), scenario.id])
+						expect(
+							stripped != policy,
+							"the reference policy uses its lever %s: %s" % [str(subset), scenario.id]
+						)
 						var stripped_run := Policies.run_policy(scenario, stripped)
-						expect(stripped_run.accepted and not Policies.passes_targets(scenario, stripped_run),
-							"the reference policy misses a target without its lever %s: %s" % [str(subset), scenario.id])
+						expect(
+							stripped_run.accepted and not Policies.passes_targets(scenario, stripped_run),
+							"the reference policy misses a target without its lever %s: %s" % [str(subset), scenario.id]
+						)
 					var lever_free: Dictionary = Policies.lever_free_policy(scenario.id)
-					expect(lever_free != Policies.without_lever_policy(scenario.id),
-						"the lever-free policy is pinned from a sweep, not the stripped reference: " + scenario.id)
-					expect(Policies.without_kinds(lever_free, levers) == lever_free,
-						"the pinned lever-free policy contains no lever command: " + scenario.id)
+					expect(
+						lever_free != Policies.without_lever_policy(scenario.id),
+						"the lever-free policy is pinned from a sweep, not the stripped reference: " + scenario.id
+					)
+					expect(
+						Policies.without_kinds(lever_free, levers) == lever_free,
+						"the pinned lever-free policy contains no lever command: " + scenario.id
+					)
 					var lever_free_run := Policies.run_policy(scenario, lever_free)
-					expect(lever_free_run.accepted and not Policies.passes_targets(scenario, lever_free_run),
-						"the strongest lever-free policy found by the sweep misses a target: " + scenario.id)
+					expect(
+						lever_free_run.accepted and not Policies.passes_targets(scenario, lever_free_run),
+						"the strongest lever-free policy found by the sweep misses a target: " + scenario.id
+					)
 					if lever_free_run.accepted:
-						print("M3_LEVER ", scenario.id, " ", JSON.stringify({"levers": levers,
-							"lever_free": {"accounting": lever_free_run.snapshot.accounting, "metrics": lever_free_run.snapshot.metrics}}, "", true))
+						print(
+							"M3_LEVER ",
+							scenario.id,
+							" ",
+							JSON.stringify(
+								{
+									"levers": levers,
+									"lever_free":
+									{
+										"accounting": lever_free_run.snapshot.accounting,
+										"metrics": lever_free_run.snapshot.metrics
+									}
+								},
+								"",
+								true
+							)
+						)
 	expect(progress.snapshot().ending_unlocked, "the real sequential playthrough reaches the ending")
 	_test_hot_queue_focus(campaign)
 	for owned_file: String in DirAccess.get_files_at(directory):
@@ -111,17 +205,23 @@ func run(_tree: SceneTree) -> void:
 
 func _test_hot_queue_focus(campaign: Resource) -> void:
 	var scenario: Resource = campaign.scenario_for("hot_queue")
-	var overprepared := Policies.run_policy(scenario, {"preparation": [
-		{"kind": "set_prep", "target_id": "marinated_protein", "value": 4}], "priorities": {}})
-	expect(not overprepared.accepted and overprepared.reason.contains("insufficient_labor"),
-		"hot queue rejects spending all preparation on four grilled dishes")
+	var overprepared := Policies.run_policy(
+		scenario,
+		{"preparation": [{"kind": "set_prep", "target_id": "marinated_protein", "value": 4}], "priorities": {}}
+	)
+	expect(
+		not overprepared.accepted and overprepared.reason.contains("insufficient_labor"),
+		"hot queue rejects spending all preparation on four grilled dishes"
+	)
 	var reference: Dictionary = Policies.reference_policy("hot_queue")
 	var preparation_only: Array = []
 	for choice: Dictionary in reference.preparation:
 		if choice.kind == "set_prep":
 			preparation_only.append(choice)
-	expect(preparation_only.size() == reference.preparation.size(),
-		"hot queue reference policy does not require station placement")
+	expect(
+		preparation_only.size() == reference.preparation.size(),
+		"hot queue reference policy does not require station placement"
+	)
 	var two_lever_policy := {
 		"preparation": preparation_only,
 		"priorities": reference.priorities.duplicate(true),
@@ -131,12 +231,12 @@ func _test_hot_queue_focus(campaign: Resource) -> void:
 	if not run.accepted:
 		return
 	var view: Dictionary = run.snapshot
-	expect(view.accounting.served >= scenario.minimum_served
-		and view.accounting.profit >= scenario.minimum_profit,
-		"hot queue preparation and priority policy passes both goals from the initial layout")
+	expect(
+		view.accounting.served >= scenario.minimum_served and view.accounting.profit >= scenario.minimum_profit,
+		"hot queue preparation and priority policy passes both goals from the initial layout"
+	)
 	var fast := Policies.run_policy(scenario, two_lever_policy, 4)
-	expect(fast.accepted and fast.hash == run.hash,
-		"hot queue two-lever policy matches at one and four speed")
+	expect(fast.accepted and fast.hash == run.hash, "hot queue two-lever policy matches at one and four speed")
 
 
 func _compare_choices(campaign: Resource) -> void:
@@ -166,15 +266,39 @@ func _compare_choices(campaign: Resource) -> void:
 			continue
 		var baseline: Dictionary = before.snapshot
 		var changed: Dictionary = after.snapshot
-		expect(baseline.accounting != changed.accounting or baseline.metrics != changed.metrics, "the choice changes actual outcomes or measured work: " + kind)
+		expect(
+			baseline.accounting != changed.accounting or baseline.metrics != changed.metrics,
+			"the choice changes actual outcomes or measured work: " + kind
+		)
 		if kind == "placement":
-			expect(changed.metrics.orders.moving < baseline.metrics.orders.moving, "the shorter route reduces measured movement")
+			expect(
+				changed.metrics.orders.moving < baseline.metrics.orders.moving,
+				"the shorter route reduces measured movement"
+			)
 		if kind == "prep":
-			expect(changed.metrics.orders.working < baseline.metrics.orders.working, "preparation removes measured service work")
+			expect(
+				changed.metrics.orders.working < baseline.metrics.orders.working,
+				"preparation removes measured service work"
+			)
 		if kind == "purchases":
-			expect(changed.accounting.served > baseline.accounting.served
-				and changed.accounting.purchased_cost == baseline.accounting.purchased_cost + 11 * 100,
-				"the reference purchase serves orders the authored stock cannot, at its unit price")
-		print("M3_COMPARISON ", kind, " ", JSON.stringify({"scenario": scenario.id,
-			"before": {"accounting": baseline.accounting, "metrics": baseline.metrics},
-			"after": {"accounting": changed.accounting, "metrics": changed.metrics}}, "", true))
+			expect(
+				(
+					changed.accounting.served > baseline.accounting.served
+					and changed.accounting.purchased_cost == baseline.accounting.purchased_cost + 11 * 100
+				),
+				"the reference purchase serves orders the authored stock cannot, at its unit price"
+			)
+		print(
+			"M3_COMPARISON ",
+			kind,
+			" ",
+			JSON.stringify(
+				{
+					"scenario": scenario.id,
+					"before": {"accounting": baseline.accounting, "metrics": baseline.metrics},
+					"after": {"accounting": changed.accounting, "metrics": changed.metrics}
+				},
+				"",
+				true
+			)
+		)
