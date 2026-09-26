@@ -46,7 +46,7 @@ func run() -> void:
 		"the rendered 14 by 9 kitchen keeps cells at least 36 pixels")
 	checks.expect(screen.duty_buttons.size() == 4 and screen.summary_label.get_line_count() >= 3,
 		"the dense fixture has four staff and wrapped stock text")
-	screen.settings_text_size.item_selected.emit(1)
+	screen.settings_panel.settings_text_size.item_selected.emit(1)
 	await _settle(screen)
 	var board_rect: Rect2 = screen.board.get_global_rect()
 	var large_kitchen_rect: Rect2 = screen.get_node("SafeArea/Layout/Kitchen").get_global_rect()
@@ -186,8 +186,8 @@ func _assert_english_pending_layout(tablet: bool) -> void:
 	root.size = Vector2i(1024, 768) if tablet else Vector2i(1566, 720)
 	await process_frame
 	var screen := Harness.boot_main(self, "res://content/campaign/scenarios/split_duties.tres")
-	screen.settings_locale.item_selected.emit(1)
-	screen.settings_text_size.item_selected.emit(1)
+	screen.settings_panel.settings_locale.item_selected.emit(1)
+	screen.settings_panel.settings_text_size.item_selected.emit(1)
 	screen.start_button.pressed.emit()
 	screen.advance(1.0)
 	await _settle(screen)
