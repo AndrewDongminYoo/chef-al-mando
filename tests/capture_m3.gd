@@ -46,9 +46,15 @@ func run() -> void:
 		return
 	for index: int in screen.campaign.scenarios.size():
 		var scenario := screen.campaign.scenarios[index]
+		if index > 0:
+			checks.expect(
+				screen.active_service == null and screen.selected_scenario_id == scenario.id,
+				"rendered next returns to the list with the next service selected: " + scenario.id
+			)
+			await _safe_click(screen.begin_button, screen.safe_area.get_global_rect())
 		var service := screen.active_service
 		if service == null or service.definitions.id != scenario.id:
-			checks.expect(false, "rendered next opens the expected service: " + scenario.id)
+			checks.expect(false, "rendered begin opens the expected service: " + scenario.id)
 			await _finish(screen, directory)
 			return
 		service.set_process(false)

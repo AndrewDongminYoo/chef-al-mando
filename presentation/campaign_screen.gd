@@ -610,8 +610,14 @@ func _show_goal() -> void:
 	if pending_save:
 		return
 	var scenario := campaign.scenario_for(selected_scenario_id)
+	# Before the service starts, Resume is disabled and Start is the button to press.
+	var text := (
+		tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 시작 버튼으로 영업을 시작하세요.")
+		if active_service.state == KitchenScreen.State.READY
+		else tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요.")
+	)
 	goal_dialog.dialog_text = (
-		tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요.")
+		text
 		% [
 			tr(scenario.display_name),
 			scenario.minimum_served,
@@ -643,9 +649,10 @@ func _result_action(action: String) -> void:
 			if index == campaign.scenarios.size() - 1:
 				_show_ending()
 			else:
+				# Stay on the list with the next service selected, so its briefing and targets are read
+				# before its preparation opens.
 				return_to_menu()
 				select_scenario(campaign.scenarios[index + 1].id)
-				begin_service()
 
 
 func _clear_result() -> void:
