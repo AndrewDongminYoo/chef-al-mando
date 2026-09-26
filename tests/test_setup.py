@@ -95,6 +95,34 @@ class SetupTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("automatic Godot installation requires Linux x86_64", result.stderr)
 
+    @unittest.skipIf(os.geteuid() == 0, "requires a non-root process")
+    def test_existing_certificate_updater_is_escalated_for_non_root_repair(self):
+        (self.bin / "godot").unlink()
+        for tool in ["mktemp", "rm", "install"]:
+            (self.bin / tool).symlink_to(shutil.which(tool))
+        self.fake(
+            "sudo",
+            'if [[ $* == "-n true" ]]; then exit 0; fi\n'
+            'while [[ $1 == -* ]]; do shift; done\nexport TEST_SUDO_USED=1\n"$@"\n',
+        )
+        self.fake(
+            "update-ca-certificates",
+            '[[ ${TEST_SUDO_USED:-} == 1 ]] || { echo "REPAIR_PERMISSION_DENIED" >&2; exit 97; }\n',
+        )
+        self.fake("curl", 'echo "DOWNLOAD_REACHED" >&2\nexit 23\n')
+        for tool in ["sha256sum", "unzip"]:
+            self.fake(tool, "exit 99\n")
+        script = self.root / "setup.sh"
+        script.write_text(
+            self.script.read_text().replace("/etc/ssl/certs/ca-certificates.crt", str(self.root / "missing-cert"))
+        )
+        shutil.copy2(self.script.parent / ".godot-version", self.root / ".godot-version")
+        self.script = script
+        result = self.run_setup(GODOT_BIN="")
+        self.assertEqual(result.returncode, 23, result.stderr)
+        self.assertIn("DOWNLOAD_REACHED", result.stderr)
+        self.assertNotIn("REPAIR_PERMISSION_DENIED", result.stderr)
+
     @unittest.skipUnless(sys.platform.startswith("linux"), "requires Linux sha256sum --check")
     def test_bad_download_fails_checksum_before_unzip_or_install(self):
         (self.bin / "godot").unlink()

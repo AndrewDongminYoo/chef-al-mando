@@ -9,15 +9,20 @@ fail() {
 # Provision only missing commands on Debian/Ubuntu, as root or with passwordless sudo.
 apt_updated=false
 privilege=()
+select_privilege() {
+	privilege=()
+	if ((EUID != 0)); then
+		command -v sudo >/dev/null 2>&1 || fail "$1 requires root or passwordless sudo"
+		sudo -n true || fail "$1 requires passwordless sudo"
+		privilege=(sudo -n --preserve-env=DEBIAN_FRONTEND)
+	fi
+}
+
 ensure_command() {
 	local tool="$1" package="$2"
 	command -v "$tool" >/dev/null 2>&1 && return 0
 	command -v apt-get >/dev/null 2>&1 || fail "missing command $tool; install $package before running setup.sh (apt-get unavailable)"
-	if ((EUID != 0)); then
-		command -v sudo >/dev/null 2>&1 || fail "missing command $tool; root or passwordless sudo is required"
-		sudo -n true || fail "missing command $tool; passwordless sudo is required"
-		privilege=(sudo -n --preserve-env=DEBIAN_FRONTEND)
-	fi
+	select_privilege "missing command $tool"
 	if [[ $apt_updated == false ]]; then
 		"${privilege[@]}" apt-get update
 		apt_updated=true
@@ -53,6 +58,7 @@ if ! command -v "$godot_bin" >/dev/null 2>&1; then
 	ensure_command curl curl
 	if [[ ! -s /etc/ssl/certs/ca-certificates.crt ]]; then
 		ensure_command update-ca-certificates ca-certificates
+		select_privilege "repairing the certificate bundle"
 		"${privilege[@]}" update-ca-certificates
 	fi
 	ensure_command sha256sum coreutils
@@ -71,11 +77,7 @@ if ! command -v "$godot_bin" >/dev/null 2>&1; then
 	command -v "$downloaded_bin" >/dev/null 2>&1 || fail "downloaded Godot executable is missing"
 	[[ $("$downloaded_bin" --headless --version) == "$expected_version" ]] || fail "downloaded Godot version does not match $expected_version"
 	if [[ ! -w /usr/local/bin ]]; then
-		if ((EUID != 0)); then
-			command -v sudo >/dev/null 2>&1 || fail "installing godot in /usr/local/bin requires root or passwordless sudo"
-			sudo -n true || fail "installing godot requires passwordless sudo"
-			privilege=(sudo -n --preserve-env=DEBIAN_FRONTEND)
-		fi
+		select_privilege "installing godot in /usr/local/bin"
 		"${privilege[@]}" mkdir -p /usr/local/bin
 	fi
 	"${privilege[@]}" install -m 0755 "$downloaded_bin" /usr/local/bin/godot
