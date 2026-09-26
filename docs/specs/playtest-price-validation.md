@@ -88,6 +88,27 @@
 앱을 지우지 않으면 다음 참가자가 이전 참가자의 완료 기록, 최고 기록, 시도 횟수를 그대로 이어받고, 주 저장 파일만 지우면 "백업에서 복구"가 이전 진행을 되살립니다.
 시작 전에 첫 화면에 "새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다"가 보이고 01 영업이 선택되어 있는지 확인합니다.
 
+운영자의 iPhone은 Mac에 연결한 상태에서 Xcode의 `devicectl`로 다룹니다.
+저장 파일은 개발 앱(`kr.donminzzi.chefalmandodev`) 데이터 컨테이너의 `Documents/`에 있습니다.
+`<device>`는 `xcrun devicectl list devices`가 보여 주는 기기 식별자이며, 각 명령은 실행 전에 운영자에게 알립니다.
+
+```bash
+# 첫 세션 전: 운영자의 저장 두 파일을 Mac으로 복사합니다(두 파일에 각각 실행).
+xcrun devicectl device copy from --device <device> --domain-type appDataContainer \
+  --domain-identifier kr.donminzzi.chefalmandodev \
+  --source Documents/campaign_records.json --destination <backup-dir>/campaign_records.json
+# 참가자마다: 앱을 삭제한 뒤 세션 빌드를 설치합니다. 삭제하면 저장도 함께 지워집니다.
+xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
+xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
+# 모든 세션 후: 복사해 둔 두 파일을 되돌립니다(두 파일에 각각 실행).
+xcrun devicectl device copy to --device <device> --domain-type appDataContainer \
+  --domain-identifier kr.donminzzi.chefalmandodev \
+  --source <backup-dir>/campaign_records.json --destination Documents/campaign_records.json
+```
+
+2026-09-26에 `copy from`과 기존 앱 위 `install app`은 실행해 확인했고, 설치 전후에 복사한 두 파일이 바이트 단위로 같았습니다.
+`uninstall app`과 `copy to`는 아직 실행하지 않았으므로, 되돌린 뒤에는 다시 `copy from`으로 받아 백업과 `cmp`로 비교합니다.
+
 ### 5.2 도입
 
 규칙을 설명하지 않습니다.
