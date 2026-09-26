@@ -1,12 +1,11 @@
 import os
-from pathlib import Path
 import plistlib
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 FAKE_ENGINE = r'''import os
 from pathlib import Path

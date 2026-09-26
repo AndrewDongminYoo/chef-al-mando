@@ -11,7 +11,6 @@ import struct
 import wave
 from pathlib import Path
 
-
 SAMPLE_RATE = 44_100
 DURATION_SECONDS = 0.22
 AMPLITUDE = 0.26
