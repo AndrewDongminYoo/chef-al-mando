@@ -262,15 +262,18 @@ func _set_state(next: State) -> void:
 
 func _refresh() -> void:
 	start_button.disabled = state != State.READY or not simulation.errors.is_empty()
+	# One preparation snapshot per refresh: the start button and the preparation panel read the same one.
+	var preparation_view: Dictionary = {}
 	if state == State.READY and preparation != null:
-		start_button.disabled = start_button.disabled or not preparation.snapshot().can_start
+		preparation_view = preparation.snapshot()
+		start_button.disabled = start_button.disabled or not preparation_view.can_start
 	pause_button.disabled = state != State.RUNNING
 	resume_button.disabled = state != State.PAUSED
 	restart_button.visible = state == State.CLOSED
 	status_label.text = tr(STATUS_TEXT[state])
 	if not simulation.errors.is_empty():
 		status_label.text = tr("주방 데이터를 불러올 수 없습니다")
-	_refresh_service()
+	_refresh_service(preparation_view)
 	_show_counter()
 
 
@@ -377,7 +380,7 @@ func submit_preparation(kind: String, target_id: String, value: Variant) -> Dict
 	if preparation == null or state != State.READY:
 		return {"accepted": false, "reason": "service_started"}
 	var result := preparation.apply_command({"kind": kind, "target_id": target_id, "value": value,
-		"apply_tick": 0, "sequence": preparation.snapshot().sequence + 1})
+		"apply_tick": 0, "sequence": preparation.sequence() + 1})
 	_set_feedback("preparation_applied" if result.accepted else "preparation_error", result.reason)
 	if result.accepted:
 		definitions = preparation.display_definition()
@@ -444,7 +447,8 @@ func _update_board_layout() -> void:
 		label.custom_minimum_size.y = 64 if compact_layout else 96
 
 
-func _refresh_service() -> void:
+## preparation_view is a snapshot that the caller already took in this refresh; empty means take one.
+func _refresh_service(preparation_view: Dictionary = {}) -> void:
 	_update_board_layout()
 	latest_view = simulation.snapshot()
 	if preparation_panel != null:
@@ -463,7 +467,7 @@ func _refresh_service() -> void:
 		detail_panel.visible = not preparing and not analyzing and (details_expanded or not compact_layout)
 		_update_details_toggle()
 		if preparing and latest_view.errors.is_empty():
-			_show_preparation()
+			_show_preparation(preparation_view)
 			_refresh_feedback()
 			return
 	if not latest_view.errors.is_empty():
@@ -717,8 +721,9 @@ func _settings_error(reason: String) -> String:
 	return tr("설정을 저장하거나 읽지 못했습니다. 기존 설정을 유지합니다.")
 
 
-func _show_preparation() -> void:
-	var preview := preparation.snapshot()
+func _show_preparation(preview: Dictionary = {}) -> void:
+	if preview.is_empty():
+		preview = preparation.snapshot()
 	preparation_panel.refresh(preview)
 	if not preview.has("purchases"):
 		board.show_state(null, {})
