@@ -60,7 +60,7 @@
 - 참가자 모집, 연락, 일정, 동의는 운영자가 수행합니다.
   에이전트는 참가자에게 메시지를 보내거나 모집하지 않습니다([M2 명세](m2-preparation.md) §11 유지).
 - 세션 기기와 설치본은 운영자가 정합니다.
-  운영자의 일상 iPhone을 쓰면 첫 세션 전 `campaign_records.json`과 `.backup`을 기기에서 복사하고, 참가자마다 §5.1의 방법으로 저장이 없는 상태에서 시작하며, 모든 세션이 끝나면 복사해 둔 두 파일을 기기에 되돌립니다.
+  운영자의 일상 iPhone을 쓰면 첫 세션 전 저장과 설정 파일을 기기에서 복사하고, 참가자마다 저장이 없는 상태에서 시작하며, 모든 세션이 끝나면 복사해 둔 파일을 기기에 되돌립니다(§5.1).
   복사·설치·실행은 각각 사전에 알리고 승인받습니다([M5 검증 기록](../notes/m5-verification.md) §9의 절차).
 - 배포 채널, 출시 앱 ID, TestFlight 여부는 이 명세가 결정하지 않습니다.
   대면 세션은 채널 결정 없이 실행할 수 있으므로 기본 형식으로 둡니다.
@@ -90,10 +90,13 @@
 
 운영자의 iPhone은 Mac에 연결한 상태에서 Xcode의 `devicectl`로 다룹니다.
 저장 파일은 개발 앱(`kr.donminzzi.chefalmandodev`) 데이터 컨테이너의 `Documents/`에 있습니다.
+백업 대상은 `campaign_records.json`, `campaign_records.json.backup`, 그리고 설정을 바꾼 적이 있으면 생기는 `settings.json`(언어, 효과음, 글자 크기)입니다.
+첫 세션 전에 `xcrun devicectl device info files`로 컨테이너의 파일 목록을 보고, 있는 파일을 모두 백업하고 되돌립니다.
+2026-09-26 목록에는 `settings.json`이 없었습니다.
 `<device>`는 `xcrun devicectl list devices`가 보여 주는 기기 식별자이며, 각 명령은 실행 전에 운영자에게 알립니다.
 
 ```bash
-# 첫 세션 전: 운영자의 저장 두 파일을 Mac으로 복사합니다(두 파일에 각각 실행).
+# 첫 세션 전: 백업 대상 파일을 Mac으로 복사합니다(파일마다 각각 실행).
 xcrun devicectl device copy from --device <device> --domain-type appDataContainer \
   --domain-identifier kr.donminzzi.chefalmandodev \
   --source Documents/campaign_records.json --destination <backup-dir>/campaign_records.json
@@ -101,7 +104,7 @@ xcrun devicectl device copy from --device <device> --domain-type appDataContaine
 xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
 xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
 # 모든 세션 후: 앱을 삭제하고 다시 설치해 실행 중인 앱과 참가자 저장을 없앤 뒤, 앱을 열기 전에
-# 복사해 둔 두 파일을 되돌립니다(두 파일에 각각 실행).
+# 복사해 둔 파일을 모두 되돌립니다(파일마다 각각 실행).
 xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
 xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
 xcrun devicectl device copy to --device <device> --domain-type appDataContainer \
@@ -111,7 +114,7 @@ xcrun devicectl device copy to --device <device> --domain-type appDataContainer 
 
 2026-09-26에 `copy from`과 기존 앱 위 `install app`은 실행해 확인했고, 설치 전후에 복사한 두 파일이 바이트 단위로 같았습니다.
 `uninstall app`과 `copy to`는 아직 실행하지 않았으므로, 되돌린 뒤에는 다시 `copy from`으로 받아 백업과 `cmp`로 비교합니다.
-앱은 두 파일이 모두 일치한 뒤에 엽니다.
+앱은 되돌린 파일이 모두 일치한 뒤에 엽니다.
 앱이 실행 중이거나 일시정지된 상태에서 되돌리면, 앱이 100 tick마다 하는 자동 저장이나 백그라운드 전환 때의 저장이 되돌린 파일을 참가자의 기록으로 다시 덮어쓸 수 있고, 그 저장은 `cmp`를 통과한 뒤에도 일어날 수 있습니다.
 
 ### 5.2 도입
