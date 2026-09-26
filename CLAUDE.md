@@ -10,7 +10,8 @@ This file adds only the commands and the cross-file structure that `AGENTS.md` d
 ## Commands
 
 Godot must match `.godot-version` exactly; `scripts/check.sh` refuses any other build.
-Set `GODOT_BIN` to that binary when `godot` on `PATH` is a different version.
+Set `GODOT_BIN` to that binary when `godot` on `PATH` is missing or a different version.
+On a Linux x86_64 container (CI, Codex Cloud), `bash setup.sh` installs the pinned Godot and the other check tools; it refuses to run on macOS (see `README.md`).
 
 ```bash
 "$GODOT_BIN" --path .                 # run the game (main scene: presentation/campaign.tscn)
@@ -20,10 +21,12 @@ bash scripts/check.sh <suite>         # import, then run one suite headless; def
 A suite passes only when its log ends with `PASS: <suite> checks=N failures=0` and contains no `SCRIPT ERROR:`, `ERROR:` or `FAIL:` line; logs land in `build/check/<suite>.log`.
 Suite names and their entry scripts are registered in `tests/run_tests.gd` (`SUITES`); each entry script lists its child test files, so a single test file runs through the parent suite that includes it.
 
-CI (`.github/workflows/check.yml`) is the full gate, in this order: `check.sh` for `m0`, `m1`, `m2`, `m3`, `m4-core`, `m4`, then `python3 tests/test_m4_restart.py`, `check.sh m5`, `check.sh mise`, `python3 tests/test_export_check.py`, `python3 tests/test_ios_export.py`, and `bash scripts/check-export.sh` (needs the matching export templates).
-The `ui-regressions` suite is registered but not in CI.
+CI (`.github/workflows/check.yml`) is the full gate; its step list is the source of truth for the local gate order.
+It runs every registered suite except `ui-regressions`, the Python checks under `tests/`, and `bash scripts/check-export.sh`, which needs the matching export templates.
 
-Lint and format run through Trunk (`.trunk/trunk.yaml`): `trunk check` and `trunk fmt`, also installed as pre-commit and pre-push hooks. Trunk has no GDScript linter; GDScript is checked only by the engine run above.
+Lint and format run through Trunk (`.trunk/trunk.yaml`): `trunk check` and `trunk fmt`, also installed as pre-commit and pre-push hooks.
+GDScript is formatted by `gdformat` and linted by `gdlint` (settings in `gdformatrc` and `gdlintrc`); CI runs neither, so the Trunk hooks are their only gate.
+`trunk.yaml` excludes `tests/fixtures/content_limits.gd` from `gdformat`, and its comment says why.
 
 Balance tooling runs as a standalone `SceneTree` script, for example `tests/sweep_policies.gd`; its usage lives in `docs/notes/kitchen-pressure-verification.md`.
 
@@ -41,3 +44,4 @@ Balance tooling runs as a standalone `SceneTree` script, for example `tests/swee
 - `Array.duplicate(true)` does not copy `Resource` elements, so mutating a scenario from a duplicated campaign pollutes the cached resource for later suites in the same process; load mutable fixtures with `ResourceLoader.CACHE_MODE_IGNORE_DEEP`.
 - `dict.key = value` stores a `StringName` key, which `ServiceSession` rejects; write `dict["key"] = value` for anything that reaches a session.
 - Assigning an untyped dictionary literal to a typed exported dictionary through `resource.set(...)` silently leaves it empty; assign a typed local instead.
+- `Dictionary ==` ignores key order, so a test that stores an order as dictionary keys (the campaign order in `tests/fixtures/content_limits.gd`) must also compare `keys()`.
