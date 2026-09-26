@@ -1,6 +1,15 @@
 extends "res://tests/harness.gd"
 
 
+## Counts full snapshots without instrumenting PreparationPlan itself.
+class CountingPlan extends "res://sim/preparation_plan.gd":
+	var snapshots: int = 0
+
+	func snapshot() -> Dictionary:
+		snapshots += 1
+		return super.snapshot()
+
+
 func run(tree: SceneTree) -> void:
 	var scene: PackedScene = load("res://presentation/main.tscn")
 	var screen: Control = scene.instantiate()
@@ -114,6 +123,7 @@ func run(tree: SceneTree) -> void:
 	await tree.process_frame
 	await _extra_menu(tree)
 	await _custom_ingredients(tree)
+	await _snapshot_per_tap(tree)
 
 
 func _expect_analysis_drag_scrolls(tree: SceneTree, scroll: ScrollContainer, content: Control) -> void:
@@ -228,3 +238,32 @@ func _custom_ingredients(tree: SceneTree) -> void:
 		screen.queue_free()
 		await tree.process_frame
 		DirAccess.remove_absolute(fixture_path)
+
+
+func _snapshot_per_tap(tree: SceneTree) -> void:
+	var scenario_path := "res://content/m2_first_service.tres"
+	var screen := boot_main(tree, scenario_path)
+	if screen == null:
+		expect(false, "the snapshot-count fixture boots the service screen")
+		return
+	await tree.process_frame
+	var plan := CountingPlan.new(load(scenario_path))
+	screen.set("preparation", plan)
+	var panel: Control = screen.get("preparation_panel")
+	var ingredient_id: String = panel.get("purchase_plus").keys()[0]
+	var purchased_before: int = plan.snapshot().purchases[ingredient_id]
+	plan.snapshots = 0
+	panel.get("purchase_plus")[ingredient_id].pressed.emit()
+	var accepted_tap := plan.snapshots
+	panel.get("move_buttons")["up"].pressed.emit()
+	var rejected_tap := plan.snapshots - accepted_tap
+	expect(accepted_tap == 1, "one accepted preparation tap computes one snapshot (counted %d)" % accepted_tap)
+	expect(rejected_tap == 1, "one rejected preparation tap computes one snapshot (counted %d)" % rejected_tap)
+	var view := plan.snapshot()
+	expect(plan.sequence() == 1 and view.sequence == 1 and view.purchases[ingredient_id] > purchased_before,
+		"the counted taps submit one accepted purchase and one rejected move")
+	expect(screen.get("feedback_label").text.contains("벽"), "the counted rejected tap reports its placement error")
+	expect(screen.get("start_button").disabled == not view.can_start,
+		"the start button follows the snapshot that the panel shows")
+	screen.queue_free()
+	await tree.process_frame

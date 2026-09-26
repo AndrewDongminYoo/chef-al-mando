@@ -178,6 +178,11 @@ func apply_command(command: Dictionary) -> Dictionary:
 	return {"accepted": true, "reason": ""}
 
 
+## The sequence of the last accepted command, without the cost of a full snapshot.
+func sequence() -> int:
+	return _sequence
+
+
 func snapshot() -> Dictionary:
 	if not _errors.is_empty():
 		return {"can_start": false, "errors": _errors.duplicate(), "committed": _committed,
