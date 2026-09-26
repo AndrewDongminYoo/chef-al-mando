@@ -80,7 +80,9 @@ func _ready() -> void:
 	store = CampaignStore.new(campaign, save_path)
 	var loaded := store.load_records()
 	storage_blocked = not loaded.accepted
-	progress = CampaignProgress.new(campaign, loaded.records if loaded.accepted else {}, loaded.attempts if loaded.accepted else {})
+	progress = CampaignProgress.new(
+		campaign, loaded.records if loaded.accepted else {}, loaded.attempts if loaded.accepted else {}
+	)
 	active_session = loaded.get("active_session") if loaded.accepted else null
 	recover_button.visible = loaded.can_recover
 	session_only_button.visible = storage_blocked
@@ -89,7 +91,10 @@ func _ready() -> void:
 		settings_panel.set_message("error", settings_load.reason)
 	selected_scenario_id = campaign.scenarios[0].id
 	for scenario: CampaignDef.ScenarioDef in campaign.scenarios:
-		if progress.is_unlocked(scenario.id) and not progress.snapshot().records.get(scenario.id, {}).get("completed", false):
+		if (
+			progress.is_unlocked(scenario.id)
+			and not progress.snapshot().records.get(scenario.id, {}).get("completed", false)
+		):
 			selected_scenario_id = scenario.id
 			break
 	_refresh_catalog()
@@ -161,7 +166,9 @@ func _build_menu() -> void:
 	menu_panel.add_child(ending_panel)
 	ending_title = _label("여덟 번의 영업을 마쳤습니다", 32)
 	ending_panel.add_child(ending_title)
-	ending_copy = _label("준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요.", 26)
+	ending_copy = _label(
+		"준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요.", 26
+	)
 	ending_panel.add_child(ending_copy)
 	ending_return_button = _button("영업 목록으로", return_to_menu)
 	ending_return_button.theme_type_variation = &"PrimaryButton"
@@ -250,7 +257,9 @@ func _refresh_strings() -> void:
 	recover_button.text = tr("백업에서 복구")
 	session_only_button.text = tr("저장 없이 새로 시작")
 	ending_title.text = tr("여덟 번의 영업을 마쳤습니다")
-	ending_copy.text = tr("준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요.")
+	ending_copy.text = tr(
+		"준비한 재료, 바꾼 동선, 나눈 담당이 하나의 주방을 완성했습니다.\n\n완료한 영업은 언제든 다시 선택할 수 있습니다.\n각 영업의 최고 제공 수와 최고 손익을 더 높여 보세요."
+	)
 	ending_return_button.text = tr("영업 목록으로")
 	begin_button.text = tr("준비 시작")
 	settings_panel.refresh_strings()
@@ -289,9 +298,18 @@ func _ensure_dialog_tap_sizes() -> void:
 	for dialog: AcceptDialog in [result_dialog, goal_dialog, leave_dialog, save_error_dialog, replace_dialog]:
 		dialog.add_theme_constant_override("buttons_min_height", 64)
 		dialog.add_theme_constant_override("buttons_min_width", 64)
-	for button: Button in [result_dialog.get_ok_button(), next_button, retry_service_button, retry_save_button,
-		goal_dialog.get_ok_button(), leave_dialog.get_ok_button(), leave_dialog.get_cancel_button(),
-		retry_checkpoint_button, replace_dialog.get_ok_button(), replace_dialog.get_cancel_button()]:
+	for button: Button in [
+		result_dialog.get_ok_button(),
+		next_button,
+		retry_service_button,
+		retry_save_button,
+		goal_dialog.get_ok_button(),
+		leave_dialog.get_ok_button(),
+		leave_dialog.get_cancel_button(),
+		retry_checkpoint_button,
+		replace_dialog.get_ok_button(),
+		replace_dialog.get_cancel_button()
+	]:
 		button.custom_minimum_size = Vector2(maxf(button.custom_minimum_size.x, 64.0), 64.0)
 
 
@@ -354,13 +372,29 @@ func _update_briefing() -> void:
 			menu_lines.append(tr("%s %d건") % [menu_name, range_values["baseline"]])
 		else:
 			menu_lines.append(tr("%s %d–%d건") % [menu_name, range_values["min"], range_values["max"]])
-	briefing_label.text = tr("%s\n\n목표 · 제공 %d건 이상 / 손익 %s 이상\n\n예산 %s · 고정 인건비 %s\n직원 %d명 · 설비 %d개 · 준비 노동량 %d\n\n예상 주문 %d건 · 영업 300초\n%s") % [tr(scenario.briefing),
-		scenario.minimum_served, KitchenScreen._money(scenario.minimum_profit), KitchenScreen._money(scenario.starting_budget),
-		KitchenScreen._money(scenario.labor_cost), scenario.employees.size(), scenario.stations.size(), scenario.prep_labor_capacity,
-		scenario.order_count, "\n".join(menu_lines)]
+	briefing_label.text = (
+		tr(
+			"%s\n\n목표 · 제공 %d건 이상 / 손익 %s 이상\n\n예산 %s · 고정 인건비 %s\n직원 %d명 · 설비 %d개 · 준비 노동량 %d\n\n예상 주문 %d건 · 영업 300초\n%s"
+		)
+		% [
+			tr(scenario.briefing),
+			scenario.minimum_served,
+			KitchenScreen._money(scenario.minimum_profit),
+			KitchenScreen._money(scenario.starting_budget),
+			KitchenScreen._money(scenario.labor_cost),
+			scenario.employees.size(),
+			scenario.stations.size(),
+			scenario.prep_labor_capacity,
+			scenario.order_count,
+			"\n".join(menu_lines)
+		]
+	)
 	var record: Dictionary = progress.snapshot().records.get(scenario.id, {})
 	if not record.is_empty():
-		briefing_label.text += tr("\n\n개별 최고 기록 · 제공 %d건 / 손익 %s\n두 최고 기록은 서로 다른 시도의 결과일 수 있습니다.") % [record.best_served, KitchenScreen._money(record.best_profit)]
+		briefing_label.text += (
+			tr("\n\n개별 최고 기록 · 제공 %d건 / 손익 %s\n두 최고 기록은 서로 다른 시도의 결과일 수 있습니다.")
+			% [record.best_served, KitchenScreen._money(record.best_profit)]
+		)
 	begin_button.disabled = storage_blocked or not progress.is_unlocked(scenario.id)
 
 
@@ -449,9 +483,14 @@ func _save_checkpoint(_reason: String = "checkpoint") -> bool:
 	if active_service == null or active_service.last_preparation.is_empty():
 		return false
 	var seed_value: Variant = active_service.definitions.get("service_seed")
-	var session := ServiceSession.capture(active_service.definitions.id, active_service.last_preparation,
-		active_service.simulation, active_service.driver.speed, active_service.driver.accumulator_us,
-		seed_value if seed_value is int else 0)
+	var session := ServiceSession.capture(
+		active_service.definitions.id,
+		active_service.last_preparation,
+		active_service.simulation,
+		active_service.driver.speed,
+		active_service.driver.accumulator_us,
+		seed_value if seed_value is int else 0
+	)
 	var result := store.save_active_session(session, progress.snapshot().records, progress.snapshot().attempts)
 	pending_save = not result.accepted
 	_set_save_message("service_saved" if result.accepted else "storage", result.reason)
@@ -548,8 +587,17 @@ func _show_result() -> void:
 
 
 func _refresh_result_text() -> void:
-	result_dialog.dialog_text = tr("%s\n\n제공 %d건 / 목표 %d건\n손익 %s / 목표 %s\n\n%s") % [tr("목표 달성") if last_result.passed else tr("목표 미달 · 준비를 바꿔 다시 도전할 수 있습니다"),
-		last_result.served, last_result.minimum_served, KitchenScreen._money(last_result.profit), KitchenScreen._money(last_result.minimum_profit), save_label.text]
+	result_dialog.dialog_text = (
+		tr("%s\n\n제공 %d건 / 목표 %d건\n손익 %s / 목표 %s\n\n%s")
+		% [
+			tr("목표 달성") if last_result.passed else tr("목표 미달 · 준비를 바꿔 다시 도전할 수 있습니다"),
+			last_result.served,
+			last_result.minimum_served,
+			KitchenScreen._money(last_result.profit),
+			KitchenScreen._money(last_result.minimum_profit),
+			save_label.text
+		]
+	)
 
 
 func _show_goal() -> void:
@@ -562,7 +610,15 @@ func _show_goal() -> void:
 	if pending_save:
 		return
 	var scenario := campaign.scenario_for(selected_scenario_id)
-	goal_dialog.dialog_text = tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요.") % [tr(scenario.display_name), scenario.minimum_served, KitchenScreen._money(scenario.minimum_profit), tr(scenario.briefing)]
+	goal_dialog.dialog_text = (
+		tr("%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요.")
+		% [
+			tr(scenario.display_name),
+			scenario.minimum_served,
+			KitchenScreen._money(scenario.minimum_profit),
+			tr(scenario.briefing)
+		]
+	)
 	goal_dialog.popup_centered_clamped(Vector2i(700, 360))
 	_ensure_dialog_tap_sizes()
 

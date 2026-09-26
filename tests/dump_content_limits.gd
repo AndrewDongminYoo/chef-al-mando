@@ -35,14 +35,19 @@ static func limits_row(campaign: Resource, content_version: int) -> Dictionary:
 		var caps: Array = []
 		for served: int in scenario.order_count + 1:
 			caps.append(scenario.maximum_profit(served))
-		scenarios[scenario.id] = {"order_count": scenario.order_count, "starting_budget": scenario.starting_budget,
-			"minimum_served": scenario.minimum_served, "minimum_profit": scenario.minimum_profit, "maximum_profit": caps}
+		scenarios[scenario.id] = {
+			"order_count": scenario.order_count,
+			"starting_budget": scenario.starting_budget,
+			"minimum_served": scenario.minimum_served,
+			"minimum_profit": scenario.minimum_profit,
+			"maximum_profit": caps
+		}
 	return {"content_version": content_version, "scenarios": scenarios}
 
 
 static func format_row(row: Dictionary) -> String:
-	var lines: PackedStringArray = ["\t{\"content_version\": %d, \"scenarios\": {" % row.content_version]
+	var lines: PackedStringArray = ['\t{"content_version": %d, "scenarios": {' % row.content_version]
 	for scenario_id: String in row.scenarios:
-		lines.append("\t\t\"%s\": %s," % [scenario_id, str(row.scenarios[scenario_id])])
+		lines.append('\t\t"%s": %s,' % [scenario_id, str(row.scenarios[scenario_id])])
 	lines.append("\t}},")
 	return "\n".join(lines)

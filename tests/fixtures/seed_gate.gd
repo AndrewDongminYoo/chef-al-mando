@@ -16,23 +16,42 @@ static func evaluate(campaign: Resource, scenario: Resource, attempts: Array[int
 	var pressured: bool = campaign.scenarios.find(campaign.scenario_for(scenario.id)) >= 2
 	for attempt: int in attempts:
 		var seed_value: int = ScheduleGenerator.service_seed_for(scenario.id, attempt)
-		var run: Dictionary = Policies.run_policy(scenario, Policies.draw_aware_policy(scenario, seed_value), 1, seed_value)
-		var row: Dictionary = {"attempt": attempt, "seed": seed_value, "served": -1, "profit": 0, "no_plan_served": -1, "no_plan_profit": 0}
+		var run: Dictionary = Policies.run_policy(
+			scenario, Policies.draw_aware_policy(scenario, seed_value), 1, seed_value
+		)
+		var row: Dictionary = {
+			"attempt": attempt, "seed": seed_value, "served": -1, "profit": 0, "no_plan_served": -1, "no_plan_profit": 0
+		}
 		if not run.accepted:
 			failures.append("attempt %d: draw-aware policy rejected (%s)" % [attempt, run.reason])
 		else:
 			row["served"] = run.snapshot.accounting.served
 			row["profit"] = run.snapshot.accounting.profit
 			if not Policies.passes_targets(scenario, run):
-				failures.append("attempt %d: draw-aware policy misses the targets (%d served, %d profit)" % [attempt, row["served"], row["profit"]])
+				failures.append(
+					(
+						"attempt %d: draw-aware policy misses the targets (%d served, %d profit)"
+						% [attempt, row["served"], row["profit"]]
+					)
+				)
 		if pressured:
 			var no_plan: Dictionary = Policies.run_policy(scenario, {}, 1, seed_value)
 			if no_plan.accepted:
 				row["no_plan_served"] = no_plan.snapshot.accounting.served
 				row["no_plan_profit"] = no_plan.snapshot.accounting.profit
 				if not no_plan_misses(scenario, no_plan):
-					failures.append("attempt %d: no plan misses by less than %d orders and %d profit (%d served, %d profit)"
-						% [attempt, NO_PLAN_SERVED_GAP, NO_PLAN_PROFIT_GAP, row["no_plan_served"], row["no_plan_profit"]])
+					failures.append(
+						(
+							"attempt %d: no plan misses by less than %d orders and %d profit (%d served, %d profit)"
+							% [
+								attempt,
+								NO_PLAN_SERVED_GAP,
+								NO_PLAN_PROFIT_GAP,
+								row["no_plan_served"],
+								row["no_plan_profit"]
+							]
+						)
+					)
 		rows.append(row)
 	return {"passed": failures.is_empty(), "failures": failures, "rows": rows}
 

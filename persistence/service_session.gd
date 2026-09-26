@@ -9,11 +9,22 @@ const MAX_SAFE_INTEGER_INT: int = 9007199254740991
 const TICK_US: int = 100000
 
 
-static func capture(scenario_id: String, selection: Dictionary, simulation: ServiceSim, speed: int = 1,
-	accumulator_us: int = 0, service_seed: int = 0) -> Dictionary:
-	return {"scenario_id": scenario_id, "preparation": selection.duplicate(true),
-		"simulation": simulation.export_state(), "speed": speed, "accumulator_us": accumulator_us,
-		"service_seed": service_seed}
+static func capture(
+	scenario_id: String,
+	selection: Dictionary,
+	simulation: ServiceSim,
+	speed: int = 1,
+	accumulator_us: int = 0,
+	service_seed: int = 0
+) -> Dictionary:
+	return {
+		"scenario_id": scenario_id,
+		"preparation": selection.duplicate(true),
+		"simulation": simulation.export_state(),
+		"speed": speed,
+		"accumulator_us": accumulator_us,
+		"service_seed": service_seed
+	}
 
 
 static func restore(campaign: CampaignDef, session: Dictionary, records: Dictionary) -> Dictionary:
@@ -51,17 +62,25 @@ static func restore(campaign: CampaignDef, session: Dictionary, records: Diction
 	if not _exact_preparation(scenario, saved.preparation):
 		return _failure("invalid_preparation")
 	var preparation := PreparationPlan.new(scenario, saved.preparation)
-	var started := preparation.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := preparation.apply_command(
+		{"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1}
+	)
 	if not started.accepted:
 		return _failure("invalid_preparation")
 	var restored := ServiceSim.restore(started.definitions, saved.simulation, started.options)
 	if not restored.accepted:
 		return _failure(restored.reason)
-	return {"accepted": true, "reason": "", "simulation": restored.simulation,
-		"definitions": started.definitions, "selection": started.selection.duplicate(true),
-		"scenario_id": saved.scenario_id, "speed": saved.speed, "accumulator_us": saved.accumulator_us,
-		"service_seed": service_seed}
+	return {
+		"accepted": true,
+		"reason": "",
+		"simulation": restored.simulation,
+		"definitions": started.definitions,
+		"selection": started.selection.duplicate(true),
+		"scenario_id": saved.scenario_id,
+		"speed": saved.speed,
+		"accumulator_us": saved.accumulator_us,
+		"service_seed": service_seed
+	}
 
 
 static func _normalize_json(value: Variant) -> Dictionary:

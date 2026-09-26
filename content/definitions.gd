@@ -78,7 +78,12 @@ func validate(require_stock: bool = true) -> Array[String]:
 	for recipe: RecipeDef in recipes:
 		if recipe == null:
 			continue
-		if recipe.revenue < 0 or recipe.patience_ticks <= 0 or recipe.cook_role not in ["cold", "hot"] or not roles.has(recipe.cook_role):
+		if (
+			recipe.revenue < 0
+			or recipe.patience_ticks <= 0
+			or recipe.cook_role not in ["cold", "hot"]
+			or not roles.has(recipe.cook_role)
+		):
 			errors.append("invalid recipe values: " + recipe.id)
 		for ingredient_id: String in recipe.ingredients:
 			if not ingredient_ids.has(ingredient_id) or recipe.ingredients[ingredient_id] < 0:
@@ -281,10 +286,15 @@ func order_schedule() -> Array[Dictionary]:
 	for index: int in order_count:
 		var recipe := recipe_for(menu_ids[posmod(index + seed, menu_ids.size())])
 		var arrival_tick := first_arrival_tick + arrival_interval_ticks * index
-		result.append({
-			"id": "order_%02d" % (index + 1),
-			"arrival_tick": arrival_tick,
-			"recipe_id": recipe.id,
-			"deadline_tick": arrival_tick + recipe.patience_ticks,
-		})
+		(
+			result
+			. append(
+				{
+					"id": "order_%02d" % (index + 1),
+					"arrival_tick": arrival_tick,
+					"recipe_id": recipe.id,
+					"deadline_tick": arrival_tick + recipe.patience_ticks,
+				}
+			)
+		)
 	return result

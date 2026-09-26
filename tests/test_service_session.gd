@@ -6,7 +6,9 @@ const SESSION_PATH := "res://persistence/service_session.gd"
 
 
 func run(_tree: SceneTree) -> void:
-	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
+	var campaign: Resource = ResourceLoader.load(
+		"res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE
+	)
 	var scenario: Resource = campaign.scenario_for("first_shift")
 	var plan := PreparationPlan.new(scenario)
 	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
@@ -16,8 +18,10 @@ func run(_tree: SceneTree) -> void:
 		var view: Dictionary = simulation.snapshot()
 		if not view.tasks.is_empty() and view.employees[0].progress in [1, 2, 3, 4]:
 			break
-	expect(simulation.snapshot().tasks.size() == 1 and simulation.snapshot().employees[0].progress in [1, 2, 3, 4],
-		"the session fixture contains actual partial movement")
+	expect(
+		simulation.snapshot().tasks.size() == 1 and simulation.snapshot().employees[0].progress in [1, 2, 3, 4],
+		"the session fixture contains actual partial movement"
+	)
 	if not ResourceLoader.exists(SESSION_PATH):
 		expect(false, "a JSON session restores the prepared in-progress service")
 		return
@@ -27,11 +31,18 @@ func run(_tree: SceneTree) -> void:
 	var restored: Dictionary = session_script.call("restore", campaign, document, {})
 	expect(restored.get("accepted") == true, "a JSON session restores the prepared in-progress service")
 	if restored.get("accepted") == true:
-		expect(restored.scenario_id == "first_shift" and restored.speed == 4 and restored.accumulator_us == 43210,
-			"session restore preserves the scenario, speed, and partial tick time")
-		expect(restored.simulation.state_hash() == simulation.state_hash(), "JSON integer normalization preserves the simulation hash")
-		expect(restored.definitions != null and restored.selection == started.selection,
-			"session restore returns the rebuilt definitions and exact preparation selection")
+		expect(
+			restored.scenario_id == "first_shift" and restored.speed == 4 and restored.accumulator_us == 43210,
+			"session restore preserves the scenario, speed, and partial tick time"
+		)
+		expect(
+			restored.simulation.state_hash() == simulation.state_hash(),
+			"JSON integer normalization preserves the simulation hash"
+		)
+		expect(
+			restored.definitions != null and restored.selection == started.selection,
+			"session restore returns the rebuilt definitions and exact preparation selection"
+		)
 	_test_capture_copy(session_script, started.selection, simulation)
 	_test_preparation_shape(campaign, session_script, session)
 	_test_numeric_boundaries(campaign, session_script, session)
@@ -60,7 +71,10 @@ func _test_numeric_boundaries(campaign: Resource, session_script: GDScript, vali
 	var too_large := valid_session.duplicate(true)
 	too_large.simulation.last_sequence = 9223372036854775807
 	var large_result: Dictionary = session_script.call("restore", campaign, too_large, {})
-	expect(not large_result.get("accepted", false), "session rejects an integer that cannot survive an exact JSON round trip")
+	expect(
+		not large_result.get("accepted", false),
+		"session rejects an integer that cannot survive an exact JSON round trip"
+	)
 	for invalid_value: Variant in [1.5, INF, NAN, "1", true]:
 		var malformed := valid_session.duplicate(true)
 		malformed.speed = invalid_value
@@ -73,13 +87,23 @@ func _test_capture_copy(session_script: GDScript, selection: Dictionary, simulat
 	var captured: Dictionary = session_script.call("capture", "first_shift", selection, simulation, 1, 0)
 	captured.preparation.duties.employee_01 = "off"
 	captured.simulation.inventory.vegetable = -1
-	expect(selection.duties.employee_01 == "all" and simulation.call("state_hash") == before,
-		"mutating a captured session cannot change preparation or simulation inputs")
+	expect(
+		selection.duties.employee_01 == "all" and simulation.call("state_hash") == before,
+		"mutating a captured session cannot change preparation or simulation inputs"
+	)
 
 
 func _test_session_contract(campaign: Resource, session_script: GDScript, valid_session: Dictionary) -> void:
-	for corruption: String in ["missing_prng", "wrong_prng", "extra_simulation", "missing_root", "extra_root",
-		"invalid_speed", "invalid_accumulator", "locked_scenario"]:
+	for corruption: String in [
+		"missing_prng",
+		"wrong_prng",
+		"extra_simulation",
+		"missing_root",
+		"extra_root",
+		"invalid_speed",
+		"invalid_accumulator",
+		"locked_scenario"
+	]:
 		var session := valid_session.duplicate(true)
 		match corruption:
 			"missing_prng":

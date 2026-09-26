@@ -19,7 +19,11 @@ func run() -> void:
 			_fail_usage()
 			return
 		options[args[index]] = args[index + 1]
-	if options["--scenario"] not in Experiment.SCENARIOS or options["--layout"] not in ["original", "clustered"] or options["--duties"] not in Experiment.DUTIES:
+	if (
+		options["--scenario"] not in Experiment.SCENARIOS
+		or options["--layout"] not in ["original", "clustered"]
+		or options["--duties"] not in Experiment.DUTIES
+	):
 		_fail_usage()
 		return
 	if DisplayServer.get_name() == "headless":
@@ -54,8 +58,18 @@ func run() -> void:
 			return
 	screen.preparation_panel.show_tab(1)
 	screen.set_process(true)
-	print("SPACE_PLAY scenario=", scenario.id, " layout=", options["--layout"], " duties=", options["--duties"],
-		" served_goal=", scenario.minimum_served, " profit_goal=", scenario.minimum_profit)
+	print(
+		"SPACE_PLAY scenario=",
+		scenario.id,
+		" layout=",
+		options["--layout"],
+		" duties=",
+		options["--duties"],
+		" served_goal=",
+		scenario.minimum_served,
+		" profit_goal=",
+		scenario.minimum_profit
+	)
 	print("SPACE_PLAY uses temporary settings and does not write campaign progress")
 
 

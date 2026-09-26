@@ -9,9 +9,10 @@ func run(tree: SceneTree) -> void:
 	expect(feedback.play_cue("arrival"), "an arrival cue starts a real player")
 	var arrival: Variant = feedback.get_node_or_null("ArrivalPlayer")
 	var arrival_player: AudioStreamPlayer = arrival as AudioStreamPlayer
-	var arrival_ready: bool = arrival_player != null and arrival_player.stream is AudioStreamWAV and arrival_player.playing
-	expect(arrival_ready,
-		"arrival uses a product PCM WAV stream through AudioStreamPlayer")
+	var arrival_ready: bool = (
+		arrival_player != null and arrival_player.stream is AudioStreamWAV and arrival_player.playing
+	)
+	expect(arrival_ready, "arrival uses a product PCM WAV stream through AudioStreamPlayer")
 	if not arrival_ready:
 		feedback.queue_free()
 		await tree.process_frame

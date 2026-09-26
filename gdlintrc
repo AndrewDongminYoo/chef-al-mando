@@ -1,0 +1,5 @@
+# Keep guard clauses and existing large UI/test files during formatter adoption.
+disable:
+  - max-returns
+  - max-file-lines
+max-line-length: 120

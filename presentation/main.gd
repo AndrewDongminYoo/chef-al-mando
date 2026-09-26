@@ -26,9 +26,18 @@ const STATUS_TEXT := {
 	State.PAUSED: "일시정지 · 재개를 눌러 계속하세요",
 	State.CLOSED: "영업 종료 · 결과를 확인하고 다시 준비할 수 있습니다",
 }
-const STATE_TEXT := {"waiting": "대기", "moving": "이동", "working": "작업", "served": "제공 완료", "cancelled": "취소", "expired": "미제공"}
+const STATE_TEXT := {
+	"waiting": "대기", "moving": "이동", "working": "작업", "served": "제공 완료", "cancelled": "취소", "expired": "미제공"
+}
 const PHASE_TEXT := {"pickup": "재료 수거", "prep": "손질", "cook": "조리", "serve": "제공", "": "완료"}
-const WAIT_TEXT := {"missing_ingredients": "재료 부족", "no_responsible_employee": "담당 없음", "responsible_employee_busy": "담당 직원 작업 중", "station_in_use": "작업대 사용 중", "no_route": "경로 없음", "": ""}
+const WAIT_TEXT := {
+	"missing_ingredients": "재료 부족",
+	"no_responsible_employee": "담당 없음",
+	"responsible_employee_busy": "담당 직원 작업 중",
+	"station_in_use": "작업대 사용 중",
+	"no_route": "경로 없음",
+	"": ""
+}
 const DUTY_TEXT: Array[String] = ["전체 담당", "냉식 담당", "온식 담당", "담당 해제"]
 const ANALYSIS_HEADING_COLOR := Color("eab06c")
 const ANALYSIS_BODY_COLOR := Color("f5edda")
@@ -127,7 +136,9 @@ func _ready() -> void:
 	cancel_button.pressed.connect(func() -> void: submit_command("cancel_order", selected_order_id, null))
 	details_toggle.pressed.connect(_toggle_details)
 	restart_button.pressed.connect(_restart)
-	speed_buttons = [$SafeArea/Layout/Controls/Speed1, $SafeArea/Layout/Controls/Speed2, $SafeArea/Layout/Controls/Speed4]
+	speed_buttons = [
+		$SafeArea/Layout/Controls/Speed1, $SafeArea/Layout/Controls/Speed2, $SafeArea/Layout/Controls/Speed4
+	]
 	for index: int in speed_buttons.size():
 		speed_buttons[index].pressed.connect(_set_speed.bind([1, 2, 4][index]))
 	_new_service()
@@ -294,9 +305,11 @@ func _new_service() -> void:
 			$SafeArea/Layout/Kitchen/Body/Side.add_child(preparation_panel)
 			$SafeArea/Layout/Kitchen/Body/Side.move_child(preparation_panel, 0)
 			preparation_panel.command_requested.connect(submit_preparation)
-			preparation_panel.station_selected.connect(func(station_id: String) -> void:
-				board.selected_station_id = station_id
-				board.queue_redraw())
+			preparation_panel.station_selected.connect(
+				func(station_id: String) -> void:
+					board.selected_station_id = station_id
+					board.queue_redraw()
+			)
 			preparation_panel.setup(source)
 			analysis_scroll = ScrollContainer.new()
 			analysis_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -357,8 +370,15 @@ func _restart() -> void:
 
 
 func submit_command(kind: String, target_id: String, value: Variant) -> Dictionary:
-	var result := simulation.enqueue_command({"kind": kind, "target_id": target_id,
-		"value": value, "apply_tick": simulation.tick + 1, "sequence": command_sequence + 1})
+	var result := simulation.enqueue_command(
+		{
+			"kind": kind,
+			"target_id": target_id,
+			"value": value,
+			"apply_tick": simulation.tick + 1,
+			"sequence": command_sequence + 1
+		}
+	)
 	if result.accepted:
 		command_sequence += 1
 		feedback_kind = "commands_pending"
@@ -372,8 +392,9 @@ func submit_command(kind: String, target_id: String, value: Variant) -> Dictiona
 func submit_preparation(kind: String, target_id: String, value: Variant) -> Dictionary:
 	if preparation == null or state != State.READY:
 		return {"accepted": false, "reason": "service_started"}
-	var result := preparation.apply_command({"kind": kind, "target_id": target_id, "value": value,
-		"apply_tick": 0, "sequence": preparation.sequence() + 1})
+	var result := preparation.apply_command(
+		{"kind": kind, "target_id": target_id, "value": value, "apply_tick": 0, "sequence": preparation.sequence() + 1}
+	)
 	_set_feedback("preparation_applied" if result.accepted else "preparation_error", result.reason)
 	if result.accepted:
 		definitions = preparation.display_definition()
@@ -435,7 +456,9 @@ func _update_details_toggle() -> void:
 
 
 func _update_board_layout() -> void:
-	board.size_flags_vertical = Control.SIZE_EXPAND_FILL if state == State.CLOSED or not compact_layout else Control.SIZE_SHRINK_BEGIN
+	board.size_flags_vertical = (
+		Control.SIZE_EXPAND_FILL if state == State.CLOSED or not compact_layout else Control.SIZE_SHRINK_BEGIN
+	)
 	for label: Label in duty_labels:
 		label.custom_minimum_size.y = 64 if compact_layout else 96
 
@@ -467,7 +490,10 @@ func _refresh_service(preparation_view: Dictionary = {}) -> void:
 		board.show_state(null, {})
 		summary_label.text = tr("주방 데이터 오류 · 영업을 시작할 수 없습니다")
 		detail_label.text = tr("주문을 불러올 수 없습니다")
-		for button: Button in [start_button, pause_button, resume_button, priority_up_button, priority_down_button, cancel_button] + speed_buttons:
+		for button: Button in (
+			[start_button, pause_button, resume_button, priority_up_button, priority_down_button, cancel_button]
+			+ speed_buttons
+		):
 			button.disabled = true
 		for button: OptionButton in duty_buttons:
 			button.disabled = true
@@ -478,7 +504,9 @@ func _refresh_service(preparation_view: Dictionary = {}) -> void:
 	_show_summary()
 	for index: int in speed_buttons.size():
 		speed_buttons[index].disabled = driver.speed == [1, 2, 4][index] or state == State.CLOSED
-		speed_buttons[index].theme_type_variation = &"ActiveButton" if driver.speed == [1, 2, 4][index] and state != State.CLOSED else &"Button"
+		speed_buttons[index].theme_type_variation = (
+			&"ActiveButton" if driver.speed == [1, 2, 4][index] and state != State.CLOSED else &"Button"
+		)
 	for order: Dictionary in latest_view.orders:
 		if selected_order_id.is_empty():
 			selected_order_id = order.id
@@ -498,7 +526,10 @@ func _refresh_service(preparation_view: Dictionary = {}) -> void:
 		var selected := "▶ " if order.id == selected_order_id else ""
 		order_buttons[order.id].theme_type_variation = &"ActiveButton" if order.id == selected_order_id else &"Button"
 		var detail: String = _order_status(order)
-		order_buttons[order.id].text = tr("%s%s %s · 우선 %d\n%s") % [selected, order.id.trim_prefix("order_"), tr(order.name), _requested_priority(order), detail]
+		order_buttons[order.id].text = (
+			tr("%s%s %s · 우선 %d\n%s")
+			% [selected, order.id.trim_prefix("order_"), tr(order.name), _requested_priority(order), detail]
+		)
 	_show_selected_order()
 	for index: int in latest_view.employees.size():
 		var employee: Dictionary = latest_view.employees[index]
@@ -594,8 +625,7 @@ func _refresh_feedback() -> void:
 	match feedback_kind:
 		"commands_pending":
 			var count: int = latest_view.get("commands", []).size()
-			feedback_label.text = tr("적용 대기 %d건%s") % [count,
-				tr(" · 재개하면 반영") if state == State.PAUSED else ""]
+			feedback_label.text = tr("적용 대기 %d건%s") % [count, tr(" · 재개하면 반영") if state == State.PAUSED else ""]
 		"commands_applied":
 			feedback_label.text = tr("명령 반영 완료")
 		"command_invalid":
@@ -621,10 +651,30 @@ func _show_preparation(preview: Dictionary = {}) -> void:
 	var employees: Array[Dictionary] = []
 	for definition: Definitions.EmployeeDef in definitions.employees:
 		var tile: Array[int] = [definition.starting_tile.x, definition.starting_tile.y]
-		employees.append({"id": definition.id, "tile": tile, "next_tile": tile.duplicate(), "progress": 0,
-			"duty": preview.duties[definition.id], "order_id": ""})
+		employees.append(
+			{
+				"id": definition.id,
+				"tile": tile,
+				"next_tile": tile.duplicate(),
+				"progress": 0,
+				"duty": preview.duties[definition.id],
+				"order_id": ""
+			}
+		)
 	board.show_state(definitions, {"employees": employees})
-	summary_label.text = tr("시작 예산 %s · 발주 %s · 고정 인건비 %s\n남은 예산 %s · 준비 노동량 %d / %d\n주문 %d건 · %s") % [_money(definitions.starting_budget), _money(preview.purchased_cost), _money(definitions.labor_cost), _money(preview.budget_remaining), preview.labor_used, preview.labor_capacity, definitions.order_count, tr("영업 시작 가능") if preview.can_start else tr("준비를 확인하세요")]
+	summary_label.text = (
+		tr("시작 예산 %s · 발주 %s · 고정 인건비 %s\n남은 예산 %s · 준비 노동량 %d / %d\n주문 %d건 · %s")
+		% [
+			_money(definitions.starting_budget),
+			_money(preview.purchased_cost),
+			_money(definitions.labor_cost),
+			_money(preview.budget_remaining),
+			preview.labor_used,
+			preview.labor_capacity,
+			definitions.order_count,
+			tr("영업 시작 가능") if preview.can_start else tr("준비를 확인하세요")
+		]
+	)
 	status_label.text = tr("준비 중 · 발주·프렙과 배치·담당을 선택한 뒤 시작하세요")
 	if not preview.errors.is_empty():
 		status_label.text = PreparationPanel.reason_text(preview.errors[0])
@@ -637,16 +687,52 @@ func _show_summary() -> void:
 	if state == State.CLOSED:
 		var total: int = latest_view.orders.size()
 		var rate: float = accounting.served * 100.0 / maxi(total, 1)
-		summary_label.text = tr("제공 %d / %d건 (%.0f%%) · 취소 %d · 미제공 %d\n매출 %s · 재료비 %s · 인건비 %s\n폐기 %s · 손익 %s · 남은 예산 %s") % [accounting.served, total, rate, accounting.cancelled, accounting.expired, _money(accounting.revenue), _money(accounting.purchased_cost), _money(accounting.labor_cost), _money(accounting.waste_cost), _money(accounting.profit), _money(accounting.cash)]
+		summary_label.text = (
+			tr("제공 %d / %d건 (%.0f%%) · 취소 %d · 미제공 %d\n매출 %s · 재료비 %s · 인건비 %s\n폐기 %s · 손익 %s · 남은 예산 %s")
+			% [
+				accounting.served,
+				total,
+				rate,
+				accounting.cancelled,
+				accounting.expired,
+				_money(accounting.revenue),
+				_money(accounting.purchased_cost),
+				_money(accounting.labor_cost),
+				_money(accounting.waste_cost),
+				_money(accounting.profit),
+				_money(accounting.cash)
+			]
+		)
 		if analysis_label != null:
 			_show_analysis()
 	elif state == State.READY:
 		var menus: PackedStringArray = []
 		for recipe_id: String in definitions.menu_ids:
 			menus.append(tr(definitions.recipe_for(recipe_id).display_name))
-		summary_label.text = tr("메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건") % [" / ".join(menus), _money(definitions.starting_budget), _money(accounting.purchased_cost), _money(accounting.labor_cost), _raw_stock(" · "), definitions.order_count]
+		summary_label.text = (
+			tr("메뉴 · %s\n예산 %s · 재료비 %s · 인건비 %s\n%s · 주문 %d건")
+			% [
+				" / ".join(menus),
+				_money(definitions.starting_budget),
+				_money(accounting.purchased_cost),
+				_money(accounting.labor_cost),
+				_raw_stock(" · "),
+				definitions.order_count
+			]
+		)
 	else:
-		summary_label.text = tr("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s") % [latest_view.orders.size(), definitions.order_count, accounting.served, accounting.expired, accounting.cancelled, _money(accounting.revenue), _raw_stock(" / ")]
+		summary_label.text = (
+			tr("주문 %d / %d건 · 제공 %d · 미제공 %d · 취소 %d\n매출 %s · 남은 재료 · %s")
+			% [
+				latest_view.orders.size(),
+				definitions.order_count,
+				accounting.served,
+				accounting.expired,
+				accounting.cancelled,
+				_money(accounting.revenue),
+				_raw_stock(" / ")
+			]
+		)
 		if preparation != null:
 			var prepared: PackedStringArray = []
 			for item: Definitions.IngredientDef in definitions.mise_items():
@@ -677,12 +763,27 @@ func _show_analysis() -> void:
 		details.append(tr("%s · %.1f초") % [tr(WAIT_TEXT[reason]), totals[reason] / 10.0])
 		if totals[reason] > totals[longest]:
 			longest = reason
-	details.append(tr("  담당 부재 %.1f초 / 작업 중 %.1f초") % [(totals.no_responsible_employee - totals.responsible_employee_busy) / 10.0, totals.responsible_employee_busy / 10.0])
+	details.append(
+		(
+			tr("  담당 부재 %.1f초 / 작업 중 %.1f초")
+			% [
+				(totals.no_responsible_employee - totals.responsible_employee_busy) / 10.0,
+				totals.responsible_employee_busy / 10.0
+			]
+		)
+	)
 	details.append(tr("이동 · %.1f초\n작업 · %.1f초") % [totals.moving / 10.0, totals.working / 10.0])
-	details.append(tr("\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다.") % (tr(WAIT_TEXT[longest]) if totals[longest] > 0 else tr("대기 없음")))
+	details.append(
+		(
+			tr("\n가장 긴 대기 · %s\n이 수치만으로 손실 원인을 단정할 수 없습니다.")
+			% (tr(WAIT_TEXT[longest]) if totals[longest] > 0 else tr("대기 없음"))
+		)
+	)
 	details.append(tr("\n설비별 예약·사용 시간\n재료를 가져오는 이동 중 예약도 포함합니다."))
 	for station: Definitions.StationDef in definitions.stations:
-		details.append(tr("%s · %.1f초") % [tr(station.display_name), latest_view.metrics.station_reserved_ticks[station.id] / 10.0])
+		details.append(
+			tr("%s · %.1f초") % [tr(station.display_name), latest_view.metrics.station_reserved_ticks[station.id] / 10.0]
+		)
 	_render_analysis(summary_label.text, recommendations, "\n".join(details))
 
 
@@ -743,39 +844,122 @@ func _recommendation_text(report: Dictionary, recommendation: Dictionary) -> Str
 	match recommendation.action:
 		"increase_prep":
 			var row: Dictionary = report.prep[target_id]
-			return tr("프렙 · %s %d개 준비 · %d개 사용 · 생재료 손질 %d건\n→ 준비 노동량 안에서 %d개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.planned, row.used, row.raw_orders, recommendation.amount]
+			return (
+				tr("프렙 · %s %d개 준비 · %d개 사용 · 생재료 손질 %d건\n→ 준비 노동량 안에서 %d개 늘려 보세요.")
+				% [
+					tr(definitions.ingredient_for(target_id).display_name),
+					row.planned,
+					row.used,
+					row.raw_orders,
+					recommendation.amount
+				]
+			)
 		"reduce_prep":
 			var row: Dictionary = report.prep[target_id]
-			return tr("프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.planned, row.used, row.remaining, recommendation.amount]
+			return (
+				tr("프렙 · %s %d개 준비 · %d개 사용 · %d개 남음\n→ 다음 영업은 %d개 줄여 보세요.")
+				% [
+					tr(definitions.ingredient_for(target_id).display_name),
+					row.planned,
+					row.used,
+					row.remaining,
+					recommendation.amount
+				]
+			)
 		"prep_at_capacity":
 			var row: Dictionary = report.prep[target_id]
 			var remaining_labor: int = report.labor_capacity - report.labor_used
-			return tr("프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 항목에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.used, row.raw_orders, row.labor_units, remaining_labor]
+			return (
+				tr(
+					# gdlint: ignore=max-line-length
+					"프렙 · %s %d개 모두 사용 · 추가 손질 %d건\n→ 프렙 1개를 더 만들 수 없습니다.\n필요한 노동량은 %d, 남은 노동량은 %d입니다.\n다른 항목에 프렙이 남았다면 옮기세요.\n없다면 작업 병목을 확인하세요."
+				)
+				% [
+					tr(definitions.ingredient_for(target_id).display_name),
+					row.used,
+					row.raw_orders,
+					row.labor_units,
+					remaining_labor
+				]
+			)
 		"increase_purchase":
 			var row: Dictionary = report.ingredients[target_id]
-			return tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.related_shortage_ticks / 10.0]
+			return (
+				tr("발주 · %s %d개 발주 · 종료 재고 0개 · 관련 메뉴 재료 부족 %.1f초\n→ 예산 안에서 1개 늘려 보세요.")
+				% [
+					tr(definitions.ingredient_for(target_id).display_name),
+					row.purchased,
+					row.related_shortage_ticks / 10.0
+				]
+			)
 		"reduce_purchase":
 			var row: Dictionary = report.ingredients[target_id]
-			return tr("발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요.") % [tr(definitions.ingredient_for(target_id).display_name), row.purchased, row.used, row.remaining, recommendation.amount]
+			return (
+				tr("발주 · %s %d개 발주 · %d개 사용 · %d개 남음\n→ 제공률을 확인하며 다음 영업은 %d개 줄여 보세요.")
+				% [
+					tr(definitions.ingredient_for(target_id).display_name),
+					row.purchased,
+					row.used,
+					row.remaining,
+					recommendation.amount
+				]
+			)
 		"purchase_consumed":
 			var row: Dictionary = report.ingredients[target_id]
 			var ingredient_name: String = tr(definitions.ingredient_for(target_id).display_name)
-			return tr("발주 · %s %d개를 모두 사용 · 재고 0 · 재료 부족 없음\n→ %s 발주량은 유지하세요.\n프렙, 우선순위, 배치 중 하나만 바꿔 비교하세요.") % [ingredient_name, row.purchased, ingredient_name]
+			return (
+				tr("발주 · %s %d개를 모두 사용 · 재고 0 · 재료 부족 없음\n→ %s 발주량은 유지하세요.\n프렙, 우선순위, 배치 중 하나만 바꿔 비교하세요.")
+				% [ingredient_name, row.purchased, ingredient_name]
+			)
 		"raise_priority":
 			var row: Dictionary = report.priorities[target_id]
 			var recipe_name: String = tr(definitions.recipe_for(target_id).display_name)
 			var next_priority: int = mini(2, row.default_priority + recommendation.amount)
-			return tr("우선순위 · %s %d · 미제공 %d · 작업 대기 %.1f초\n→ 다음 영업에서\n%s의 기본 우선순위를 %d로 올려 보세요.") % [recipe_name, row.default_priority, row.expired, row.pressure_ticks / 10.0, recipe_name, next_priority]
+			return (
+				tr("우선순위 · %s %d · 미제공 %d · 작업 대기 %.1f초\n→ 다음 영업에서\n%s의 기본 우선순위를 %d로 올려 보세요.")
+				% [
+					recipe_name,
+					row.default_priority,
+					row.expired,
+					row.pressure_ticks / 10.0,
+					recipe_name,
+					next_priority
+				]
+			)
 		"priority_at_max":
 			var row: Dictionary = report.priorities[target_id]
-			var header := tr("우선순위 · %s 기본 2 · 미제공 %d건 · 작업 대기 %.1f초") % [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]
+			var header := (
+				tr("우선순위 · %s 기본 2 · 미제공 %d건 · 작업 대기 %.1f초")
+				% [tr(definitions.recipe_for(target_id).display_name), row.expired, row.pressure_ticks / 10.0]
+			)
 			match recommendation.bottleneck:
 				"movement":
-					return header + "\n" + tr("→ 이미 최대입니다. 이동 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 이동 시간을 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+					return (
+						header
+						+ "\n"
+						+ (
+							tr("→ 이미 최대입니다. 이동 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 이동 시간을 비교해 보세요.")
+							% (recommendation.bottleneck_ticks / 10.0)
+						)
+					)
 				"employee_busy":
-					return header + "\n" + tr("→ 이미 최대입니다. 담당 직원 대기 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 담당 직원 대기와 이동 시간을 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+					return (
+						header
+						+ "\n"
+						+ (
+							tr("→ 이미 최대입니다. 담당 직원 대기 %.1f초가 가장 큽니다. 다음 영업은 작업대 한 곳의 위치만 바꾸고 담당 직원 대기와 이동 시간을 비교해 보세요.")
+							% (recommendation.bottleneck_ticks / 10.0)
+						)
+					)
 				"station":
-					return header + "\n" + tr("→ 이미 최대입니다. 작업대 대기 %.1f초가 가장 큽니다. 다음 영업은 냉식대·화구 중 한 곳만 바꾸고 작업대 대기를 비교해 보세요.") % (recommendation.bottleneck_ticks / 10.0)
+					return (
+						header
+						+ "\n"
+						+ (
+							tr("→ 이미 최대입니다. 작업대 대기 %.1f초가 가장 큽니다. 다음 영업은 냉식대·화구 중 한 곳만 바꾸고 작업대 대기를 비교해 보세요.")
+							% (recommendation.bottleneck_ticks / 10.0)
+						)
+					)
 	return ""
 
 
@@ -785,7 +969,9 @@ func _employee_activity(employee: Dictionary) -> String:
 		return tr("작업 중")
 	var recipe_name: String = tr(order.name)
 	var task := _task_for_order(order.id)
-	var collecting: bool = not task.is_empty() and task.collection_index >= 0 and task.path_index < task.collection_index
+	var collecting: bool = (
+		not task.is_empty() and task.collection_index >= 0 and task.path_index < task.collection_index
+	)
 	var action := ""
 	if order.state == "moving":
 		match order.phase_id:
@@ -794,7 +980,11 @@ func _employee_activity(employee: Dictionary) -> String:
 			"prep":
 				action = tr("새 재료 손질하러 이동 중")
 			"cook":
-				action = tr("손질한 재료 가지러 이동 중") if collecting else tr("%s로 이동 중") % tr(_station_name(task.get("station_id", "")))
+				action = (
+					tr("손질한 재료 가지러 이동 중")
+					if collecting
+					else tr("%s로 이동 중") % tr(_station_name(task.get("station_id", "")))
+				)
 			"serve":
 				action = tr("완성 요리 가지러 이동 중") if collecting else tr("제공대로 운반 중")
 	elif order.state == "working":

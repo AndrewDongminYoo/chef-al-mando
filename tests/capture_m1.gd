@@ -25,21 +25,31 @@ func run() -> void:
 	await click(screen.cancel_button)
 	await click(screen.resume_button)
 	screen.advance(0.1)
-	checks.expect(screen.simulation.snapshot().orders[2].state == "cancelled", "rendered cancellation applies after resume")
+	checks.expect(
+		screen.simulation.snapshot().orders[2].state == "cancelled", "rendered cancellation applies after resume"
+	)
 	await click(screen.speed_buttons[2])
 	checks.expect(screen.driver.speed == 4, "rendered four-speed hit target changes the driver")
 	screen.advance(68.0)
 	checks.expect(screen.simulation.closed, "the rendered service reaches closing")
 	await save_frame("res://build/check/m1-closed.png")
 	await click(screen.restart_button)
-	checks.expect(screen.simulation.tick == 0 and screen.state == KitchenScreen.State.READY, "rendered restart returns to preparation")
+	checks.expect(
+		screen.simulation.tick == 0 and screen.state == KitchenScreen.State.READY,
+		"rendered restart returns to preparation"
+	)
 	await process_frame
 	var safe := screen.safe_area.get_global_rect()
 	if "--negative-layout" in OS.get_cmdline_user_args():
 		screen.start_button.position.x = screen.size.x + 100
-	for button: Button in [screen.start_button, screen.pause_button, screen.resume_button, screen.speed_buttons[0], screen.details_toggle]:
+	for button: Button in [
+		screen.start_button, screen.pause_button, screen.resume_button, screen.speed_buttons[0], screen.details_toggle
+	]:
 		if button.is_visible_in_tree():
-			checks.expect(safe.encloses(button.get_global_rect()), "rendered control must remain in the safe area: " + str(button.name))
+			checks.expect(
+				safe.encloses(button.get_global_rect()),
+				"rendered control must remain in the safe area: " + str(button.name)
+			)
 	print("M1 rendered input failures=%d" % checks.failures)
 	screen.queue_free()
 	await process_frame

@@ -103,21 +103,25 @@ static func lever_subsets(scenario_id: String) -> Array:
 static func lever_free_policy(scenario_id: String) -> Dictionary:
 	var policy: Dictionary = without_lever_policy(scenario_id)
 	match scenario_id:
+		# gdlint: ignore=max-line-length
 		## sweep: --scenario hot_queue --attempt 0 --without priorities --best → passed 0, best_any {"prepped_grain": 3, "soup_base": 3} · 12 · 1,400
 		"hot_queue":
 			policy = {"preparation": [], "priorities": {}}
 			_add(policy, "set_prep", "prepped_grain", 3)
 			_add(policy, "set_prep", "soup_base", 3)
+		# gdlint: ignore=max-line-length
 		## sweep: --scenario shared_stock --attempt 0 --without set_purchase --best → passed 0, best_any {"prepped_grain": 6, "soup_base": 5} · 15 · 3,700
 		"shared_stock":
 			policy = {"preparation": [], "priorities": {}}
 			_add(policy, "set_prep", "prepped_grain", 6)
 			_add(policy, "set_prep", "soup_base", 5)
+		# gdlint: ignore=max-line-length
 		## sweep: --scenario split_duties --attempt 0 --without set_duty --items prepped_vegetable:7,prepped_grain:7,prepped_mushroom:7,thawed_protein:7 --best → passed 0, best_any {"prepped_vegetable": 2, "thawed_protein": 4} · 25 · 11,350
 		"split_duties":
 			policy = {"preparation": [], "priorities": {}}
 			_add(policy, "set_prep", "prepped_vegetable", 2)
 			_add(policy, "set_prep", "thawed_protein", 4)
+		# gdlint: ignore=max-line-length
 		## sweep: --scenario long_route --attempt 0 --without move_station,rotate_station --items marinated_protein:5,prepped_vegetable:6,prepped_grain:6,prepped_mushroom:6,soup_base:6,thawed_protein:6 --best → passed 0, best_any {"marinated_protein": 5} · 18 · 8,700.
 		## best_any는 지렛대를 뺀 기준 정책과 같은 프렙이라(without_lever_policy가 이미 검사) 통과 무관 순위의 다음 행
 		## {"marinated_protein": 4, "prepped_mushroom": 1, "thawed_protein": 2} · 17 · 7,700으로 고정합니다(같은 회계의 동률 행은 없음).
@@ -128,6 +132,7 @@ static func lever_free_policy(scenario_id: String) -> Dictionary:
 			_add(policy, "set_prep", "thawed_protein", 2)
 		## rush_hour은 지렛대가 set_prep·priorities 둘이라 이 스윕 도구(프렙만 순회)가 닿지 않아, Task 9의
 		## placement·duty·purchase 탐침(rh_lever_free_probe.gd, scratchpad·미커밋, 시드 0·작성 발주, 85가지)에서 고정합니다:
+		# gdlint: ignore=max-line-length
 		## move_station cold_01 left 2회 → 23 · 6,500(목표 23건·8,500원 미달). docs/notes/kitchen-pressure-verification.md의 rush_hour 절 참고.
 		"rush_hour":
 			policy = {"preparation": [], "priorities": {}}
@@ -162,8 +167,11 @@ static func draw_aware_policy(scenario: Definitions, seed_value: int) -> Diction
 
 
 static func passes_targets(scenario: Definitions, run: Dictionary) -> bool:
-	return run.accepted and run.snapshot.accounting.served >= scenario.minimum_served \
+	return (
+		run.accepted
+		and run.snapshot.accounting.served >= scenario.minimum_served
 		and run.snapshot.accounting.profit >= scenario.minimum_profit
+	)
 
 
 static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
@@ -240,7 +248,9 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 	return alternatives
 
 
-static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: int = 1, seed_value: int = 0) -> Dictionary:
+static func run_policy(
+	scenario: Definitions, policy: Dictionary = {}, speed: int = 1, seed_value: int = 0
+) -> Dictionary:
 	var seeded: Definitions = scenario if seed_value == 0 else scenario.with_service_seed(seed_value)
 	var plan := PreparationPlan.new(seeded)
 	var sequence: int = 0
@@ -252,7 +262,9 @@ static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: in
 		var result := plan.apply_command(command)
 		if not result.accepted:
 			return {"accepted": false, "reason": "preparation: " + str(command) + " " + result.reason}
-	var committed := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": sequence + 1})
+	var committed := plan.apply_command(
+		{"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": sequence + 1}
+	)
 	if not committed.accepted:
 		return {"accepted": false, "reason": "start: " + committed.reason}
 	var sim := ServiceSim.new(committed.definitions, null, committed.options)
@@ -264,8 +276,15 @@ static func run_policy(scenario: Definitions, policy: Dictionary = {}, speed: in
 		_drive_to(driver, sim, arrival.arrival_tick, speed)
 		if policy.get("priorities", {}).has(arrival.recipe_id):
 			sequence += 1
-			var result := sim.enqueue_command({"kind": "set_priority", "target_id": arrival.id,
-				"value": policy.priorities[arrival.recipe_id], "apply_tick": sim.tick + 1, "sequence": sequence})
+			var result := sim.enqueue_command(
+				{
+					"kind": "set_priority",
+					"target_id": arrival.id,
+					"value": policy.priorities[arrival.recipe_id],
+					"apply_tick": sim.tick + 1,
+					"sequence": sequence
+				}
+			)
 			if not result.accepted:
 				return {"accepted": false, "reason": "priority: " + result.reason}
 	_drive_to(driver, sim, scenario.closing_tick, speed)

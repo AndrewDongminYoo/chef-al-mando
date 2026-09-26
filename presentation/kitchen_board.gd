@@ -2,11 +2,21 @@ extends Control
 
 const Definitions := preload("res://content/definitions.gd")
 const STATION_NAMES := {"storage": "재료", "cold": "냉식", "hot": "화구", "pass": "제공"}
-const STATION_COLORS := {"storage": Color("91734e"), "cold": Color("447e9b"), "hot": Color("b96547"), "pass": Color("638457")}
-const STATION_TEXTURES := {"storage": preload("res://assets/m2/storage.svg"), "cold": preload("res://assets/m2/cold.svg"),
-	"hot": preload("res://assets/m2/hot.svg"), "pass": preload("res://assets/m2/pass.svg")}
-const EMPLOYEE_TEXTURES := {"north": preload("res://assets/m2/employee_north.svg"), "east": preload("res://assets/m2/employee_east.svg"),
-	"south": preload("res://assets/m2/employee_south.svg"), "west": preload("res://assets/m2/employee_west.svg")}
+const STATION_COLORS := {
+	"storage": Color("91734e"), "cold": Color("447e9b"), "hot": Color("b96547"), "pass": Color("638457")
+}
+const STATION_TEXTURES := {
+	"storage": preload("res://assets/m2/storage.svg"),
+	"cold": preload("res://assets/m2/cold.svg"),
+	"hot": preload("res://assets/m2/hot.svg"),
+	"pass": preload("res://assets/m2/pass.svg")
+}
+const EMPLOYEE_TEXTURES := {
+	"north": preload("res://assets/m2/employee_north.svg"),
+	"east": preload("res://assets/m2/employee_east.svg"),
+	"south": preload("res://assets/m2/employee_south.svg"),
+	"west": preload("res://assets/m2/employee_west.svg")
+}
 var definitions: Definitions
 var view: Dictionary = {}
 var selected_station_id: String = ""
@@ -66,7 +76,14 @@ func _draw() -> void:
 			draw_set_transform(Vector2.ZERO)
 		else:
 			draw_rect(rect.grow(-2), STATION_COLORS[station.role])
-			draw_string(font, rect.position + Vector2(2, cell * 0.65), tr(STATION_NAMES[station.role]), HORIZONTAL_ALIGNMENT_CENTER, cell - 4, font_size)
+			draw_string(
+				font,
+				rect.position + Vector2(2, cell * 0.65),
+				tr(STATION_NAMES[station.role]),
+				HORIZONTAL_ALIGNMENT_CENTER,
+				cell - 4,
+				font_size
+			)
 		if station.id == selected_station_id:
 			draw_rect(rect.grow(-1), Color("ffe0a3"), false, 3)
 		var work_center := origin + (Vector2(station.work_position) + Vector2.ONE * 0.5) * cell
@@ -90,7 +107,15 @@ func _draw() -> void:
 				draw_arc(center, cell * 0.44, -PI * 0.9, -PI * 0.1, 10, Color("f1c56f"), 3)
 		if employee_badges.has(employee.id):
 			_draw_employee_badge(center, cell, employee_badges[employee.id])
-		draw_string(font, center + Vector2(-cell * 0.2, cell * 0.31), str(index + 1), HORIZONTAL_ALIGNMENT_CENTER, cell * 0.4, roundi(maxi(12, int(cell * 0.3)) * text_scale), Color("182728"))
+		draw_string(
+			font,
+			center + Vector2(-cell * 0.2, cell * 0.31),
+			str(index + 1),
+			HORIZONTAL_ALIGNMENT_CENTER,
+			cell * 0.4,
+			roundi(maxi(12, int(cell * 0.3)) * text_scale),
+			Color("182728")
+		)
 	if not chatter.is_empty():
 		_draw_chatter(kitchen_rect, origin, cell, font, font_size)
 
@@ -99,7 +124,9 @@ func _draw_employee_badge(center: Vector2, cell: float, badge: Dictionary) -> vo
 	var recipe := definitions.recipe_for(badge.recipe_id)
 	var icon_size := cell * 0.32
 	if recipe != null and recipe.icon != null:
-		draw_texture_rect(recipe.icon, Rect2(center + Vector2(cell * 0.14, -cell * 0.47), Vector2.ONE * icon_size), false)
+		draw_texture_rect(
+			recipe.icon, Rect2(center + Vector2(cell * 0.14, -cell * 0.47), Vector2.ONE * icon_size), false
+		)
 
 
 func _draw_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, font: Font, font_size: int) -> void:
@@ -117,8 +144,15 @@ func _draw_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, font: Font
 	chatter_rect = _place_chatter(kitchen_rect, origin, cell, anchor, bubble_size)
 	draw_rect(chatter_rect, Color("fff5d6"))
 	draw_rect(chatter_rect, Color("5b3b2d"), false, 2.0)
-	draw_string(font, chatter_rect.position + Vector2(10.0, bubble_size.y - 8.0), text_value,
-		HORIZONTAL_ALIGNMENT_CENTER, bubble_size.x - 20.0, bubble_font_size, Color("35251f"))
+	draw_string(
+		font,
+		chatter_rect.position + Vector2(10.0, bubble_size.y - 8.0),
+		text_value,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		bubble_size.x - 20.0,
+		bubble_font_size,
+		Color("35251f")
+	)
 
 
 func _place_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, anchor: Vector2, bubble_size: Vector2) -> Rect2:
@@ -130,7 +164,9 @@ func _place_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, anchor: V
 	]
 	var step := maxi(4, roundi(cell * 0.5))
 	for y: int in range(roundi(kitchen_rect.position.y + 6.0), roundi(kitchen_rect.end.y - bubble_size.y - 5.0), step):
-		for x: int in range(roundi(kitchen_rect.position.x + 6.0), roundi(kitchen_rect.end.x - bubble_size.x - 5.0), step):
+		for x: int in range(
+			roundi(kitchen_rect.position.x + 6.0), roundi(kitchen_rect.end.x - bubble_size.x - 5.0), step
+		):
 			candidates.append(Vector2(x, y))
 	var best := Rect2(_clamp_chatter_position(candidates[0], kitchen_rect, bubble_size), bubble_size)
 	var best_overlap := _chatter_overlap_area(best, origin, cell)
@@ -149,7 +185,8 @@ func _place_chatter(kitchen_rect: Rect2, origin: Vector2, cell: float, anchor: V
 func _clamp_chatter_position(position: Vector2, kitchen_rect: Rect2, bubble_size: Vector2) -> Vector2:
 	return Vector2(
 		clampf(position.x, kitchen_rect.position.x + 6.0, kitchen_rect.end.x - bubble_size.x - 6.0),
-		clampf(position.y, kitchen_rect.position.y + 6.0, kitchen_rect.end.y - bubble_size.y - 6.0))
+		clampf(position.y, kitchen_rect.position.y + 6.0, kitchen_rect.end.y - bubble_size.y - 6.0)
+	)
 
 
 func _chatter_overlap_area(rect: Rect2, origin: Vector2, cell: float) -> float:

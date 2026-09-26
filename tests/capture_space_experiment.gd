@@ -19,7 +19,10 @@ func run() -> void:
 	for scenario_id: String in Experiment.SCENARIOS:
 		for locale: String in ["ko", "en"]:
 			var temporary := "user://space_capture_%d.tres" % Time.get_ticks_usec()
-			checks.expect(ResourceSaver.save(Experiment.scenario(scenario_id), temporary) == OK, "the rendered experiment saves an isolated scenario")
+			checks.expect(
+				ResourceSaver.save(Experiment.scenario(scenario_id), temporary) == OK,
+				"the rendered experiment saves an isolated scenario"
+			)
 			var screen := Harness.boot_main(self, temporary)
 			checks.expect(screen != null, "the spatial preview opens the actual preparation scene")
 			if screen == null:
@@ -37,9 +40,24 @@ func run() -> void:
 			await _settle(screen)
 			if "--negative-preview" in OS.get_cmdline_user_args():
 				panel.placement_preview.visible = false
-			checks.expect(screen.definitions.space_rules and panel.move_buttons.left.disabled and panel.move_buttons.rotate.disabled, "the actual preview identifies the frozen exit before input")
-			checks.expect(panel.placement_preview.visible and panel.pages[1].get_global_rect().encloses(panel.placement_preview.get_global_rect()), "fixed-station rule text is fully visible in the scrolled phone panel")
-			checks.expect(not panel.placement_preview.text.is_empty(), "the rendered fixed preview has explanatory text")
+			checks.expect(
+				(
+					screen.definitions.space_rules
+					and panel.move_buttons.left.disabled
+					and panel.move_buttons.rotate.disabled
+				),
+				"the actual preview identifies the frozen exit before input"
+			)
+			checks.expect(
+				(
+					panel.placement_preview.visible
+					and panel.pages[1].get_global_rect().encloses(panel.placement_preview.get_global_rect())
+				),
+				"fixed-station rule text is fully visible in the scrolled phone panel"
+			)
+			checks.expect(
+				not panel.placement_preview.text.is_empty(), "the rendered fixed preview has explanatory text"
+			)
 			if checks.failures > 0:
 				screen.queue_free()
 				await process_frame
@@ -48,12 +66,18 @@ func run() -> void:
 				return
 			await _save_frame(scenario_id + "-" + locale + "-fixed")
 			if scenario_id == "hot_queue":
-				checks.expect(screen.submit_preparation("move_station", "hot_01", "left").accepted, "the rendered clearance fixture reaches the last valid gap")
+				checks.expect(
+					screen.submit_preparation("move_station", "hot_01", "left").accepted,
+					"the rendered clearance fixture reaches the last valid gap"
+				)
 				panel.select_station("hot_01")
 				await _settle(screen)
 				panel.pages[1].ensure_control_visible(panel.placement_preview)
 				await _settle(screen)
-				checks.expect(panel.move_buttons.left.disabled and not panel.move_buttons.right.disabled, "the rendered panel distinguishes blocked and legal moves")
+				checks.expect(
+					panel.move_buttons.left.disabled and not panel.move_buttons.right.disabled,
+					"the rendered panel distinguishes blocked and legal moves"
+				)
 				await _save_frame(scenario_id + "-" + locale + "-clearance")
 			screen.queue_free()
 			await process_frame
@@ -73,4 +97,7 @@ func _settle(screen: Control) -> void:
 func _save_frame(label: String) -> void:
 	await RenderingServer.frame_post_draw
 	var screenshot := root.get_texture().get_image()
-	checks.expect(screenshot.save_png("res://build/check/space/" + label + ".png") == OK, "the spatial preview saves its actual pixels")
+	checks.expect(
+		screenshot.save_png("res://build/check/space/" + label + ".png") == OK,
+		"the spatial preview saves its actual pixels"
+	)

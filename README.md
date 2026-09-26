@@ -116,6 +116,11 @@ Ubuntu 24.04 기반 Linux x86_64 컨테이너에서는 `bash setup.sh`로 검사
 `GODOT_BIN`으로 기존 엔진을 지정한다면 Cloud 환경 변수에도 같은 값을 설정합니다.
 이 준비 과정은 기존 headless 검사를 위한 것이며, 모바일 SDK·서명·실기기 검증을 준비하지 않습니다.
 
+### GDScript 포맷과 린터
+
+Trunk의 pre-commit은 `gdformat`, pre-push는 `gdlint`를 실행합니다.
+120열 설정과 도구 한계에 따른 예외, 파싱 오류 처리 정책은 [도입 명세](docs/specs/2026-09-26-gdscript-formatting.md)에 기록합니다.
+
 ### 검사 명령
 
 저장소 루트에서 다음 명령을 사용합니다.

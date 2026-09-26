@@ -44,12 +44,18 @@ func run(tree: SceneTree) -> void:
 	expect(backgrounded_count == 2, "a later focus loss is a new background transition")
 	expect(not screen.is_running(), "focus loss alone pauses the counter")
 	screen.lifecycle.notification(MainLoop.NOTIFICATION_APPLICATION_FOCUS_IN)
-	expect(screen.status_label.text == KitchenScreen.STATUS_TEXT[KitchenScreen.State.PAUSED], "status text follows the state")
+	expect(
+		screen.status_label.text == KitchenScreen.STATUS_TEXT[KitchenScreen.State.PAUSED],
+		"status text follows the state"
+	)
 	expect(screen.counter.text == "경과 003.0초", "counter text labels elapsed tenths of a second")
 	expect(screen.get("input_actions") == 4, "lifecycle pauses must not count as button input")
 	screen.start_button.pressed.emit()
 	screen.start_button.pressed.emit()
-	expect(screen.get("input_actions") == 6 and not screen.is_running(), "input diagnostics expose duplicate signals even when state guards ignore them")
+	expect(
+		screen.get("input_actions") == 6 and not screen.is_running(),
+		"input diagnostics expose duplicate signals even when state guards ignore them"
+	)
 	screen.resized.disconnect(screen._update_safe_area)
 	screen.size = Vector2(1280, 720)
 	var to_canvas := Transform2D.IDENTITY.scaled(Vector2(0.5, 0.5))
@@ -58,12 +64,25 @@ func run(tree: SceneTree) -> void:
 	expect(screen.safe_area.offset_right == 0.0, "unobscured right edge has no inset")
 	screen._apply_safe_area(Rect2i(0, 0, 2460, 1400), to_canvas)
 	expect(screen.safe_area.offset_left == 0.0, "rotation releases the old left inset")
-	expect(screen.safe_area.offset_right == -50.0 and screen.safe_area.offset_bottom == -20.0, "rotation applies the new insets without resizing")
+	expect(
+		screen.safe_area.offset_right == -50.0 and screen.safe_area.offset_bottom == -20.0,
+		"rotation applies the new insets without resizing"
+	)
 	screen.size = Vector2(1400, 800)
 	screen._apply_safe_area(Rect2i(0, 0, 2460, 1400), to_canvas)
-	expect(screen.safe_area.offset_right == -170.0 and screen.safe_area.offset_bottom == -100.0, "a resize with an unchanged safe rect recomputes the far edges")
+	expect(
+		screen.safe_area.offset_right == -170.0 and screen.safe_area.offset_bottom == -100.0,
+		"a resize with an unchanged safe rect recomputes the far edges"
+	)
 	screen._apply_safe_area(Rect2i(5000, 5000, 100, 100), to_canvas)
-	expect(screen.safe_area.offset_left == 0.0 and screen.safe_area.offset_right == 0.0 and screen.safe_area.offset_bottom == 0.0, "a safe rect outside the canvas falls back to the full canvas")
+	expect(
+		(
+			screen.safe_area.offset_left == 0.0
+			and screen.safe_area.offset_right == 0.0
+			and screen.safe_area.offset_bottom == 0.0
+		),
+		"a safe rect outside the canvas falls back to the full canvas"
+	)
 	screen.queue_free()
 	await tree.process_frame
 

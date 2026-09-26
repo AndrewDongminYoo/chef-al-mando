@@ -24,8 +24,12 @@ func save_settings(values: Dictionary) -> Dictionary:
 	if existing.reason not in ["missing", "corrupt_settings"] and not existing.accepted:
 		return _failure(existing.reason)
 	var temporary := file_path + ".tmp"
-	var document := {"schema_version": SCHEMA_VERSION, "locale": values.locale,
-		"sound_enabled": values.sound_enabled, "text_size": values.text_size}
+	var document := {
+		"schema_version": SCHEMA_VERSION,
+		"locale": values.locale,
+		"sound_enabled": values.sound_enabled,
+		"text_size": values.text_size
+	}
 	if _write_text(temporary, JSON.stringify(document, "\t", true)) != OK:
 		DirAccess.remove_absolute(temporary)
 		return _failure("write_failed")
@@ -55,8 +59,11 @@ func _read(target: String) -> Dictionary:
 	# No app version ever wrote a schema below 1, so such a file is corrupt, not protected.
 	if version != SCHEMA_VERSION or document.size() != 4:
 		return _failure("corrupt_settings")
-	var values := {"locale": document.get("locale"), "sound_enabled": document.get("sound_enabled"),
-		"text_size": document.get("text_size")}
+	var values := {
+		"locale": document.get("locale"),
+		"sound_enabled": document.get("sound_enabled"),
+		"text_size": document.get("text_size")
+	}
 	if not _valid_values(values):
 		return _failure("corrupt_settings")
 	return {"accepted": true, "reason": "loaded", "values": values}
@@ -68,8 +75,13 @@ func _valid_values(values: Variant) -> bool:
 	var locale: Variant = values.get("locale")
 	var sound_enabled: Variant = values.get("sound_enabled")
 	var text_size: Variant = values.get("text_size")
-	return locale is String and locale in ["ko", "en"] and sound_enabled is bool \
-		and text_size is String and text_size in ["normal", "large"]
+	return (
+		locale is String
+		and locale in ["ko", "en"]
+		and sound_enabled is bool
+		and text_size is String
+		and text_size in ["normal", "large"]
+	)
 
 
 func _failure(reason: String) -> Dictionary:

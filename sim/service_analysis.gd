@@ -15,10 +15,18 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 		var planned: int = prep_quantities.get(item.id, 0)
 		labor_used += planned * item.labor_units
 		var remaining: int = view.inventory.get(item.id, 0)
-		var prep_row := {"planned": planned, "used": maxi(0, planned - remaining),
-			"remaining": remaining, "raw_orders": 0, "served": 0, "expired": 0,
-			"shortage_ticks": 0, "pressure_ticks": 0, "labor_units": item.labor_units,
-			"menu_count": data.menu_count_for(item.id)}
+		var prep_row := {
+			"planned": planned,
+			"used": maxi(0, planned - remaining),
+			"remaining": remaining,
+			"raw_orders": 0,
+			"served": 0,
+			"expired": 0,
+			"shortage_ticks": 0,
+			"pressure_ticks": 0,
+			"labor_units": item.labor_units,
+			"menu_count": data.menu_count_for(item.id)
+		}
 		for order: Dictionary in view.orders:
 			if item.id not in data.recipe_for(order.recipe_id).mise_ids:
 				continue
@@ -33,10 +41,17 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 		prep[item.id] = prep_row
 	for recipe_id: String in data.menu_ids:
 		var recipe := data.recipe_for(recipe_id)
-		var priority_row := {"default_priority": menu_priorities.get(recipe_id, 1),
-			"served": 0, "expired": 0, "pressure_ticks": 0, "shortage_ticks": 0,
-			"employee_busy_ticks": 0, "station_ticks": 0, "moving_ticks": 0,
-			"revenue": recipe.revenue}
+		var priority_row := {
+			"default_priority": menu_priorities.get(recipe_id, 1),
+			"served": 0,
+			"expired": 0,
+			"pressure_ticks": 0,
+			"shortage_ticks": 0,
+			"employee_busy_ticks": 0,
+			"station_ticks": 0,
+			"moving_ticks": 0,
+			"revenue": recipe.revenue
+		}
 		for order: Dictionary in view.orders:
 			if order.recipe_id != recipe_id:
 				continue
@@ -61,9 +76,13 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 			var recipe := data.recipe_for(order.recipe_id)
 			if recipe.ingredients.has(ingredient.id):
 				related_shortage_ticks += order.metrics.missing_ingredients
-		ingredients[ingredient.id] = {"purchased": purchased, "used": maxi(0, purchased - remaining),
-			"remaining": remaining, "related_shortage_ticks": related_shortage_ticks,
-			"unit_cost": ingredient.unit_cost}
+		ingredients[ingredient.id] = {
+			"purchased": purchased,
+			"used": maxi(0, purchased - remaining),
+			"remaining": remaining,
+			"related_shortage_ticks": related_shortage_ticks,
+			"unit_cost": ingredient.unit_cost
+		}
 	var recommendations: Array[Dictionary] = []
 	var prep_recommendation := _prep_recommendation(data, prep, labor_used, selection)
 	if not prep_recommendation.is_empty():
@@ -75,9 +94,14 @@ static func build(data: Definitions, view: Dictionary, selection: Dictionary) ->
 	if not priority_recommendation.is_empty():
 		recommendations.append(priority_recommendation)
 	recommendations = _cap_notices_last(recommendations)
-	return {"prep": prep, "ingredients": ingredients, "priorities": priorities,
-		"labor_used": labor_used, "labor_capacity": data.prep_labor_capacity,
-		"recommendations": recommendations.slice(0, 3)}
+	return {
+		"prep": prep,
+		"ingredients": ingredients,
+		"priorities": priorities,
+		"labor_used": labor_used,
+		"labor_capacity": data.prep_labor_capacity,
+		"recommendations": recommendations.slice(0, 3)
+	}
 
 
 static func _cap_notices_last(values: Array[Dictionary]) -> Array[Dictionary]:
@@ -91,7 +115,9 @@ static func _cap_notices_last(values: Array[Dictionary]) -> Array[Dictionary]:
 	return ordered
 
 
-static func _prep_recommendation(data: Definitions, prep: Dictionary, labor_used: int, selection: Dictionary = {}) -> Dictionary:
+static func _prep_recommendation(
+	data: Definitions, prep: Dictionary, labor_used: int, selection: Dictionary = {}
+) -> Dictionary:
 	var best: Dictionary = {}
 	var best_rank := -1
 	var best_score := -1
@@ -129,13 +155,17 @@ static func _valid_prep_change(data: Definitions, selection: Dictionary, mise_id
 	var candidate := data.duplicate() as Definitions
 	candidate.purchases = {}
 	candidate.purchases.assign(purchases)
-	var options := {"prep_quantities": prep_quantities,
+	var options := {
+		"prep_quantities": prep_quantities,
 		"duties": selection.get("duties", {}).duplicate(),
-		"menu_priorities": selection.get("menu_priorities", {}).duplicate()}
+		"menu_priorities": selection.get("menu_priorities", {}).duplicate()
+	}
 	return PreparationPlan.initial_state(candidate, options, true).errors.is_empty()
 
 
-static func _ingredient_recommendation(ingredients: Dictionary, data: Definitions = null, selection: Dictionary = {}) -> Dictionary:
+static func _ingredient_recommendation(
+	ingredients: Dictionary, data: Definitions = null, selection: Dictionary = {}
+) -> Dictionary:
 	var best: Dictionary = {}
 	var best_score := -1
 	for ingredient_id: String in ingredients:
@@ -164,7 +194,9 @@ static func _ingredient_recommendation(ingredients: Dictionary, data: Definition
 	return best
 
 
-static func _valid_purchase_change(data: Definitions, selection: Dictionary, ingredient_id: String, quantity: int) -> bool:
+static func _valid_purchase_change(
+	data: Definitions, selection: Dictionary, ingredient_id: String, quantity: int
+) -> bool:
 	if data == null or selection.is_empty():
 		return true
 	var purchases: Dictionary = selection.get("purchases", data.purchases).duplicate()
@@ -172,9 +204,11 @@ static func _valid_purchase_change(data: Definitions, selection: Dictionary, ing
 	var candidate := data.duplicate() as Definitions
 	candidate.purchases = {}
 	candidate.purchases.assign(purchases)
-	var options := {"prep_quantities": selection.get("prep_quantities", {}).duplicate(),
+	var options := {
+		"prep_quantities": selection.get("prep_quantities", {}).duplicate(),
 		"duties": selection.get("duties", {}).duplicate(),
-		"menu_priorities": selection.get("menu_priorities", {}).duplicate()}
+		"menu_priorities": selection.get("menu_priorities", {}).duplicate()
+	}
 	return PreparationPlan.initial_state(candidate, options, true).errors.is_empty()
 
 

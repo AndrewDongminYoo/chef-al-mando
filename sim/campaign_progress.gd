@@ -15,9 +15,12 @@ const ScheduleGenerator := preload("res://content/schedule_generator.gd")
 const LEGACY_COMPLETION_TARGETS := {
 	"first_shift": [{"minimum_served": 10, "minimum_profit": 1000, "since_content": 1}],
 	"lunch_prep": [{"minimum_served": 14, "minimum_profit": 1000, "since_content": 1}],
-	"hot_queue": [{"minimum_served": 14, "minimum_profit": 1500, "since_content": 1},
+	"hot_queue":
+	[
+		{"minimum_served": 14, "minimum_profit": 1500, "since_content": 1},
 		{"minimum_served": 12, "minimum_profit": 5000, "since_content": 2},
-		{"minimum_served": 12, "minimum_profit": 4750, "since_content": 3}],
+		{"minimum_served": 12, "minimum_profit": 4750, "since_content": 3}
+	],
 	"shared_stock": [{"minimum_served": 16, "minimum_profit": 1500, "since_content": 1}],
 	"long_route": [{"minimum_served": 17, "minimum_profit": 2000, "since_content": 1}],
 	"split_duties": [{"minimum_served": 19, "minimum_profit": 2500, "since_content": 1}],
@@ -34,8 +37,12 @@ const LEGACY_COMPLETION_TARGETS := {
 ## Extend this table whenever a future content version lowers a scenario's cap; without an entry an
 ## old best above the new cap is corrupt.
 const LEGACY_PROFIT_CAPS := {
-	"hot_queue": {"margins": [1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100,
-		550, 550, 550, 550, 550, 400, 400, 400, 400, 400], "labor_cost": 2000},
+	"hot_queue":
+	{
+		"margins":
+		[1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 1100, 550, 550, 550, 550, 550, 400, 400, 400, 400, 400],
+		"labor_cost": 2000
+	},
 }
 
 var errors: Array[String] = []
@@ -76,20 +83,34 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 		if not record is Dictionary or (record.size() != 3 and not (record.size() == 4 and has_legacy_completion)):
 			problems.append("invalid record fields")
 			continue
-		if not record.get("completed") is bool or not record.get("best_served") is int or not record.get("best_profit") is int:
+		if (
+			not record.get("completed") is bool
+			or not record.get("best_served") is int
+			or not record.get("best_profit") is int
+		):
 			problems.append("invalid record value types")
 			continue
 		# A best profit is bounded by the highest cap any shipped composition paid for that served
 		# count, so a best earned before content 7 lowered hot_queue's cap stays valid without being
 		# rewritten; scenarios without a legacy cap keep the strict current bound, and record_result
 		# bounds every new result by the current cap alone.
-		var profit_cap: int = maxi(scenario.maximum_profit(record.best_served), legacy_maximum_profit(scenario_id, record.best_served))
-		if record.best_served < 0 or record.best_served > scenario.order_count or record.best_profit < -scenario.starting_budget or record.best_profit > profit_cap:
+		var profit_cap: int = maxi(
+			scenario.maximum_profit(record.best_served), legacy_maximum_profit(scenario_id, record.best_served)
+		)
+		if (
+			record.best_served < 0
+			or record.best_served > scenario.order_count
+			or record.best_profit < -scenario.starting_budget
+			or record.best_profit > profit_cap
+		):
 			problems.append("record value is outside the service limits")
 		if has_legacy_completion and (not record.completed or not meets_legacy_completion_targets(scenario_id, record)):
 			problems.append("invalid legacy completion marker")
-		if record.completed and not has_legacy_completion \
-			and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit):
+		if (
+			record.completed
+			and not has_legacy_completion
+			and (record.best_served < scenario.minimum_served or record.best_profit < scenario.minimum_profit)
+		):
 			problems.append("completed record does not meet its targets")
 	if not problems.is_empty():
 		return problems
@@ -107,7 +128,9 @@ static func validate_records(campaign: CampaignDef, records: Dictionary) -> Arra
 ## validate_records for a record that already carries the marker, where the granting document's
 ## version is not known. A non-negative content_version only counts pairs whose since_content is at
 ## or below it, so a save cannot claim a pair its own content version had not shipped yet.
-static func meets_legacy_completion_targets(scenario_id: Variant, record: Dictionary, content_version: int = -1) -> bool:
+static func meets_legacy_completion_targets(
+	scenario_id: Variant, record: Dictionary, content_version: int = -1
+) -> bool:
 	var pairs: Variant = LEGACY_COMPLETION_TARGETS.get(scenario_id)
 	if not pairs is Array:
 		return false
@@ -149,8 +172,12 @@ func next_service_seed(scenario_id: String) -> Dictionary:
 		return {"accepted": false, "reason": "locked_service", "service_seed": 0, "attempt_index": 0}
 	var attempt_index: int = _attempts.get(scenario_id, 0)
 	_attempts[scenario_id] = attempt_index + 1
-	return {"accepted": true, "reason": "", "service_seed": ScheduleGenerator.service_seed_for(scenario_id, attempt_index),
-		"attempt_index": attempt_index}
+	return {
+		"accepted": true,
+		"reason": "",
+		"service_seed": ScheduleGenerator.service_seed_for(scenario_id, attempt_index),
+		"attempt_index": attempt_index
+	}
 
 
 ## Undoes the draw that produced attempt_index when the caller could not persist it.
@@ -169,18 +196,29 @@ func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 	if not is_unlocked(scenario_id):
 		return {"accepted": false, "reason": "locked_service"}
 	var scenario := _campaign.scenario_for(scenario_id)
-	if result.get("closed") != true or result.get("tick") != scenario.closing_tick or result.get("errors", ["missing"]) != []:
+	if (
+		result.get("closed") != true
+		or result.get("tick") != scenario.closing_tick
+		or result.get("errors", ["missing"]) != []
+	):
 		return {"accepted": false, "reason": "service_not_closed"}
 	var accounting: Variant = result.get("accounting")
 	if not accounting is Dictionary or not accounting.get("served") is int or not accounting.get("profit") is int:
 		return {"accepted": false, "reason": "invalid_result"}
-	if accounting.served < 0 or accounting.served > scenario.order_count or accounting.profit < -scenario.starting_budget or accounting.profit > scenario.maximum_profit(accounting.served):
+	if (
+		accounting.served < 0
+		or accounting.served > scenario.order_count
+		or accounting.profit < -scenario.starting_budget
+		or accounting.profit > scenario.maximum_profit(accounting.served)
+	):
 		return {"accepted": false, "reason": "invalid_result"}
 	var passed: bool = accounting.served >= scenario.minimum_served and accounting.profit >= scenario.minimum_profit
 	var previous: Dictionary = _records.get(scenario_id, {})
-	var record := {"completed": passed or previous.get("completed", false),
+	var record := {
+		"completed": passed or previous.get("completed", false),
 		"best_served": maxi(accounting.served, previous.get("best_served", accounting.served)),
-		"best_profit": maxi(accounting.profit, previous.get("best_profit", accounting.profit))}
+		"best_profit": maxi(accounting.profit, previous.get("best_profit", accounting.profit))
+	}
 	if previous.get("legacy_completed") == true and not passed:
 		record.legacy_completed = true
 	var candidate := _records.duplicate(true)
@@ -189,9 +227,15 @@ func record_result(scenario_id: String, result: Dictionary) -> Dictionary:
 		return {"accepted": false, "reason": "invalid_result"}
 	var changed := candidate != _records
 	_records = candidate
-	return {"accepted": true, "passed": passed, "changed": changed,
-		"served": accounting.served, "profit": accounting.profit,
-		"minimum_served": scenario.minimum_served, "minimum_profit": scenario.minimum_profit}
+	return {
+		"accepted": true,
+		"passed": passed,
+		"changed": changed,
+		"served": accounting.served,
+		"profit": accounting.profit,
+		"minimum_served": scenario.minimum_served,
+		"minimum_profit": scenario.minimum_profit
+	}
 
 
 func snapshot() -> Dictionary:
@@ -199,6 +243,15 @@ func snapshot() -> Dictionary:
 	for scenario: CampaignDef.ScenarioDef in _campaign.scenarios:
 		if scenario != null and is_unlocked(scenario.id):
 			unlocked.append(scenario.id)
-	var ending: bool = errors.is_empty() and not _campaign.scenarios.is_empty() and _records.get(_campaign.scenarios[-1].id, {}).get("completed", false)
-	return {"records": _records.duplicate(true), "attempts": _attempts.duplicate(true), "unlocked": unlocked,
-		"ending_unlocked": ending, "errors": errors.duplicate()}
+	var ending: bool = (
+		errors.is_empty()
+		and not _campaign.scenarios.is_empty()
+		and _records.get(_campaign.scenarios[-1].id, {}).get("completed", false)
+	)
+	return {
+		"records": _records.duplicate(true),
+		"attempts": _attempts.duplicate(true),
+		"unlocked": unlocked,
+		"ending_unlocked": ending,
+		"errors": errors.duplicate()
+	}

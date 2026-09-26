@@ -37,8 +37,13 @@ func _init() -> void:
 		for entry: String in arguments["items"].split(","):
 			var parts := entry.split(":")
 			var ingredient: Resource = scenario.ingredient_for(parts[0])
-			if parts.size() != 2 or not parts[1].is_valid_int() or int(parts[1]) < 0 \
-				or ingredient == null or not ingredient.is_mise():
+			if (
+				parts.size() != 2
+				or not parts[1].is_valid_int()
+				or int(parts[1]) < 0
+				or ingredient == null
+				or not ingredient.is_mise()
+			):
 				push_error("invalid --items entry: " + entry)
 				quit(2)
 				return
@@ -59,7 +64,9 @@ func _init() -> void:
 		push_error("invalid --purchases: " + purchase_mode)
 		quit(2)
 		return
-	var without: PackedStringArray = arguments["without"].split(",") if arguments.has("without") else PackedStringArray()
+	var without: PackedStringArray = (
+		arguments["without"].split(",") if arguments.has("without") else PackedStringArray()
+	)
 	for token: String in without:
 		if token not in WITHOUT_KINDS:
 			push_error("invalid --without token: " + token)
@@ -76,15 +83,21 @@ func _init() -> void:
 		var verdict: Dictionary = SeedGate.evaluate(campaign, scenario, GATE_ATTEMPTS)
 		for row: Dictionary in verdict.rows:
 			print("SEED_GATE_ROW ", scenario.id, " ", JSON.stringify(row, "", true))
-		print("SEED_GATE_VERDICT ", JSON.stringify({"scenario": scenario.id, "passed": verdict.passed, "failures": verdict.failures}, "", true))
+		print(
+			"SEED_GATE_VERDICT ",
+			JSON.stringify({"scenario": scenario.id, "passed": verdict.passed, "failures": verdict.failures}, "", true)
+		)
 		quit(0)
 		return
 	var base: Dictionary = {"preparation": [], "priorities": {}}
 	var reference: Dictionary = Policies.reference_policy(scenario.id)
 	for command: Dictionary in reference.preparation:
 		var kind: String = command.kind
-		if kind == "set_duty" and "duties" in keep or kind == "set_purchase" and "purchases" in keep \
-			or kind in ["move_station", "rotate_station"] and "placement" in keep:
+		if (
+			kind == "set_duty" and "duties" in keep
+			or kind == "set_purchase" and "purchases" in keep
+			or kind in ["move_station", "rotate_station"] and "placement" in keep
+		):
 			base.preparation.append(command.duplicate(true))
 	if "priorities" in keep:
 		base.priorities = reference.priorities.duplicate(true)
@@ -99,16 +112,39 @@ func _init() -> void:
 				kept.append(command)
 		base.preparation = drawn + kept
 	base = Policies.without_kinds(base, Array(without))
-	var state := {"scenario": scenario, "seed": seed_value, "items": items, "caps": caps, "base": base,
-		"combinations": 0, "passed": 0, "best": {}, "best_any": {}}
+	var state := {
+		"scenario": scenario,
+		"seed": seed_value,
+		"items": items,
+		"caps": caps,
+		"base": base,
+		"combinations": 0,
+		"passed": 0,
+		"best": {},
+		"best_any": {}
+	}
 	var quantities: Array[int] = []
 	quantities.resize(items.size())
 	quantities.fill(0)
 	_sweep(state, quantities, 0)
-	print("SWEEP_SUMMARY ", JSON.stringify({"scenario": scenario.id, "attempt": attempt, "seed": seed_value,
-		"combinations": state.combinations, "passed": state.passed, "best": state.best,
-		"best_any": state.best_any if arguments.has("best") else {},
-		"purchases": purchase_mode, "without": without}, "", true))
+	print(
+		"SWEEP_SUMMARY ",
+		JSON.stringify(
+			{
+				"scenario": scenario.id,
+				"attempt": attempt,
+				"seed": seed_value,
+				"combinations": state.combinations,
+				"passed": state.passed,
+				"best": state.best,
+				"best_any": state.best_any if arguments.has("best") else {},
+				"purchases": purchase_mode,
+				"without": without
+			},
+			"",
+			true
+		)
+	)
 	quit(0)
 
 
@@ -120,7 +156,9 @@ func _sweep(state: Dictionary, quantities: Array[int], index: int) -> void:
 			_sweep(state, quantities, index + 1)
 		return
 	var scenario: Resource = state.scenario
-	var policy: Dictionary = {"preparation": state.base.preparation.duplicate(true), "priorities": state.base.priorities.duplicate(true)}
+	var policy: Dictionary = {
+		"preparation": state.base.preparation.duplicate(true), "priorities": state.base.priorities.duplicate(true)
+	}
 	var labor: int = 0
 	for position: int in items.size():
 		labor += quantities[position] * scenario.ingredient_for(items[position]).labor_units
@@ -133,8 +171,13 @@ func _sweep(state: Dictionary, quantities: Array[int], index: int) -> void:
 		return
 	state.combinations += 1
 	var accounting: Dictionary = run.snapshot.accounting
-	var row := {"quantities": _named(items, quantities), "labor": labor, "served": accounting.served,
-		"profit": accounting.profit, "working": run.snapshot.metrics.orders.working}
+	var row := {
+		"quantities": _named(items, quantities),
+		"labor": labor,
+		"served": accounting.served,
+		"profit": accounting.profit,
+		"working": run.snapshot.metrics.orders.working
+	}
 	if _better(row, state.best_any):
 		state.best_any = row
 	if Policies.passes_targets(scenario, run):

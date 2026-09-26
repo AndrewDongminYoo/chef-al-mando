@@ -7,7 +7,7 @@ cli:
 plugins:
   sources:
     - id: quality-configs
-      ref: v0.9.0
+      ref: v0.10.0
       uri: https://github.com/AndrewDongminYoo/quality-configs
     - id: trunk
       ref: v1.11.0
@@ -21,6 +21,15 @@ runtimes:
     - python@3.14.4
 # This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
+  ignore:
+    # gdformat 4.5.0 duplicates this fixture's file docstring inside a dictionary.
+    - linters: [gdformat]
+      paths: [tests/fixtures/content_limits.gd]
+    - linters: [gdformat, gdlint]
+      paths:
+        - .godot/**
+        - build/**
+        - android/**
   disabled:
     - bandit
     - black
@@ -29,6 +38,8 @@ lint:
     - grype
     - osv-scanner
   enabled:
+    - gdformat@4.5.0
+    - gdlint@4.5.0
     - isort@9.0.1
     - ruff@0.16.9
     - pinact@4.1.1:

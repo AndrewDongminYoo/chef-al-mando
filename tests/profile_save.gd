@@ -14,11 +14,23 @@ const ServiceSim := preload("res://sim/service_sim.gd")
 const RUNS := 20
 const TICKS := 200
 const SCENARIOS: Array[String] = ["first_shift", "final_service"]
-const PHASES: Array[String] = ["validate_session", "read_primary", "read_backup", "write_tmp", "verify_tmp",
-	"write_backup_tmp", "verify_backup_tmp", "replace_backup", "replace_primary", "other", "total"]
+const PHASES: Array[String] = [
+	"validate_session",
+	"read_primary",
+	"read_backup",
+	"write_tmp",
+	"verify_tmp",
+	"write_backup_tmp",
+	"verify_backup_tmp",
+	"replace_backup",
+	"replace_primary",
+	"other",
+	"total"
+]
 
 
-class ProfiledStore extends "res://persistence/campaign_store.gd":
+class ProfiledStore:
+	extends "res://persistence/campaign_store.gd"
 	var phases: Dictionary = {}
 
 	func _valid_session(active_session: Variant, records: Dictionary) -> bool:
@@ -30,8 +42,12 @@ class ProfiledStore extends "res://persistence/campaign_store.gd":
 	func _read(target: String) -> Dictionary:
 		var started := Time.get_ticks_usec()
 		var result := super._read(target)
-		var names := {file_path: "read_primary", file_path + ".backup": "read_backup",
-			file_path + ".tmp": "verify_tmp", file_path + ".backup.tmp": "verify_backup_tmp"}
+		var names := {
+			file_path: "read_primary",
+			file_path + ".backup": "read_backup",
+			file_path + ".tmp": "verify_tmp",
+			file_path + ".backup.tmp": "verify_backup_tmp"
+		}
 		_add(names.get(target, "other"), started)
 		return result
 
@@ -52,14 +68,17 @@ class ProfiledStore extends "res://persistence/campaign_store.gd":
 
 
 func _init() -> void:
-	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "",
-		ResourceLoader.CACHE_MODE_IGNORE_DEEP)
+	var campaign: Resource = ResourceLoader.load(
+		"res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE_DEEP
+	)
 	var directory := "user://profile_save_%d" % Time.get_ticks_usec()
 	if DirAccess.make_dir_recursive_absolute(directory) != OK:
 		push_error("cannot create " + directory)
 		quit(1)
 		return
-	print("Godot %s, %d runs after one warm-up, session after %d ticks" % [Engine.get_version_info().string, RUNS, TICKS])
+	print(
+		"Godot %s, %d runs after one warm-up, session after %d ticks" % [Engine.get_version_info().string, RUNS, TICKS]
+	)
 	var columns: Dictionary = {}
 	var ok := true
 	for scenario_id: String in SCENARIOS:
@@ -138,15 +157,15 @@ func _records_before(campaign: Resource, scenario_id: String) -> Dictionary:
 	for scenario: Resource in campaign.scenarios:
 		if scenario.id == scenario_id:
 			break
-		records[scenario.id] = {"completed": true, "best_served": scenario.minimum_served,
-			"best_profit": scenario.minimum_profit}
+		records[scenario.id] = {
+			"completed": true, "best_served": scenario.minimum_served, "best_profit": scenario.minimum_profit
+		}
 	return records
 
 
 func _session(campaign: Resource, scenario_id: String) -> Dictionary:
 	var plan := PreparationPlan.new(campaign.scenario_for(scenario_id))
-	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null,
-		"apply_tick": 0, "sequence": 1})
+	var started := plan.apply_command({"kind": "start", "target_id": "", "value": null, "apply_tick": 0, "sequence": 1})
 	if not started.accepted:
 		push_error("the profiled scenario does not start: " + scenario_id)
 		return {}

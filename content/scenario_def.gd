@@ -46,7 +46,11 @@ func validate(require_stock: bool = true) -> Array[String]:
 		else:
 			for index: int in order_arrival_ticks.size():
 				var arrival_tick := order_arrival_ticks[index]
-				if arrival_tick <= 0 or arrival_tick >= closing_tick or (index > 0 and arrival_tick < order_arrival_ticks[index - 1]):
+				if (
+					arrival_tick <= 0
+					or arrival_tick >= closing_tick
+					or (index > 0 and arrival_tick < order_arrival_ticks[index - 1])
+				):
 					errors.append("campaign arrival schedule must be ordered within service time")
 					break
 	var seen: Dictionary = {}
@@ -77,7 +81,9 @@ func forecast_ranges() -> Dictionary:
 	var counts := baseline_counts()
 	for recipe_id: String in menu_ids:
 		var slack: int = forecast_slack.get(recipe_id, 0)
-		ranges[recipe_id] = {"baseline": counts[recipe_id], "min": maxi(counts[recipe_id] - slack, 0), "max": counts[recipe_id] + slack}
+		ranges[recipe_id] = {
+			"baseline": counts[recipe_id], "min": maxi(counts[recipe_id] - slack, 0), "max": counts[recipe_id] + slack
+		}
 	return ranges
 
 
@@ -94,9 +100,19 @@ func order_schedule() -> Array[Dictionary]:
 		var recipe := recipe_for(recipe_ids[index])
 		if recipe == null:
 			return []
-		var arrival_tick := order_arrival_ticks[index] if not order_arrival_ticks.is_empty() else first_arrival_tick + arrival_interval_ticks * index
-		result.append({"id": "order_%02d" % (index + 1), "arrival_tick": arrival_tick,
-			"recipe_id": recipe.id, "deadline_tick": arrival_tick + recipe.patience_ticks})
+		var arrival_tick := (
+			order_arrival_ticks[index]
+			if not order_arrival_ticks.is_empty()
+			else first_arrival_tick + arrival_interval_ticks * index
+		)
+		result.append(
+			{
+				"id": "order_%02d" % (index + 1),
+				"arrival_tick": arrival_tick,
+				"recipe_id": recipe.id,
+				"deadline_tick": arrival_tick + recipe.patience_ticks
+			}
+		)
 	return result
 
 
