@@ -287,6 +287,9 @@ msgstr "Goal achieved"
 msgid "목표 미달 · 준비를 바꿔 다시 도전할 수 있습니다"
 msgstr "Goal missed · adjust preparation and try again"
 
+msgid "%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 시작 버튼으로 영업을 시작하세요."
+msgstr "%s\n\nServe at least %d · profit at least %s\n\n%s\n\nAfter closing this dialog, select Start to begin the service."
+
 msgid "%s\n\n제공 %d건 이상 · 손익 %s 이상\n\n%s\n\n확인 후 재개 버튼으로 영업을 계속하세요."
 msgstr "%s\n\nServe at least %d · profit at least %s\n\n%s\n\nAfter closing this dialog, select Resume to continue."
 
