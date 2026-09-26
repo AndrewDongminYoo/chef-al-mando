@@ -100,7 +100,10 @@ xcrun devicectl device copy from --device <device> --domain-type appDataContaine
 # 참가자마다: 앱을 삭제한 뒤 세션 빌드를 설치합니다. 삭제하면 저장도 함께 지워집니다.
 xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
 xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
-# 모든 세션 후: 복사해 둔 두 파일을 되돌립니다(두 파일에 각각 실행).
+# 모든 세션 후: 앱을 삭제하고 다시 설치해 실행 중인 앱과 참가자 저장을 없앤 뒤, 앱을 열기 전에
+# 복사해 둔 두 파일을 되돌립니다(두 파일에 각각 실행).
+xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
+xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
 xcrun devicectl device copy to --device <device> --domain-type appDataContainer \
   --domain-identifier kr.donminzzi.chefalmandodev \
   --source <backup-dir>/campaign_records.json --destination Documents/campaign_records.json
@@ -108,6 +111,8 @@ xcrun devicectl device copy to --device <device> --domain-type appDataContainer 
 
 2026-09-26에 `copy from`과 기존 앱 위 `install app`은 실행해 확인했고, 설치 전후에 복사한 두 파일이 바이트 단위로 같았습니다.
 `uninstall app`과 `copy to`는 아직 실행하지 않았으므로, 되돌린 뒤에는 다시 `copy from`으로 받아 백업과 `cmp`로 비교합니다.
+앱은 두 파일이 모두 일치한 뒤에 엽니다.
+앱이 실행 중이거나 일시정지된 상태에서 되돌리면, 앱이 100 tick마다 하는 자동 저장이나 백그라운드 전환 때의 저장이 되돌린 파일을 참가자의 기록으로 다시 덮어쓸 수 있고, 그 저장은 `cmp`를 통과한 뒤에도 일어날 수 있습니다.
 
 ### 5.2 도입
 
