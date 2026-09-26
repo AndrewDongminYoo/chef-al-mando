@@ -151,14 +151,14 @@ func run(tree: SceneTree) -> void:
 				"the Korean running summary separates arrivals, served orders, expirations, and cancellations"
 			)
 			var before_locale: String = service.get("simulation").state_hash()
-			screen.get("settings_locale").item_selected.emit(1)
+			screen.get("settings_panel").settings_locale.item_selected.emit(1)
 			expect(
 				service.get("summary_label").text.contains(
 					"Orders %d / %d · served %d · unserved %d · cancelled %d" % counts
 				),
 				"the English running summary shows the same measured order counts"
 			)
-			screen.get("settings_locale").item_selected.emit(0)
+			screen.get("settings_panel").settings_locale.item_selected.emit(0)
 			expect(
 				service.get("simulation").state_hash() == before_locale,
 				"order summary locale changes preserve the simulation state"
@@ -187,12 +187,12 @@ func run(tree: SceneTree) -> void:
 				),
 				"the passing result shows its enabled Korean action: " + scenario.id
 			)
-			screen.get("settings_locale").item_selected.emit(1)
+			screen.get("settings_panel").settings_locale.item_selected.emit(1)
 			expect(
 				screen.get("next_button").text == english_action,
 				"the result locale refresh preserves its English action: " + scenario.id
 			)
-			screen.get("settings_locale").item_selected.emit(0)
+			screen.get("settings_panel").settings_locale.item_selected.emit(0)
 			expect(
 				screen.get("next_button").text == korean_action,
 				"the result locale refresh restores its Korean action: " + scenario.id

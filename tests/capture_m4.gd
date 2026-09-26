@@ -49,53 +49,59 @@ func run() -> void:
 	await _wait_for_render_focus()
 	await _safe_click(screen.settings_button, screen.safe_area.get_global_rect())
 	if "--negative-popup-theme" in args:
-		screen.settings_locale.get_popup().remove_theme_constant_override("v_separation")
+		screen.settings_panel.settings_locale.get_popup().remove_theme_constant_override("v_separation")
 	var sound_toggles: Array[bool] = []
-	screen.settings_sound.toggled.connect(func(enabled: bool) -> void: sound_toggles.append(enabled))
+	screen.settings_panel.settings_sound.toggled.connect(func(enabled: bool) -> void: sound_toggles.append(enabled))
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and sound_toggles.is_empty()
 		),
 		"settings start with sound on and no toggle events"
 	)
 	var requested_locale := 1 if locale == "en" else 0
-	await _dialog_choose(screen.settings_locale, 1 - requested_locale, screen.safe_area.get_global_rect())
+	await _dialog_choose(
+		screen.settings_panel.settings_locale, 1 - requested_locale, screen.safe_area.get_global_rect()
+	)
 	if "--negative-popup-theme" in args and checks.failures > 0:
 		await _finish(screen, directory)
 		return
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and sound_toggles.is_empty()
 		),
 		"opposite locale input does not toggle sound"
 	)
-	await _dialog_choose(screen.settings_locale, requested_locale, screen.safe_area.get_global_rect())
+	await _dialog_choose(screen.settings_panel.settings_locale, requested_locale, screen.safe_area.get_global_rect())
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and sound_toggles.is_empty()
 		),
 		"requested locale input does not toggle sound"
 	)
 	var requested_text_size := 1 if large_text else 0
-	await _dialog_choose(screen.settings_text_size, 1 - requested_text_size, screen.safe_area.get_global_rect())
+	await _dialog_choose(
+		screen.settings_panel.settings_text_size, 1 - requested_text_size, screen.safe_area.get_global_rect()
+	)
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and sound_toggles.is_empty()
 		),
 		"opposite text-size input does not toggle sound"
 	)
-	await _dialog_choose(screen.settings_text_size, requested_text_size, screen.safe_area.get_global_rect())
+	await _dialog_choose(
+		screen.settings_panel.settings_text_size, requested_text_size, screen.safe_area.get_global_rect()
+	)
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and sound_toggles.is_empty()
 		),
@@ -103,10 +109,12 @@ func run() -> void:
 	)
 	if large_text:
 		popup_frame_saved = false
-		await _dialog_choose(screen.settings_locale, requested_locale, screen.safe_area.get_global_rect())
+		await _dialog_choose(
+			screen.settings_panel.settings_locale, requested_locale, screen.safe_area.get_global_rect()
+		)
 		checks.expect(
 			(
-				screen.settings_sound.button_pressed
+				screen.settings_panel.settings_sound.button_pressed
 				and screen.preferences.snapshot().sound_enabled
 				and sound_toggles.is_empty()
 			),
@@ -121,22 +129,22 @@ func run() -> void:
 	)
 	var settings_document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(directory + "/settings.json"))
 	checks.expect(settings_document.sound_enabled, "popup input keeps sound enabled in the settings file")
-	await _dialog_click(screen.settings_sound, screen.safe_area.get_global_rect())
+	await _dialog_click(screen.settings_panel.settings_sound, screen.safe_area.get_global_rect())
 	settings_document = JSON.parse_string(FileAccess.get_file_as_string(directory + "/settings.json"))
 	checks.expect(
 		(
-			not screen.settings_sound.button_pressed
+			not screen.settings_panel.settings_sound.button_pressed
 			and not screen.preferences.snapshot().sound_enabled
 			and not settings_document.sound_enabled
 			and sound_toggles == [false]
 		),
 		"settings coordinate input turns sound off once"
 	)
-	await _dialog_click(screen.settings_sound, screen.safe_area.get_global_rect())
+	await _dialog_click(screen.settings_panel.settings_sound, screen.safe_area.get_global_rect())
 	settings_document = JSON.parse_string(FileAccess.get_file_as_string(directory + "/settings.json"))
 	checks.expect(
 		(
-			screen.settings_sound.button_pressed
+			screen.settings_panel.settings_sound.button_pressed
 			and screen.preferences.snapshot().sound_enabled
 			and settings_document.sound_enabled
 			and sound_toggles == [false, true]
@@ -144,8 +152,8 @@ func run() -> void:
 		"settings coordinate input turns sound on once"
 	)
 	await save_frame("res://build/check/m4-settings.png")
-	await _dialog_click(screen.settings_dialog.get_ok_button(), screen.safe_area.get_global_rect())
-	checks.expect(not screen.settings_dialog.visible, "settings close input returns to the catalog")
+	await _dialog_click(screen.settings_panel.settings_dialog.get_ok_button(), screen.safe_area.get_global_rect())
+	checks.expect(not screen.settings_panel.settings_dialog.visible, "settings close input returns to the catalog")
 	_check_text(screen.briefing_title, "campaign briefing title")
 	await save_frame("res://build/check/m4-catalog.png")
 	await _safe_click(screen.begin_button, screen.safe_area.get_global_rect())

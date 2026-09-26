@@ -29,8 +29,8 @@ func run() -> void:
 				quit(1)
 				return
 			if locale == "en":
-				screen.settings_locale.item_selected.emit(1)
-			screen.settings_text_size.item_selected.emit(1)
+				screen.settings_panel.settings_locale.item_selected.emit(1)
+			screen.settings_panel.settings_text_size.item_selected.emit(1)
 			await _settle(screen)
 			var panel = screen.preparation_panel
 			panel.show_tab(1)

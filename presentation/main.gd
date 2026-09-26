@@ -18,6 +18,7 @@ const KitchenBoard := preload("res://presentation/kitchen_board.gd")
 const PreparationPlan := preload("res://sim/preparation_plan.gd")
 const PreparationPanel := preload("res://presentation/preparation_panel.gd")
 const AppPreferences := preload("res://presentation/app_preferences.gd")
+const SettingsPanel := preload("res://presentation/settings_panel.gd")
 const AudioFeedback := preload("res://presentation/audio_feedback.gd")
 const STATUS_TEXT := {
 	State.READY: "준비 완료 · 시작을 눌러 주방을 확인하세요",
@@ -74,17 +75,9 @@ var settings_path: String = "user://settings.json"
 var app_preferences: AppPreferences
 var audio_feedback: AudioFeedback
 var settings_button: Button
-var settings_dialog: AcceptDialog
-var settings_locale: OptionButton
-var settings_sound: CheckButton
-var settings_text_size: OptionButton
-var settings_message: Label
-var settings_locale_label: Label
-var settings_text_size_label: Label
+var settings_panel: SettingsPanel
 var feedback_kind: String = ""
 var feedback_reason: String = ""
-var settings_message_kind: String = ""
-var settings_message_reason: String = ""
 var modal_open_allowed: Callable
 var chatter_event: Dictionary = {}
 var chatter_seconds_left: float = 0.0
@@ -127,7 +120,7 @@ func _ready() -> void:
 	audio_feedback.set_enabled(app_preferences.snapshot().sound_enabled)
 	_build_settings()
 	if not settings_load.accepted:
-		_set_settings_message("error", settings_load.reason)
+		settings_panel.set_message("error", settings_load.reason)
 	start_button.pressed.connect(_record_input.bind("start"))
 	start_button.pressed.connect(_start)
 	pause_button.pressed.connect(_record_input.bind("pause"))
@@ -574,89 +567,15 @@ func _build_settings() -> void:
 	settings_button.custom_minimum_size = Vector2(64, 64)
 	settings_button.pressed.connect(_show_settings)
 	$SafeArea/Layout/Header.add_child(settings_button)
-	settings_dialog = AcceptDialog.new()
-	settings_dialog.dialog_autowrap = true
-	settings_dialog.add_theme_constant_override("buttons_min_height", 64)
-	settings_dialog.add_theme_constant_override("buttons_min_width", 64)
-	add_child(settings_dialog)
-	settings_dialog.get_ok_button().custom_minimum_size.y = 64
-	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(520, 0)
-	column.add_theme_constant_override("separation", 12)
-	settings_dialog.add_child(column)
-	settings_locale_label = _settings_label("언어")
-	column.add_child(settings_locale_label)
-	settings_locale = OptionButton.new()
-	settings_locale.custom_minimum_size = Vector2(64, 64)
-	settings_locale.add_item("한국어")
-	settings_locale.add_item("English")
-	settings_locale.item_selected.connect(_change_locale)
-	column.add_child(settings_locale)
-	settings_sound = CheckButton.new()
-	settings_sound.custom_minimum_size = Vector2(64, 64)
-	settings_sound.toggled.connect(_change_sound)
-	column.add_child(settings_sound)
-	settings_text_size_label = _settings_label("글자 크기")
-	column.add_child(settings_text_size_label)
-	settings_text_size = OptionButton.new()
-	settings_text_size.custom_minimum_size = Vector2(64, 64)
-	settings_text_size.add_item("")
-	settings_text_size.add_item("")
-	settings_text_size.item_selected.connect(_change_text_size)
-	column.add_child(settings_text_size)
-	settings_message = _settings_label("")
-	column.add_child(settings_message)
-	_sync_settings_controls()
-
-
-func _settings_label(text: String) -> Label:
-	var label := Label.new()
-	label.text = tr(text)
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", 20)
-	return label
+	settings_panel = SettingsPanel.new(app_preferences)
+	add_child(settings_panel)
 
 
 func _show_settings() -> void:
 	_pause()
 	if modal_open_allowed.is_valid() and not modal_open_allowed.call():
 		return
-	_sync_settings_controls()
-	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
-	settings_dialog.get_ok_button().custom_minimum_size = Vector2(64, 64)
-	await get_tree().process_frame
-	if settings_dialog.visible:
-		settings_dialog.size = Vector2i(620, 520)
-		settings_dialog.popup_centered_clamped(Vector2i(620, 520))
-
-
-func _change_locale(index: int) -> void:
-	_update_settings({"locale": "ko" if index == 0 else "en"})
-
-
-func _change_sound(enabled: bool) -> void:
-	_update_settings({"sound_enabled": enabled})
-
-
-func _change_text_size(index: int) -> void:
-	_update_settings({"text_size": "normal" if index == 0 else "large"})
-
-
-func _update_settings(changes: Dictionary) -> void:
-	var result := app_preferences.update_settings(changes)
-	_set_settings_message("saved" if result.accepted else "error", result.reason)
-	_sync_settings_controls()
-
-
-func _sync_settings_controls() -> void:
-	var values := app_preferences.snapshot()
-	settings_locale.select(0 if values.locale == "ko" else 1)
-	settings_sound.set_pressed_no_signal(values.sound_enabled)
-	settings_text_size.select(0 if values.text_size == "normal" else 1)
-	var popup_font_size := 32 if values.text_size == "large" else 26
-	for picker: OptionButton in [settings_locale, settings_text_size]:
-		picker.get_popup().add_theme_font_size_override("font_size", popup_font_size)
-		picker.get_popup().add_theme_constant_override("v_separation", 32)
+	settings_panel.open()
 
 
 func _on_preferences_changed() -> void:
@@ -675,15 +594,7 @@ func apply_preferences() -> void:
 
 func _refresh_translated_text() -> void:
 	settings_button.text = tr("설정")
-	settings_dialog.title = tr("설정")
-	settings_dialog.ok_button_text = tr("닫기")
-	settings_dialog.get_ok_button().custom_minimum_size = Vector2(64, 64)
-	settings_locale_label.text = tr("언어")
-	settings_sound.text = tr("효과음")
-	settings_text_size_label.text = tr("글자 크기")
-	settings_text_size.set_item_text(0, tr("기본"))
-	settings_text_size.set_item_text(1, tr("크게"))
-	_refresh_settings_message()
+	settings_panel.refresh_strings()
 	if definitions is ScenarioDef:
 		title_label.text = tr(definitions.display_name)
 	else:
@@ -727,28 +638,6 @@ func _refresh_feedback() -> void:
 			feedback_label.text = PreparationPanel.reason_text(feedback_reason)
 		_:
 			feedback_label.text = ""
-
-
-func _set_settings_message(kind: String, reason: String = "") -> void:
-	settings_message_kind = kind
-	settings_message_reason = reason
-	_refresh_settings_message()
-
-
-func _refresh_settings_message() -> void:
-	match settings_message_kind:
-		"saved":
-			settings_message.text = tr("설정 저장 완료")
-		"error":
-			settings_message.text = _settings_error(settings_message_reason)
-		_:
-			settings_message.text = ""
-
-
-func _settings_error(reason: String) -> String:
-	if reason in ["future_version", "unsupported_version"]:
-		return tr("이 앱에서 지원하지 않는 설정 파일입니다. 기존 파일을 보존합니다.")
-	return tr("설정을 저장하거나 읽지 못했습니다. 기존 설정을 유지합니다.")
 
 
 func _show_preparation(preview: Dictionary = {}) -> void:
@@ -1236,17 +1125,9 @@ func _update_safe_area() -> void:
 
 ## Applies the safe-area inset as pure offsets; design padding lives on the MarginContainer.
 func _apply_safe_area(physical_safe: Rect2i, to_canvas: Transform2D) -> void:
-	var canvas := Rect2(Vector2.ZERO, size)
-	var usable := canvas
-	if physical_safe.has_area():
-		usable = canvas.intersection(to_canvas * Rect2(physical_safe))
-		if not usable.has_area():
-			usable = canvas
+	var usable := SafeAreaSource.usable_area(size, physical_safe, to_canvas)
 	if usable == last_usable_area and size == last_canvas_size:
 		return
 	last_usable_area = usable
 	last_canvas_size = size
-	safe_area.offset_left = usable.position.x
-	safe_area.offset_top = usable.position.y
-	safe_area.offset_right = usable.end.x - size.x
-	safe_area.offset_bottom = usable.end.y - size.y
+	SafeAreaSource.inset(safe_area, usable, size)

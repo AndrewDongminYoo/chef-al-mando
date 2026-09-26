@@ -128,14 +128,14 @@ func _check_m5(directory: String) -> bool:
 	screen.get("ending_return_button").pressed.emit()
 	await process_frame
 	screen.get("settings_button").pressed.emit()
-	screen.get("licenses_button").pressed.emit()
+	screen.get("settings_panel").licenses_button.pressed.emit()
 	await process_frame
-	var body: RichTextLabel = screen.get("licenses_body")
+	var body: RichTextLabel = screen.get("settings_panel").licenses_body
 	var valid: bool = (
 		ending_visible
 		and screen.get("catalog_panel").visible
 		and screen.get("ending_button").visible
-		and screen.get("licenses_dialog").visible
+		and screen.get("settings_panel").licenses_dialog.visible
 		and body.is_visible_in_tree()
 		and body.text.contains(Engine.get_license_text())
 		and body.text.contains("Godot 엔진 소스:")

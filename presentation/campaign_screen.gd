@@ -8,7 +8,7 @@ const AppPreferences := preload("res://presentation/app_preferences.gd")
 const KitchenScreen := preload("res://presentation/main.gd")
 const ServiceScene := preload("res://presentation/main.tscn")
 const SafeAreaSource := preload("res://platform/safe_area.gd")
-const LicenseNotices := preload("res://presentation/license_notices.gd")
+const SettingsPanel := preload("res://presentation/settings_panel.gd")
 
 @export_file("*.tres") var campaign_path: String = "res://content/campaign/campaign.tres"
 var save_path: String = "user://campaign_records.json"
@@ -47,13 +47,7 @@ var continue_button: Button
 var active_session: Variant = null
 var preferences: AppPreferences
 var settings_button: Button
-var settings_dialog: AcceptDialog
-var settings_locale: OptionButton
-var settings_sound: CheckButton
-var settings_text_size: OptionButton
-var settings_message: Label
-var settings_locale_label: Label
-var settings_text_size_label: Label
+var settings_panel: SettingsPanel
 var menu_title: Label
 var ending_title: Label
 var ending_copy: Label
@@ -63,11 +57,6 @@ var retry_checkpoint_button: Button
 var replace_dialog: ConfirmationDialog
 var save_message_kind: String = ""
 var save_message_reason: String = ""
-var settings_message_kind: String = ""
-var settings_message_reason: String = ""
-var licenses_button: Button
-var licenses_dialog: AcceptDialog
-var licenses_body: RichTextLabel
 
 @onready var safe_area: MarginContainer = $SafeArea
 @onready var safe_area_source: SafeAreaSource = $SafeAreaSource
@@ -99,7 +88,7 @@ func _ready() -> void:
 	session_only_button.visible = storage_blocked
 	_set_save_message("storage", loaded.reason)
 	if not settings_load.accepted:
-		_set_settings_message("error", settings_load.reason)
+		settings_panel.set_message("error", settings_load.reason)
 	selected_scenario_id = campaign.scenarios[0].id
 	for scenario: CampaignDef.ScenarioDef in campaign.scenarios:
 		if (
@@ -246,102 +235,13 @@ func _build_dialogs() -> void:
 
 
 func _build_settings() -> void:
-	settings_dialog = AcceptDialog.new()
-	settings_dialog.title = tr("설정")
-	settings_dialog.ok_button_text = tr("닫기")
-	settings_dialog.dialog_autowrap = true
-	add_child(settings_dialog)
-	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(520, 0)
-	column.add_theme_constant_override("separation", 12)
-	settings_dialog.add_child(column)
-	settings_dialog.get_ok_button().custom_minimum_size.y = 64
-	settings_locale_label = _label("언어", 20)
-	column.add_child(settings_locale_label)
-	settings_locale = OptionButton.new()
-	settings_locale.custom_minimum_size = Vector2(64, 64)
-	settings_locale.add_item("한국어")
-	settings_locale.add_item("English")
-	settings_locale.item_selected.connect(_change_locale)
-	column.add_child(settings_locale)
-	settings_sound = CheckButton.new()
-	settings_sound.text = tr("효과음")
-	settings_sound.custom_minimum_size = Vector2(64, 64)
-	settings_sound.toggled.connect(_change_sound)
-	column.add_child(settings_sound)
-	settings_text_size_label = _label("글자 크기", 20)
-	column.add_child(settings_text_size_label)
-	settings_text_size = OptionButton.new()
-	settings_text_size.custom_minimum_size = Vector2(64, 64)
-	settings_text_size.add_item(tr("기본"))
-	settings_text_size.add_item(tr("크게"))
-	settings_text_size.item_selected.connect(_change_text_size)
-	column.add_child(settings_text_size)
-	settings_message = _label("", 18)
-	column.add_child(settings_message)
-	licenses_button = _button("오픈 소스 라이선스", _show_licenses)
-	column.add_child(licenses_button)
-	licenses_dialog = AcceptDialog.new()
-	licenses_dialog.title = tr("오픈 소스 라이선스")
-	licenses_dialog.ok_button_text = tr("닫기")
-	add_child(licenses_dialog)
-	licenses_body = RichTextLabel.new()
-	licenses_body.custom_minimum_size = Vector2(0, 200)
-	licenses_body.bbcode_enabled = false
-	licenses_body.selection_enabled = true
-	licenses_dialog.add_child(licenses_body)
-	_sync_settings_controls()
+	settings_panel = SettingsPanel.new(preferences, true)
+	add_child(settings_panel)
 	preferences.apply_to(self)
 
 
-func _show_licenses() -> void:
-	settings_dialog.hide()
-	licenses_body.text = LicenseNotices.text()
-	licenses_body.add_theme_font_size_override("normal_font_size", preferences.font_size(20))
-	licenses_body.scroll_to_line(0)
-	licenses_dialog.popup_centered_clamped(Vector2i(900, 520))
-	_ensure_dialog_tap_sizes()
-	_ensure_dialog_tap_sizes.call_deferred()
-
-
 func _show_settings() -> void:
-	_sync_settings_controls()
-	settings_dialog.popup_centered_clamped(Vector2i(620, 520))
-	_ensure_dialog_tap_sizes()
-	_ensure_dialog_tap_sizes.call_deferred()
-	await get_tree().process_frame
-	if settings_dialog.visible:
-		settings_dialog.size = Vector2i(620, 520)
-		settings_dialog.popup_centered_clamped(Vector2i(620, 520))
-
-
-func _change_locale(index: int) -> void:
-	_update_settings({"locale": "ko" if index == 0 else "en"})
-
-
-func _change_sound(enabled: bool) -> void:
-	_update_settings({"sound_enabled": enabled})
-
-
-func _change_text_size(index: int) -> void:
-	_update_settings({"text_size": "normal" if index == 0 else "large"})
-
-
-func _update_settings(changes: Dictionary) -> void:
-	var result := preferences.update_settings(changes)
-	_set_settings_message("saved" if result.accepted else "error", result.reason)
-	_sync_settings_controls()
-
-
-func _sync_settings_controls() -> void:
-	var values := preferences.snapshot()
-	settings_locale.select(0 if values.locale == "ko" else 1)
-	settings_sound.set_pressed_no_signal(values.sound_enabled)
-	settings_text_size.select(0 if values.text_size == "normal" else 1)
-	var popup_font_size := 32 if values.text_size == "large" else 26
-	for picker: OptionButton in [settings_locale, settings_text_size]:
-		picker.get_popup().add_theme_font_size_override("font_size", popup_font_size)
-		picker.get_popup().add_theme_constant_override("v_separation", 32)
+	settings_panel.open()
 
 
 func _on_preferences_changed() -> void:
@@ -362,19 +262,7 @@ func _refresh_strings() -> void:
 	)
 	ending_return_button.text = tr("영업 목록으로")
 	begin_button.text = tr("준비 시작")
-	settings_dialog.title = tr("설정")
-	settings_dialog.ok_button_text = tr("닫기")
-	licenses_button.text = tr("오픈 소스 라이선스")
-	licenses_dialog.title = tr("오픈 소스 라이선스")
-	licenses_dialog.ok_button_text = tr("닫기")
-	licenses_body.add_theme_font_size_override("normal_font_size", preferences.font_size(20))
-	if licenses_dialog.visible:
-		licenses_body.text = LicenseNotices.text()
-	settings_locale_label.text = tr("언어")
-	settings_sound.text = tr("효과음")
-	settings_text_size_label.text = tr("글자 크기")
-	settings_text_size.set_item_text(0, tr("기본"))
-	settings_text_size.set_item_text(1, tr("크게"))
+	settings_panel.refresh_strings()
 	save_error_dialog.title = tr("영업을 저장하지 못했습니다")
 	retry_checkpoint_button.text = tr("저장 재시도")
 	replace_dialog.title = tr("진행 중인 영업 교체")
@@ -397,7 +285,6 @@ func _refresh_strings() -> void:
 		service_menu_button.text = tr("목록")
 		service_goal_button.text = tr("결과") if not last_result.is_empty() else tr("목표")
 	_refresh_save_message()
-	_refresh_settings_message()
 	if save_error_dialog.visible:
 		save_error_dialog.dialog_text = save_label.text
 	if not last_result.is_empty():
@@ -408,13 +295,10 @@ func _refresh_strings() -> void:
 
 
 func _ensure_dialog_tap_sizes() -> void:
-	for dialog: AcceptDialog in [
-		settings_dialog, result_dialog, goal_dialog, leave_dialog, save_error_dialog, replace_dialog, licenses_dialog
-	]:
+	for dialog: AcceptDialog in [result_dialog, goal_dialog, leave_dialog, save_error_dialog, replace_dialog]:
 		dialog.add_theme_constant_override("buttons_min_height", 64)
 		dialog.add_theme_constant_override("buttons_min_width", 64)
 	for button: Button in [
-		settings_dialog.get_ok_button(),
 		result_dialog.get_ok_button(),
 		next_button,
 		retry_service_button,
@@ -424,32 +308,9 @@ func _ensure_dialog_tap_sizes() -> void:
 		leave_dialog.get_cancel_button(),
 		retry_checkpoint_button,
 		replace_dialog.get_ok_button(),
-		replace_dialog.get_cancel_button(),
-		licenses_dialog.get_ok_button()
+		replace_dialog.get_cancel_button()
 	]:
 		button.custom_minimum_size = Vector2(maxf(button.custom_minimum_size.x, 64.0), 64.0)
-
-
-func _settings_message(reason: String) -> String:
-	if reason in ["future_version", "unsupported_version"]:
-		return tr("이 앱에서 지원하지 않는 설정 파일입니다. 기존 파일을 보존합니다.")
-	return tr("설정을 저장하거나 읽지 못했습니다. 기존 설정을 유지합니다.")
-
-
-func _set_settings_message(kind: String, reason: String = "") -> void:
-	settings_message_kind = kind
-	settings_message_reason = reason
-	_refresh_settings_message()
-
-
-func _refresh_settings_message() -> void:
-	match settings_message_kind:
-		"saved":
-			settings_message.text = tr("설정 저장 완료")
-		"error":
-			settings_message.text = _settings_message(settings_message_reason)
-		_:
-			settings_message.text = ""
 
 
 func _refresh_catalog() -> void:
@@ -891,13 +752,4 @@ func _update_safe_area() -> void:
 
 
 func _apply_safe_area(physical_safe: Rect2i, to_canvas: Transform2D) -> void:
-	var canvas := Rect2(Vector2.ZERO, size)
-	var usable := canvas
-	if physical_safe.has_area():
-		usable = canvas.intersection(to_canvas * Rect2(physical_safe))
-		if not usable.has_area():
-			usable = canvas
-	safe_area.offset_left = usable.position.x
-	safe_area.offset_top = usable.position.y
-	safe_area.offset_right = usable.end.x - size.x
-	safe_area.offset_bottom = usable.end.y - size.y
+	SafeAreaSource.inset(safe_area, SafeAreaSource.usable_area(size, physical_safe, to_canvas), size)
