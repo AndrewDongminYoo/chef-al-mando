@@ -7,9 +7,15 @@ const VERSIONS := {"schema_version": 4, "content_version": 7, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
 const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
+## An autosave reads back the session it just validated and the two it wrote before, so three entries
+## cover a save; the fourth is slack for a save_records call between autosaves.
+const VERIFIED_SESSION_LIMIT := 4
 
 var file_path: String
 var _campaign: CampaignDef
+## Canonical [session, records] texts that ServiceSession.restore accepted through this store, oldest
+## first. The campaign definition is static content, so an accepted pair stays accepted.
+var _verified_sessions: Array[String] = []
 
 
 func _init(campaign: CampaignDef, target: String = "user://campaign_records.json") -> void:
@@ -226,7 +232,7 @@ func _read(target: String) -> Dictionary:
 				return _failure("corrupt_records")
 			if content_updated and _content_update_restarts_session(int(document.content_version), active_session):
 				active_session = null
-			elif not ServiceSession.restore(_campaign, active_session, records).accepted:
+			elif not _session_restores(active_session, records):
 				return _failure("corrupt_records")
 			else:
 				active_session = active_session.duplicate(true)
@@ -245,9 +251,44 @@ func _content_update_restarts_session(source_content_version: int, _active_sessi
 	return source_content_version < 7
 
 
+# The caller's session always goes through a full restore: an in-memory session can hold what JSON
+# erases (a StringName key), so its canonical text alone cannot prove that restore accepts it.
 func _valid_session(active_session: Variant, records: Dictionary) -> bool:
-	return active_session == null or (active_session is Dictionary
-		and ServiceSession.restore(_campaign, active_session, records).accepted)
+	if active_session == null:
+		return true
+	if not active_session is Dictionary or not ServiceSession.restore(_campaign, active_session, records).accepted:
+		return false
+	_remember_verified(_session_key(active_session, records))
+	return true
+
+
+# ServiceSession.restore dominates the cost of a save (issue #31), and one autosave used to run it five
+# times on three sessions: the new one, the primary's and the backup's, each already restored before.
+# A session parsed from a file skips it only when restore has already accepted this exact session
+# under these exact records in this store; any other pair is restored in full, so a tampered or torn
+# session and a session whose service the records lock are still refused.
+func _session_restores(active_session: Dictionary, records: Dictionary) -> bool:
+	var key := _session_key(active_session, records)
+	if key in _verified_sessions:
+		return true
+	if not ServiceSession.restore(_campaign, active_session, records).accepted:
+		return false
+	_remember_verified(key)
+	return true
+
+
+# A JSON round trip first, so that an in-memory session with int values and the same session parsed
+# from a file (float values) give the same text; sorted keys make the text independent of key order.
+func _session_key(active_session: Dictionary, records: Dictionary) -> String:
+	var parsed: Variant = JSON.parse_string(JSON.stringify([active_session, records], "", true, true))
+	return JSON.stringify(parsed, "", true, true)
+
+
+func _remember_verified(key: String) -> void:
+	_verified_sessions.erase(key)
+	_verified_sessions.append(key)
+	while _verified_sessions.size() > VERIFIED_SESSION_LIMIT:
+		_verified_sessions.remove_at(0)
 
 
 func _is_integer(value: Variant) -> bool:

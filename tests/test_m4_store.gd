@@ -24,6 +24,24 @@ class FailedStore extends "res://persistence/campaign_store.gd":
 		return super._replace_file(source, target)
 
 
+## Rewrites the staged primary after this store validated the session, so that the read-back holds a
+## session or records that the store has not restored.
+class TamperedStore extends "res://persistence/campaign_store.gd":
+	var tamper: String = ""
+
+	func _write_text(target: String, text: String) -> Error:
+		if tamper.is_empty() or target != file_path + ".tmp":
+			return super._write_text(target, text)
+		return super._write_text(target, JSON.stringify(_tampered(JSON.parse_string(text), tamper), "\t", true))
+
+	static func _tampered(document: Dictionary, kind: String) -> Dictionary:
+		if kind == "speed":
+			document.active_session["speed"] = 3
+		else:
+			document["records"] = {}
+		return document
+
+
 func run(_tree: SceneTree) -> void:
 	var campaign: Resource = ResourceLoader.load("res://content/campaign/campaign.tres", "", ResourceLoader.CACHE_MODE_IGNORE)
 	var directory := "user://test_m4_store_%d" % Time.get_ticks_usec()
@@ -116,6 +134,7 @@ func run(_tree: SceneTree) -> void:
 	expect(loaded.accepted and _same_restore(restored, expected_restore) and restored.simulation.closed,
 		"a fresh reader restores a closed session")
 	_test_write_failures(campaign, directory, records, session, replacement_session)
+	_test_restore_shortcuts(campaign, directory, records, session, replacement_session)
 	_test_recovery(campaign, directory, records, improved, session, replacement_session)
 	_test_reserved_input_json_recovery(campaign, directory)
 	_test_task_path_json_recovery(campaign, directory)
@@ -534,6 +553,51 @@ func _test_write_failures(campaign: Resource, directory: String, records: Dictio
 		expected_restore = ServiceSession.restore(campaign, replacement_session, records)
 		expect(loaded.accepted and _same_restore(actual_restore, expected_restore),
 			"a fresh reader sees the retried full session: " + failure)
+
+
+# CampaignStore skips ServiceSession.restore for a session it has already restored under the same
+# records. Each case gives the store a session or records it has not restored and expects the rejection
+# that a full restore produces.
+func _test_restore_shortcuts(campaign: Resource, directory: String, records: Dictionary,
+	session: Dictionary, replacement_session: Dictionary) -> void:
+	for tamper: String in ["speed", "records"]:
+		var target := directory + "/shortcut_read_back_%s.json" % tamper
+		var store := TamperedStore.new(campaign, target)
+		expect(store.save_active_session(session, records).accepted, "the read-back fixture writes a baseline: " + tamper)
+		var original_bytes := FileAccess.get_file_as_bytes(target)
+		store.tamper = tamper
+		var result: Dictionary = store.save_active_session(replacement_session, records)
+		expect(not result.accepted and result.reason == "verification_failed",
+			"a staged file that differs from the validated session fails verification: " + tamper)
+		expect(FileAccess.get_file_as_bytes(target) == original_bytes and not FileAccess.file_exists(target + ".tmp"),
+			"a failed read-back keeps the primary and removes the staged file: " + tamper)
+	for tamper: String in ["speed", "records"]:
+		var target := directory + "/shortcut_primary_%s.json" % tamper
+		var store := CampaignStore.new(campaign, target)
+		expect(store.save_active_session(session, records).accepted
+			and store.save_active_session(replacement_session, records).accepted,
+			"the primary fixture writes two sessions through one store: " + tamper)
+		var document: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(target))
+		_write(target, JSON.stringify(TamperedStore._tampered(document, tamper), "\t", true))
+		var tampered_bytes := FileAccess.get_file_as_bytes(target)
+		var result: Dictionary = store.save_active_session(session, records)
+		expect(not result.accepted and result.reason == "corrupt_records",
+			"a store that wrote the previous primary still refuses an edited primary: " + tamper)
+		expect(not store.load_records().accepted and FileAccess.get_file_as_bytes(target) == tampered_bytes,
+			"the same store does not load or replace the edited primary: " + tamper)
+	var target := directory + "/shortcut_string_name.json"
+	var store := CampaignStore.new(campaign, target)
+	expect(store.save_active_session(session, records).accepted, "the StringName fixture writes a baseline")
+	var twin: Dictionary = {}
+	for key: String in session:
+		twin[StringName(key)] = session[key]
+	expect(JSON.stringify(twin) == JSON.stringify(session) and not ServiceSession.restore(campaign, twin, records).accepted,
+		"the StringName twin has the saved session's JSON text but does not restore")
+	var original_bytes := FileAccess.get_file_as_bytes(target)
+	var result: Dictionary = store.save_active_session(twin, records)
+	expect(not result.accepted and result.reason == "invalid_session"
+		and FileAccess.get_file_as_bytes(target) == original_bytes,
+		"a session that fails restore is rejected before any write even when its JSON twin was saved")
 
 
 func _test_recovery(campaign: Resource, directory: String, records: Dictionary, improved: Dictionary,
