@@ -31,17 +31,17 @@ func run(tree: SceneTree) -> void:
 	expect(_find_button(screen, "설정") != null,
 		"the campaign catalog provides a settings action")
 	screen.get("settings_button").pressed.emit()
-	var campaign_locale_popup: PopupMenu = screen.get("settings_locale").get_popup()
-	var campaign_text_popup: PopupMenu = screen.get("settings_text_size").get_popup()
+	var campaign_locale_popup: PopupMenu = screen.get("settings_panel").settings_locale.get_popup()
+	var campaign_text_popup: PopupMenu = screen.get("settings_panel").settings_text_size.get_popup()
 	expect(campaign_locale_popup.get_theme_font_size("font_size") == 26
 		and campaign_text_popup.get_theme_font_size("font_size") == 26
 		and _popup_row_height(campaign_locale_popup) >= 64
 		and _popup_row_height(campaign_text_popup) >= 64,
 		"normal campaign settings popups provide 64-pixel rows at the native 26-pixel font")
 	var base_font: int = screen.get("menu_title").get_theme_font_size("font_size")
-	screen.get("settings_locale").item_selected.emit(1)
-	screen.get("settings_text_size").item_selected.emit(1)
-	screen.get("settings_sound").toggled.emit(false)
+	screen.get("settings_panel").settings_locale.item_selected.emit(1)
+	screen.get("settings_panel").settings_text_size.item_selected.emit(1)
+	screen.get("settings_panel").settings_sound.toggled.emit(false)
 	var fresh_preferences := AppPreferences.new(directory + "/settings.json")
 	var fresh_settings := fresh_preferences.load_settings()
 	expect(TranslationServer.get_locale() == "en"
@@ -66,8 +66,8 @@ func run(tree: SceneTree) -> void:
 		and _popup_row_height(campaign_locale_popup) >= 64
 		and _popup_row_height(campaign_text_popup) >= 64,
 		"large campaign settings popups provide 64-pixel rows at the native 32-pixel font")
-	screen.get("settings_sound").toggled.emit(true)
-	screen.get("settings_dialog").hide()
+	screen.get("settings_panel").settings_sound.toggled.emit(true)
+	screen.get("settings_panel").settings_dialog.hide()
 	screen.get("begin_button").pressed.emit()
 	var service: Control = screen.get("active_service")
 	service.set_process(false)
@@ -75,8 +75,8 @@ func run(tree: SceneTree) -> void:
 	var service_settings := _find_button(service, "Settings")
 	expect(service_settings != null and service.get_node("SafeArea/Layout/Controls/Start").text == "Start",
 		"the service shares the active locale and provides its own settings action")
-	var service_locale_popup: PopupMenu = service.get("settings_locale").get_popup()
-	var service_text_popup: PopupMenu = service.get("settings_text_size").get_popup()
+	var service_locale_popup: PopupMenu = service.get("settings_panel").settings_locale.get_popup()
+	var service_text_popup: PopupMenu = service.get("settings_panel").settings_text_size.get_popup()
 	expect(service_locale_popup.get_theme_font_size("font_size") == 32
 		and service_text_popup.get_theme_font_size("font_size") == 32
 		and _popup_row_height(service_locale_popup) >= 64
@@ -87,19 +87,19 @@ func run(tree: SceneTree) -> void:
 		and service.get("preparation_panel").purchase_labels.vegetable.text.contains("Tomatoes"),
 		"English refresh includes scenario, preparation, and dynamic content names")
 	var unchanged_state: String = service.get("simulation").state_hash()
-	service.get("settings_locale").item_selected.emit(0)
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(service.get("simulation").state_hash() == unchanged_state
 		and service.get("simulation").tick == 0,
 		"changing locale twice leaves simulation state unchanged")
 	var rejected_preparation: Dictionary = service.call("submit_preparation", "set_purchase", "vegetable", 999)
 	expect(not rejected_preparation.accepted and service.get("feedback_label").text.contains("Budget"),
 		"an English preparation rejection shows its translated reason")
-	service.get("settings_locale").item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(service.get("feedback_label").text.contains("예산이 부족합니다")
 		and service.get("simulation").state_hash() == unchanged_state,
 		"locale refresh retains and retranslates the preparation rejection without changing simulation state")
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(service.get("feedback_label").text.contains("Budget")
 		and service.get("simulation").state_hash() == unchanged_state,
 		"the retained preparation rejection translates back to English")
@@ -115,16 +115,16 @@ func run(tree: SceneTree) -> void:
 	var arrived_button: Button = service.get("order_buttons").order_01
 	expect(arrived_button.get_theme_font_size("font_size") == 24,
 		"an order button created after large text is active uses the enlarged native font")
-	service.get("settings_text_size").item_selected.emit(0)
-	service.get("settings_text_size").item_selected.emit(1)
+	service.get("settings_panel").settings_text_size.item_selected.emit(0)
+	service.get("settings_panel").settings_text_size.item_selected.emit(1)
 	expect(arrived_button.get_theme_font_size("font_size") == 24,
 		"reapplying large text does not compound a dynamic order button font")
 	if service_settings != null:
 		service_settings.pressed.emit()
-		expect(not service.call("is_running") and service.get("settings_dialog").visible
+		expect(not service.call("is_running") and service.get("settings_panel").settings_dialog.visible
 			and not arrival_player.playing,
 			"opening settings pauses the simulation and stops an actual arrival cue")
-		service.get("settings_dialog").hide()
+		service.get("settings_panel").settings_dialog.hide()
 		expect(not service.call("is_running"),
 			"closing service settings does not resume the simulation")
 		service.get("resume_button").pressed.emit()
@@ -350,12 +350,12 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 		and screen.get("save_error_dialog").visible,
 		"a failed pause checkpoint blocks the menu confirmation behind its retry action")
 	var failed_state: String = service.get("simulation").state_hash()
-	screen.get("settings_locale").item_selected.emit(1)
+	screen.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(screen.get("save_label").text.contains("another save attempt")
 		and screen.get("save_error_dialog").dialog_text.contains("another save attempt")
 		and service.get("simulation").state_hash() == failed_state,
 		"locale refresh retains and retranslates the visible storage failure without changing simulation state")
-	screen.get("settings_locale").item_selected.emit(0)
+	screen.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(screen.get("save_label").text.contains("다시 시도"),
 		"the retained storage failure translates back to Korean")
 	screen.call("return_to_menu")
@@ -384,15 +384,18 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 	service.get("settings_button").pressed.emit()
 	await tree.process_frame
 	expect(screen.get("pending_save") and screen.get("save_error_dialog").visible
-		and not service.get("settings_dialog").visible and not screen.get("goal_dialog").visible,
+		and not service.get("settings_panel").settings_dialog.visible and not screen.get("goal_dialog").visible,
 		"a failed service-settings pause shows only the checkpoint retry dialog")
 	failed_store.failure = ""
 	retry.pressed.emit()
 	service.get("settings_button").pressed.emit()
-	expect(not screen.get("pending_save") and service.get("settings_dialog").visible
+	expect(not screen.get("pending_save") and service.get("settings_panel").settings_dialog.visible
 		and not service.call("is_running"),
 		"a successful retry allows service settings while service remains paused")
-	service.get("settings_dialog").hide()
+	expect(service.get("settings_panel").licenses_button == null
+		and screen.get("settings_panel").licenses_button != null,
+		"only the campaign settings dialog offers the open-source licenses")
+	service.get("settings_panel").settings_dialog.hide()
 	screen.call("request_menu")
 	screen.get("leave_dialog").confirmed.emit()
 	await tree.process_frame
@@ -409,10 +412,10 @@ func _test_failed_checkpoint_and_replacement(tree: SceneTree, entry: String, dir
 		"starting over with an open checkpoint requires an explicit replacement confirmation")
 	expect(screen.get("replace_dialog").dialog_text == "새 영업에서 시작을 누르면 저장한 이어하기를 새 영업으로 교체합니다.",
 		"replacement copy names Start as the checkpoint replacement point")
-	screen.get("settings_locale").item_selected.emit(1)
+	screen.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(screen.get("replace_dialog").dialog_text == "Starting the new service replaces the saved checkpoint.",
 		"English replacement copy names Start as the checkpoint replacement point")
-	screen.get("settings_locale").item_selected.emit(0)
+	screen.get("settings_panel").settings_locale.item_selected.emit(0)
 	if replace != null:
 		replace.pressed.emit()
 	await tree.process_frame
@@ -610,7 +613,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		"the ready locale fixture warms the displayed time cache at tick zero")
 	var ready_hash: String = service.get("simulation").state_hash()
 	var ready_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(counter.text == "Elapsed 000.0 s", "a ready locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 300.0 s  ·  ",
 		"a ready locale change refreshes the exact English remaining time")
@@ -628,7 +631,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and service.get("simulation").snapshot().commands == ready_commands
 		and service.get("simulation").state_hash() == ready_hash,
 		"a ready locale change preserves the service state, tick, and commands")
-	service.get("settings_locale").item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(counter.text == "경과 000.0초", "a ready locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 300.0초  ·  ",
 		"a ready locale change refreshes the exact Korean remaining time")
@@ -657,7 +660,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		"the paused compact fixture starts collapsed with Korean text")
 	var paused_hash: String = service.get("simulation").state_hash()
 	var paused_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(counter.text == "Elapsed 001.0 s", "a paused locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 299.0 s  ·  ",
 		"a paused locale change refreshes the exact English remaining time")
@@ -667,7 +670,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and service.get("simulation").snapshot().commands == paused_commands
 		and service.get("simulation").state_hash() == paused_hash and not detail_panel.visible,
 		"the collapsed locale change preserves the paused state, tick, commands, and panel visibility")
-	service.get("settings_locale").item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(counter.text == "경과 001.0초", "a paused locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 299.0초  ·  ",
 		"a paused locale change refreshes the exact Korean remaining time")
@@ -677,14 +680,14 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	details_toggle.pressed.emit()
 	expect(detail_panel.visible and details_toggle.text == "주문 상세 접기",
 		"the paused compact fixture starts its expanded check with Korean text")
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(details_toggle.text == "Hide order details",
 		"a paused locale change refreshes the expanded details control")
 	expect(service.get("state") == 2 and service.get("simulation").tick == 10
 		and service.get("simulation").snapshot().commands == paused_commands
 		and service.get("simulation").state_hash() == paused_hash and detail_panel.visible,
 		"the expanded locale change preserves the paused state, tick, commands, and panel visibility")
-	service.get("settings_locale").item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(details_toggle.text == "주문 상세 접기",
 		"the Korean refresh restores the expanded details control text")
 	expect(service.get("state") == 2 and service.get("simulation").tick == 10
@@ -700,7 +703,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 	var closed_hash: String = service.get("simulation").state_hash()
 	var closed_commands: Array = service.get("simulation").snapshot().commands.duplicate(true)
 	var closed_panel_visible: bool = detail_panel.visible
-	service.get("settings_locale").item_selected.emit(1)
+	service.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(counter.text == "Elapsed 300.0 s", "a closed locale change labels the exact English elapsed time")
 	expect(remaining.text == "Time remaining 000.0 s  ·  ",
 		"a closed locale change refreshes the exact English remaining time")
@@ -709,7 +712,7 @@ func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: Str
 		and service.get("simulation").state_hash() == closed_hash
 		and detail_panel.visible == closed_panel_visible,
 		"a closed locale change preserves the service state, tick, commands, and panel visibility")
-	service.get("settings_locale").item_selected.emit(0)
+	service.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(counter.text == "경과 300.0초", "a closed locale change labels the exact Korean elapsed time")
 	expect(remaining.text == "남은 시간 000.0초  ·  ",
 		"a closed locale change refreshes the exact Korean remaining time")
@@ -787,7 +790,7 @@ func _test_recovered_active_session(tree: SceneTree, entry: String, directory: S
 		and screen.get("save_message_reason") == "corrupt_records"
 		and screen.get("active_session") == null,
 		"the recovery choices start from the actual blocked corrupt-save state")
-	screen.get("settings_locale").item_selected.emit(1)
+	screen.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(recover_button.text == "Recover from backup",
 		"a locale change refreshes the exact English backup recovery action")
 	expect(session_only_button.text == "Start without saving",
@@ -799,7 +802,7 @@ func _test_recovered_active_session(tree: SceneTree, entry: String, directory: S
 		and session_only_button.visible and FileAccess.get_file_as_bytes(file_path) == primary_bytes
 		and FileAccess.get_file_as_bytes(file_path + ".backup") == backup_bytes,
 		"the English refresh preserves failure state, bytes, choices, and the manual recovery gate")
-	screen.get("settings_locale").item_selected.emit(0)
+	screen.get("settings_panel").settings_locale.item_selected.emit(0)
 	expect(recover_button.text == "백업에서 복구",
 		"the Korean refresh restores the exact backup recovery action")
 	expect(session_only_button.text == "저장 없이 새로 시작",
@@ -857,13 +860,13 @@ func _test_invalid_campaign_settings(tree: SceneTree, entry: String, directory: 
 		expect((screen.get("campaign") == null) == (index == 0),
 			"fixtures cover both a failed campaign cast and failed campaign validation")
 		screen.get("settings_button").pressed.emit()
-		expect(screen.get("settings_dialog").visible,
+		expect(screen.get("settings_panel").settings_dialog.visible,
 			"settings remain accessible after campaign initialization fails")
-		screen.get("settings_locale").item_selected.emit(1)
+		screen.get("settings_panel").settings_locale.item_selected.emit(1)
 		expect(screen.get("save_label").text == "Could not load campaign data",
 			"locale input refreshes the campaign error without campaign data")
-		screen.get("settings_sound").toggled.emit(false)
-		screen.get("settings_text_size").item_selected.emit(1)
+		screen.get("settings_panel").settings_sound.toggled.emit(false)
+		screen.get("settings_panel").settings_text_size.item_selected.emit(1)
 		expect(screen.get("save_label").text == "Could not load campaign data"
 			and screen.get("menu_title").get_theme_font_size("font_size") == 36,
 			"sound and large text inputs preserve the translated campaign error")
@@ -871,7 +874,7 @@ func _test_invalid_campaign_settings(tree: SceneTree, entry: String, directory: 
 		expect(fresh_preferences.load_settings().accepted
 			and fresh_preferences.snapshot() == {"locale": "en", "sound_enabled": false, "text_size": "large"},
 			"a new settings reader loads inputs made on the campaign error screen")
-		screen.get("settings_locale").item_selected.emit(0)
+		screen.get("settings_panel").settings_locale.item_selected.emit(0)
 		expect(screen.get("save_label").text == "캠페인 데이터를 불러올 수 없습니다"
 			and screen.get("scenario_buttons").is_empty() and screen.get("begin_button").disabled
 			and not screen.call("begin_service") and not FileAccess.file_exists(records_path),
@@ -963,10 +966,10 @@ func _test_future_settings_error(tree: SceneTree, entry: String, directory: Stri
 	var screen := _boot(tree, entry, directory + "/future-campaign.json", settings_path)
 	await tree.process_frame
 	screen.get("settings_button").pressed.emit()
-	expect(screen.get("settings_message").text.contains("지원하지 않는 설정")
-		and screen.get("settings_message").is_visible_in_tree(),
+	expect(screen.get("settings_panel").settings_message.text.contains("지원하지 않는 설정")
+		and screen.get("settings_panel").settings_message.is_visible_in_tree(),
 		"a future settings file shows a visible protected-file reason")
-	screen.get("settings_locale").item_selected.emit(1)
+	screen.get("settings_panel").settings_locale.item_selected.emit(1)
 	expect(FileAccess.get_file_as_bytes(settings_path) == original,
 		"settings input cannot overwrite future settings bytes")
 	screen.queue_free()
@@ -989,10 +992,10 @@ func _test_operational_option_popups(tree: SceneTree, entry: String, directory: 
 		live_pickers.append(picker)
 	expect(_operational_popups_match(preparation_pickers, 26) and _operational_popups_match(live_pickers, 26),
 		"normal text styles preparation and live duty popup rows at 26 pixels")
-	service.get("settings_text_size").item_selected.emit(1)
+	service.get("settings_panel").settings_text_size.item_selected.emit(1)
 	expect(_operational_popups_match(preparation_pickers, 32) and _operational_popups_match(live_pickers, 32),
 		"large text styles preparation and live duty popup rows at 32 pixels")
-	service.get("settings_text_size").item_selected.emit(0)
+	service.get("settings_panel").settings_text_size.item_selected.emit(0)
 	expect(_operational_popups_match(preparation_pickers, 26) and _operational_popups_match(live_pickers, 26),
 		"normal text restores preparation and live duty popup rows at 26 pixels")
 	service.get("start_button").pressed.emit()

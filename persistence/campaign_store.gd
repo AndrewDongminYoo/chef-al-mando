@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://persistence/file_store.gd"
 
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
@@ -37,22 +37,20 @@ func load_records() -> Dictionary:
 	return {"accepted": false, "reason": reason, "records": {}, "attempts": {}, "can_recover": backup.accepted and not protected}
 
 
+# The two saves share every guard but run the session check at different points, and the order
+# decides the reason code when two guards fail (tests/test_save_guards.gd): save_records can only
+# check the stored session after reading it, while save_active_session checks the caller's session
+# before reading any file. Both check the files before the attempts.
 func save_records(records: Dictionary, attempts: Variant = null) -> Dictionary:
 	if not CampaignProgress.validate_records(_campaign, records).is_empty():
 		return _failure("invalid_records")
-	var primary := _read(file_path)
-	var backup := _read(file_path + ".backup")
-	if backup.reason in ["future_version", "unsupported_version"]:
-		return _failure(backup.reason)
-	if not primary.accepted and not (primary.reason == "missing" and backup.reason == "missing"):
-		return _failure("recovery_required" if primary.reason == "missing" else primary.reason)
+	var primary := _read_writable_primary()
+	if primary.has("failure"):
+		return primary.failure
 	var active_session: Variant = primary.active_session if primary.accepted else null
 	if not _valid_session(active_session, records):
 		return _failure("invalid_session")
-	var resolved := _resolve_attempts(attempts, primary)
-	if not resolved.accepted:
-		return _failure("invalid_attempts")
-	return _commit(records, active_session, resolved.attempts, primary)
+	return _commit(records, active_session, attempts, primary)
 
 
 func save_active_session(active_session: Variant, records: Dictionary, attempts: Variant = null) -> Dictionary:
@@ -60,16 +58,23 @@ func save_active_session(active_session: Variant, records: Dictionary, attempts:
 		return _failure("invalid_records")
 	if not _valid_session(active_session, records):
 		return _failure("invalid_session")
+	var primary := _read_writable_primary()
+	if primary.has("failure"):
+		return primary.failure
+	return _commit(records, active_session, attempts, primary)
+
+
+## Reads the primary for an ordinary save. Returns the read result, which is not accepted only for a
+## new campaign (no primary and no backup), or {"failure": ...} when the files require protection
+## or explicit recovery.
+func _read_writable_primary() -> Dictionary:
 	var primary := _read(file_path)
 	var backup := _read(file_path + ".backup")
 	if backup.reason in ["future_version", "unsupported_version"]:
-		return _failure(backup.reason)
+		return {"failure": _failure(backup.reason)}
 	if not primary.accepted and not (primary.reason == "missing" and backup.reason == "missing"):
-		return _failure("recovery_required" if primary.reason == "missing" else primary.reason)
-	var resolved := _resolve_attempts(attempts, primary)
-	if not resolved.accepted:
-		return _failure("invalid_attempts")
-	return _commit(records, active_session, resolved.attempts, primary)
+		return {"failure": _failure("recovery_required" if primary.reason == "missing" else primary.reason)}
+	return primary
 
 
 func _resolve_attempts(attempts: Variant, primary: Dictionary) -> Dictionary:
@@ -87,7 +92,11 @@ func clear_active_session() -> Dictionary:
 	return save_active_session(null, loaded.records, loaded.attempts)
 
 
-func _commit(records: Dictionary, active_session: Variant, attempts: Dictionary, primary: Dictionary) -> Dictionary:
+func _commit(records: Dictionary, active_session: Variant, requested_attempts: Variant, primary: Dictionary) -> Dictionary:
+	var resolved := _resolve_attempts(requested_attempts, primary)
+	if not resolved.accepted:
+		return _failure("invalid_attempts")
+	var attempts: Dictionary = resolved.attempts
 	var temporary := file_path + ".tmp"
 	var result := _prepare_file(temporary, records, active_session, attempts)
 	if not result.accepted:
@@ -150,18 +159,11 @@ func _prepare_file(target: String, records: Dictionary, active_session: Variant,
 
 
 func _read(target: String) -> Dictionary:
-	if not FileAccess.file_exists(target):
-		return _failure("missing")
-	var file := FileAccess.open(target, FileAccess.READ)
-	if file == null:
-		return _failure("read_failed")
-	var text := file.get_as_text()
-	var read_error := file.get_error()
-	file.close()
-	if read_error != OK and read_error != ERR_FILE_EOF:
-		return _failure("read_failed")
+	var raw := _read_text(target)
+	if not raw.reason.is_empty():
+		return _failure(raw.reason)
 	var parser := JSON.new()
-	if parser.parse(text) != OK or not parser.data is Dictionary:
+	if parser.parse(raw.text) != OK or not parser.data is Dictionary:
 		return _failure("corrupt_records")
 	var document: Dictionary = parser.data
 	var content_updated := false
@@ -289,27 +291,6 @@ func _remember_verified(key: String) -> void:
 	_verified_sessions.append(key)
 	while _verified_sessions.size() > VERIFIED_SESSION_LIMIT:
 		_verified_sessions.remove_at(0)
-
-
-func _is_integer(value: Variant) -> bool:
-	if value is int:
-		return true
-	return value is float and is_finite(value) and value == floor(value) and absf(value) <= 9007199254740991.0
-
-
-func _write_text(target: String, text: String) -> Error:
-	var file := FileAccess.open(target, FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	file.store_string(text)
-	file.flush()
-	var result := file.get_error()
-	file.close()
-	return result
-
-
-func _replace_file(source: String, target: String) -> Error:
-	return DirAccess.rename_absolute(source, target)
 
 
 func _failure(reason: String) -> Dictionary:

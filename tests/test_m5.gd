@@ -16,14 +16,14 @@ func run(tree: SceneTree) -> void:
 	screen.set("settings_path", directory + "/settings.json")
 	tree.root.add_child(screen)
 	await tree.process_frame
-	var button: Button = screen.get("licenses_button")
+	var button: Button = screen.get("settings_panel").licenses_button
 	expect(button != null, "settings provides an offline licenses button")
 	if button != null:
 		screen.get("settings_button").pressed.emit()
 		button.pressed.emit()
 		await tree.process_frame
-		var dialog: AcceptDialog = screen.get("licenses_dialog")
-		var body: RichTextLabel = screen.get("licenses_body")
+		var dialog: AcceptDialog = screen.get("settings_panel").licenses_dialog
+		var body: RichTextLabel = screen.get("settings_panel").licenses_body
 		expect(dialog.visible and body.is_visible_in_tree(), "settings opens the readable license body")
 		expect(not body.bbcode_enabled, "license text is displayed without markup interpretation")
 		expect(body.text.contains(Engine.get_license_text()), "the complete engine license is displayed")
