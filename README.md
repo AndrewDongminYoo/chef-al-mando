@@ -109,6 +109,8 @@ Ubuntu 24.04 기반 Linux x86_64 컨테이너에서는 `bash setup.sh`로 검사
 다른 아키텍처에서는 고정 버전의 엔진을 먼저 설치하고 `GODOT_BIN`을 지정해야 합니다.
 
 [Codex Cloud 환경 설정](https://developers.openai.com/codex/cloud/environments)의 setup script에 `bash setup.sh`를 등록하고, 캐시 재개 시 다시 확인하려면 maintenance script에도 같은 명령을 등록합니다.
+환경 변수에는 `GODOT_BIN=godot`을 등록합니다.
+기존 Python 검사도 이 변수를 읽으며, 변수가 없으면 macOS 경로를 사용합니다.
 다운로드가 필요하면 setup 단계에서 GitHub 접근이 가능해야 합니다.
 새로 설치하는 `godot`은 `/usr/local/bin`에 두므로 세션 간 `export` 유지에 의존하지 않습니다.
 `GODOT_BIN`으로 기존 엔진을 지정한다면 Cloud 환경 변수에도 같은 값을 설정합니다.

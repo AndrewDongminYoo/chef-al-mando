@@ -75,7 +75,7 @@ class SetupTests(unittest.TestCase):
         (self.bin / "godot").unlink()
         for tool in ["mktemp", "rm", "install"]:
             (self.bin / tool).symlink_to(shutil.which(tool))
-        result = self.run_setup(GODOT_BIN="")
+        result = self.run_setup(GODOT_BIN="godot")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("FAIL: missing command curl", result.stderr)
 

@@ -20,6 +20,7 @@ jobs:
         run: |
           bash setup.sh
           bash setup.sh
+          printf 'GODOT_BIN=%s\n' "$(command -v godot)" >> "$GITHUB_ENV"
       - name: Check setup behavior
         run: python3 tests/test_setup.py
       - name: Check M0

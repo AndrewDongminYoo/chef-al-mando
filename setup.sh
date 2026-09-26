@@ -41,7 +41,7 @@ fc-match --version
 
 godot_bin="${GODOT_BIN:-godot}"
 if ! command -v "$godot_bin" >/dev/null 2>&1; then
-	[[ -z ${GODOT_BIN:-} ]] || fail "GODOT_BIN command is missing: $GODOT_BIN"
+	[[ $godot_bin == godot || $godot_bin == /usr/local/bin/godot ]] || fail "GODOT_BIN command is missing: $GODOT_BIN"
 	[[ $(uname -m) == x86_64 ]] || fail "automatic Godot installation requires Linux x86_64; provide GODOT_BIN for this architecture"
 	# This checksum is the existing CI pin for the Standard Linux x86_64 archive.
 	# Updating .godot-version also requires reviewing this pin.
