@@ -235,6 +235,7 @@ func run(tree: SceneTree) -> void:
 	await _test_failed_checkpoint_and_replacement(tree, entry, directory)
 	await _test_recovered_active_session(tree, entry, directory)
 	await _test_lifecycle_audio(tree, entry, directory)
+	await _test_quit_request_checkpoint(tree, entry, directory)
 	await _test_service_locale_refresh(tree, entry, directory)
 	await _test_rejected_close_and_single_preference_apply(tree, entry, directory)
 	await _test_rejected_resume_result(tree, entry, directory)
@@ -543,6 +544,37 @@ func _test_lifecycle_audio(tree: SceneTree, entry: String, directory: String) ->
 	screen.queue_free()
 	await tree.process_frame
 	await tree.process_frame
+
+
+## Issue #33: the engine notifies nodes before it sets the quit flag, so the handler must write
+## the pause checkpoint synchronously. This proves the handler only; the engine's notification
+## order and a real window close or Android back gesture stay deferred operator evidence.
+func _test_quit_request_checkpoint(tree: SceneTree, entry: String, directory: String) -> void:
+	var requests := {"window close": Node.NOTIFICATION_WM_CLOSE_REQUEST, "back gesture": Node.NOTIFICATION_WM_GO_BACK_REQUEST}
+	for label: String in requests:
+		var file_path := directory + "/quit-%d.json" % requests[label]
+		var screen := _boot(tree, entry, file_path, directory + "/quit-%d-settings.json" % requests[label])
+		await tree.process_frame
+		screen.get("begin_button").pressed.emit()
+		var service: Control = screen.get("active_service")
+		service.set_process(false)
+		service.get("start_button").pressed.emit()
+		service.call("advance", 1.5)
+		var live_tick: int = service.get("simulation").tick
+		var before := CampaignStore.new(screen.get("campaign"), file_path).load_records()
+		expect(service.call("is_running") and live_tick > 0 and before.accepted
+			and before.active_session.simulation.tick != live_tick,
+			"the %s fixture runs past its last stored checkpoint" % label)
+		service.get("lifecycle").notification(requests[label])
+		var after := CampaignStore.new(screen.get("campaign"), file_path).load_records()
+		expect(not service.call("is_running") and service.get("simulation").tick == live_tick
+			and after.accepted and after.active_session.simulation.tick == live_tick,
+			"a %s request during service writes the pause checkpoint at the current tick" % label)
+		service.get("audio_feedback").set_enabled(false)
+		await tree.create_timer(0.3).timeout
+		screen.queue_free()
+		await tree.process_frame
+		await tree.process_frame
 
 
 func _test_service_locale_refresh(tree: SceneTree, entry: String, directory: String) -> void:
