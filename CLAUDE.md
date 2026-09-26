@@ -25,7 +25,8 @@ CI (`.github/workflows/check.yml`) is the full gate; its step list is the source
 It runs every registered suite except `ui-regressions`, the Python checks under `tests/`, and `bash scripts/check-export.sh`, which needs the matching export templates.
 
 Lint and format run through Trunk (`.trunk/trunk.yaml`): `trunk check` and `trunk fmt`, also installed as pre-commit and pre-push hooks.
-GDScript is formatted by `gdformat` and linted by `gdlint` (settings in `gdformatrc` and `gdlintrc`); CI runs neither, so the Trunk hooks are their only gate.
+The official Trunk plugins have no GDScript linter; `gdformat` and `gdlint` come from the `quality-configs` plugin source pinned in `trunk.yaml` (settings in `gdformatrc` and `gdlintrc`).
+CI runs neither, so the Trunk hooks are their only gate.
 `trunk.yaml` excludes `tests/fixtures/content_limits.gd` from `gdformat`, and its comment says why.
 
 Balance tooling runs as a standalone `SceneTree` script, for example `tests/sweep_policies.gd`; its usage lives in `docs/notes/kitchen-pressure-verification.md`.
