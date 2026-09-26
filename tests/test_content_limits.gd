@@ -31,8 +31,9 @@ func run(_tree: SceneTree) -> void:
 	expect(latest.get("scenarios", {}).keys() == live.scenarios.keys(),
 		"the live campaign order %s differs from the last content limits row %s; bump the content version if a save could notice, then %s"
 		% [live.scenarios.keys(), latest.get("scenarios", {}).keys(), DUMP_HINT])
-	for row: Dictionary in rows:
-		var problems := compatibility_problems(row, campaign)
+	for index: int in rows.size():
+		var row: Dictionary = rows[index]
+		var problems := compatibility_problems(row, campaign, rows.slice(index + 1))
 		for problem: String in problems:
 			expect(false, problem)
 		expect(problems.is_empty(), "every record content %d accepted stays valid under the live content" % row.content_version)
@@ -40,8 +41,12 @@ func run(_tree: SceneTree) -> void:
 
 
 ## Every way a record valid under row could fail CampaignProgress.validate_records on the live
-## campaign, as one message per service and cause.
-static func compatibility_problems(row: Dictionary, campaign: Resource) -> Array[String]:
+## campaign, as one message per service and cause. later_rows are the rows shipped after row: a
+## completion that one of them loaded under a different target pair carries a legacy_completed
+## marker, and validate_records keeps checking that marker against targets even once the live pair
+## equals row's pair again.
+static func compatibility_problems(row: Dictionary, campaign: Resource, later_rows: Array = [],
+		targets: Dictionary = CampaignProgress.LEGACY_COMPLETION_TARGETS) -> Array[String]:
 	var problems: Array[String] = []
 	var version: int = row.content_version
 	for scenario_id: String in row.scenarios:
@@ -66,9 +71,14 @@ static func compatibility_problems(row: Dictionary, campaign: Resource) -> Array
 		if old.starting_budget > scenario.starting_budget:
 			problems.append(prefix + "starting_budget fell from %d to %d; a best_profit down to -%d is rejected and no legacy table can cover that"
 				% [old.starting_budget, scenario.starting_budget, old.starting_budget])
-		if old.minimum_served != scenario.minimum_served or old.minimum_profit != scenario.minimum_profit:
+		var pair_changed: bool = old.minimum_served != scenario.minimum_served or old.minimum_profit != scenario.minimum_profit
+		for later: Dictionary in later_rows:
+			var next: Dictionary = later.scenarios.get(scenario_id, {})
+			if not next.is_empty() and (next.minimum_served != old.minimum_served or next.minimum_profit != old.minimum_profit):
+				pair_changed = true
+		if pair_changed:
 			var covered := false
-			for pair: Dictionary in CampaignProgress.LEGACY_COMPLETION_TARGETS.get(scenario_id, []):
+			for pair: Dictionary in targets.get(scenario_id, []):
 				if pair.minimum_served == old.minimum_served and pair.minimum_profit == old.minimum_profit and pair.since_content <= version:
 					covered = true
 			if not covered:
@@ -121,6 +131,22 @@ func _expect_detects_each_lockout(campaign: Resource, live: Dictionary) -> void:
 	var early_problems := compatibility_problems(early, campaign)
 	expect(early_problems.size() == 1 and "since_content at most 2" in early_problems[0],
 		"a legacy pair introduced after the row's content version does not cover it, got %s" % [early_problems])
+	# A later version replaces first_shift's pair and the live content restores it: a save migrated
+	# through that version still carries legacy_completed, so the restored pair still needs its entry.
+	var restored: Dictionary = live.duplicate(true)
+	restored.content_version = 1
+	var replaced: Dictionary = live.duplicate(true)
+	replaced.content_version = 2
+	replaced.scenarios.first_shift.minimum_profit += 1
+	var without_first_shift: Dictionary = CampaignProgress.LEGACY_COMPLETION_TARGETS.duplicate(true)
+	without_first_shift.erase("first_shift")
+	var restored_problems := compatibility_problems(restored, campaign, [replaced], without_first_shift)
+	expect(restored_problems.size() == 1 and restored_problems[0].begins_with("content 1 first_shift: ") and "target pair" in restored_problems[0],
+		"the content limits check reports a restored target pair that no legacy entry covers, got %s" % [restored_problems])
+	expect(compatibility_problems(restored, campaign, [replaced]).is_empty(),
+		"the legacy first_shift entry covers the restored target pair")
+	expect(compatibility_problems(restored, campaign, [], without_first_shift).is_empty(),
+		"a target pair unchanged through the live content needs no legacy entry")
 	var swapped: Dictionary = live.duplicate(true)
 	swapped.content_version = 1
 	var swapped_scenarios := {}
