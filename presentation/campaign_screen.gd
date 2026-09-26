@@ -342,8 +342,21 @@ func _refresh_catalog() -> void:
 		preferences.apply_to(button)
 		scenario_buttons[scenario.id] = button
 	ending_button.visible = progress.snapshot().ending_unlocked
-	continue_button.visible = active_session is Dictionary and active_service == null
+	_update_continue_button()
 	_update_briefing()
+
+
+# A closed session only reopens its own result, so Continue for it shows only while its service is
+# selected; after "next" moves the selection on, it would lead back to the finished service.
+func _update_continue_button() -> void:
+	continue_button.visible = (
+		active_session is Dictionary
+		and active_service == null
+		and not (
+			active_session.get("simulation", {}).get("closed", false) == true
+			and active_session.get("scenario_id") != selected_scenario_id
+		)
+	)
 
 
 func select_scenario(scenario_id: String) -> bool:
@@ -353,6 +366,7 @@ func select_scenario(scenario_id: String) -> bool:
 	for key: String in scenario_buttons:
 		scenario_buttons[key].set_pressed_no_signal(key == scenario_id)
 		scenario_buttons[key].theme_type_variation = &"ActiveButton" if key == scenario_id else &"Button"
+	_update_continue_button()
 	_update_briefing()
 	return true
 

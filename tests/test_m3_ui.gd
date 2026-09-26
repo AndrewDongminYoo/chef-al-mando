@@ -118,6 +118,18 @@ func run(tree: SceneTree) -> void:
 				),
 				"the next action returns to the list with the next service selected: " + scenario.id
 			)
+			expect(
+				not screen.get("continue_button").visible,
+				"the list after next offers no Continue back to the finished service: " + scenario.id
+			)
+			var finished_id: String = campaign.scenarios[index - 1].id
+			screen.call("select_scenario", finished_id)
+			var reopenable: bool = screen.get("continue_button").visible
+			screen.call("select_scenario", scenario.id)
+			expect(
+				reopenable and not screen.get("continue_button").visible,
+				"Continue for the finished service returns only while that service is selected: " + finished_id
+			)
 		screen.get("begin_button").pressed.emit()
 		service = screen.get("active_service")
 		service.set_process(false)
