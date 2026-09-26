@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://persistence/file_store.gd"
 
 const DEFAULTS := {"locale": "ko", "sound_enabled": true, "text_size": "normal"}
 const SCHEMA_VERSION := 1
@@ -40,18 +40,11 @@ func save_settings(values: Dictionary) -> Dictionary:
 
 
 func _read(target: String) -> Dictionary:
-	if not FileAccess.file_exists(target):
-		return _failure("missing")
-	var file := FileAccess.open(target, FileAccess.READ)
-	if file == null:
-		return _failure("read_failed")
-	var text := file.get_as_text()
-	var read_error := file.get_error()
-	file.close()
-	if read_error != OK and read_error != ERR_FILE_EOF:
-		return _failure("read_failed")
+	var raw := _read_text(target)
+	if not raw.reason.is_empty():
+		return _failure(raw.reason)
 	var parser := JSON.new()
-	if parser.parse(text) != OK or not parser.data is Dictionary:
+	if parser.parse(raw.text) != OK or not parser.data is Dictionary:
 		return _failure("corrupt_settings")
 	var document: Dictionary = parser.data
 	if not _is_integer(document.get("schema_version")):
@@ -77,26 +70,6 @@ func _valid_values(values: Variant) -> bool:
 	var text_size: Variant = values.get("text_size")
 	return locale is String and locale in ["ko", "en"] and sound_enabled is bool \
 		and text_size is String and text_size in ["normal", "large"]
-
-
-func _is_integer(value: Variant) -> bool:
-	return value is int or (value is float and is_finite(value) and value == floor(value)
-		and absf(value) <= 9007199254740991.0)
-
-
-func _write_text(target: String, text: String) -> Error:
-	var file := FileAccess.open(target, FileAccess.WRITE)
-	if file == null:
-		return FileAccess.get_open_error()
-	file.store_string(text)
-	file.flush()
-	var result := file.get_error()
-	file.close()
-	return result
-
-
-func _replace_file(source: String, target: String) -> Error:
-	return DirAccess.rename_absolute(source, target)
 
 
 func _failure(reason: String) -> Dictionary:
