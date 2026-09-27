@@ -60,8 +60,9 @@
 - 참가자 모집, 연락, 일정, 동의는 운영자가 수행합니다.
   에이전트는 참가자에게 메시지를 보내거나 모집하지 않습니다([M2 명세](m2-preparation.md) §11 유지).
 - 세션 기기와 설치본은 운영자가 정합니다.
-  운영자의 일상 iPhone을 쓰면 첫 세션 전 저장과 설정 파일을 기기에서 복사하고, 참가자마다 저장이 없는 상태에서 시작하며, 모든 세션이 끝나면 복사해 둔 파일을 기기에 되돌립니다(§5.1).
-  복사·설치·실행은 각각 사전에 알리고 승인받습니다([M5 검증 기록](../notes/m5-verification.md) §9의 절차).
+  세션 빌드는 운영자의 개발 앱(`kr.donminzzi.chefalmandodev`)과 따로, 플레이테스트 전용 번들 ID `kr.donminzzi.chefalmandoplaytest`로 설치합니다(§5.1).
+  운영자의 개발 앱과 그 저장은 세션에서 쓰지도 지우지도 않으므로 [M2 명세](m2-preparation.md) §11의 "앱 삭제 금지"는 그대로 지켜집니다.
+  설치·삭제·실행은 각각 사전에 알리고 승인받습니다([M5 검증 기록](../notes/m5-verification.md) §9의 절차).
 - 배포 채널, 출시 앱 ID, TestFlight 여부는 이 명세가 결정하지 않습니다.
   대면 세션은 채널 결정 없이 실행할 수 있으므로 기본 형식으로 둡니다.
 - 경쟁작 가격은 앵커를 정하는 자료이지 수요 증거가 아닙니다.
@@ -83,41 +84,25 @@
 ### 5.1 사전 기록
 
 빌드 식별을 먼저 기록합니다: 소스 commit SHA, 앱 ID, 표시 버전·빌드 번호, PCK SHA-256, 기기.
-세션 전 캠페인 기록을 백업하고, 참가자마다 앱을 삭제한 뒤 세션 빌드를 새로 설치해 저장이 없는 상태로 시작합니다.
+참가자마다 플레이테스트 앱을 삭제한 뒤 다시 설치해 저장과 설정이 없는 상태로 시작합니다.
 2026-09-26 정정: 앱 안에는 캠페인을 초기화하는 기능이 없습니다.
 앱을 지우지 않으면 다음 참가자가 이전 참가자의 완료 기록, 최고 기록, 시도 횟수를 그대로 이어받고, 주 저장 파일만 지우면 "백업에서 복구"가 이전 진행을 되살립니다.
 시작 전에 첫 화면에 "새 캠페인 · 마감 후 완료 기록과 최고 기록을 저장합니다"가 보이고 01 영업이 선택되어 있는지 확인합니다.
 
-운영자의 iPhone은 Mac에 연결한 상태에서 Xcode의 `devicectl`로 다룹니다.
-저장 파일은 개발 앱(`kr.donminzzi.chefalmandodev`) 데이터 컨테이너의 `Documents/`에 있습니다.
-백업 대상은 `campaign_records.json`, `campaign_records.json.backup`, 그리고 설정을 바꾼 적이 있으면 생기는 `settings.json`(언어, 효과음, 글자 크기)입니다.
-첫 세션 전에 `xcrun devicectl device info files`로 컨테이너의 파일 목록을 보고, 있는 파일을 모두 백업하고 되돌립니다.
-2026-09-26 목록에는 `settings.json`이 없었습니다.
-모든 `copy from`과 `copy to`는 앱이 실행 중이지 않을 때만 합니다.
-앱은 100 tick마다, 그리고 백그라운드로 갈 때 저장하므로, 실행 중에 파일을 하나씩 복사하면 파일끼리 시점이 어긋나거나 되돌린 파일이 다시 덮어써질 수 있습니다.
-첫 백업 전에는 앱을 앱 전환기에서 닫고, 되돌릴 때는 아래처럼 다시 설치한 앱을 열기 전에 복사합니다.
+세션 빌드는 `scripts/export-ios.sh`로 만든 Xcode 프로젝트를 번들 ID만 바꿔 빌드합니다.
+번들 ID가 다르면 데이터 컨테이너도 따로 생기므로, 이 앱을 지워도 운영자의 개발 앱과 저장은 그대로 남습니다.
+개발 서명은 팀의 와일드카드 프로필(`iOS Team Provisioning Profile: *`)이 이 번들 ID와 운영자의 iPhone을 포함하므로 포털 변경 없이 됩니다(2026-09-26 빌드와 `codesign --verify`로 확인).
+두 앱의 홈 화면 이름은 같으므로, 운영자는 참가자에게 건네기 전에 플레이테스트 앱을 열어 둡니다.
 `<device>`는 `xcrun devicectl list devices`가 보여 주는 기기 식별자이며, 각 명령은 실행 전에 운영자에게 알립니다.
 
 ```bash
-# 첫 세션 전: 백업 대상 파일을 Mac으로 복사합니다(파일마다 각각 실행).
-xcrun devicectl device copy from --device <device> --domain-type appDataContainer \
-  --domain-identifier kr.donminzzi.chefalmandodev \
-  --source Documents/campaign_records.json --destination <backup-dir>/campaign_records.json
-# 참가자마다: 앱을 삭제한 뒤 세션 빌드를 설치합니다. 삭제하면 저장도 함께 지워집니다.
-xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
-xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
-# 모든 세션 후: 앱을 삭제하고 다시 설치해 실행 중인 앱과 참가자 저장을 없앤 뒤, 앱을 열기 전에
-# 복사해 둔 파일을 모두 되돌립니다(파일마다 각각 실행).
-xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandodev
-xcrun devicectl device install app --device <device> <path-to>/chef_al_mando.app
-xcrun devicectl device copy to --device <device> --domain-type appDataContainer \
-  --domain-identifier kr.donminzzi.chefalmandodev \
-  --source <backup-dir>/campaign_records.json --destination Documents/campaign_records.json
+xcodebuild -project build/ios/chef_al_mando.xcodeproj -scheme chef_al_mando -configuration Debug \
+  -destination 'generic/platform=iOS' -derivedDataPath build/ios-playtest-derived \
+  PRODUCT_BUNDLE_IDENTIFIER=kr.donminzzi.chefalmandoplaytest build
+# 참가자마다: 플레이테스트 앱만 삭제한 뒤 다시 설치합니다. 첫 설치 전에는 지울 앱이 없어 삭제가 실패해도 됩니다.
+xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandoplaytest
+xcrun devicectl device install app --device <device> build/ios-playtest-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
 ```
-
-2026-09-26에 `copy from`과 기존 앱 위 `install app`은 실행해 확인했고, 설치 전후에 복사한 두 파일이 바이트 단위로 같았습니다.
-`uninstall app`과 `copy to`는 아직 실행하지 않았으므로, 되돌린 뒤에는 다시 `copy from`으로 받아 백업과 `cmp`로 비교합니다.
-앱은 되돌린 파일이 모두 일치한 뒤에 엽니다.
 
 ### 5.2 도입
 
