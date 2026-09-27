@@ -93,6 +93,9 @@
 번들 ID가 다르면 데이터 컨테이너도 따로 생기므로, 이 앱을 지워도 운영자의 개발 앱과 저장은 그대로 남습니다.
 개발 서명은 팀의 와일드카드 프로필(`iOS Team Provisioning Profile: *`)이 이 번들 ID와 운영자의 iPhone을 포함하므로 포털 변경 없이 됩니다(2026-09-26 빌드와 `codesign --verify`로 확인).
 두 앱의 홈 화면 이름은 같으므로, 운영자는 참가자에게 건네기 전에 플레이테스트 앱을 열어 둡니다.
+빌드는 기록할 commit에서 변경 사항이 없는 checkout으로 만듭니다.
+설치 전에 `.app`의 번들 ID가 `kr.donminzzi.chefalmandoplaytest`인지 확인하고, 표시 버전, 빌드 번호, 실행 파일과 PCK의 SHA-256을 이 절 첫 줄의 빌드 식별로 기록합니다.
+번들 ID가 다르거나 참가자 사이에 해시가 바뀌면 설치하지 않습니다.
 `<device>`는 `xcrun devicectl list devices`가 보여 주는 기기 식별자이며, 각 명령은 실행 전에 운영자에게 알립니다.
 
 ```bash
