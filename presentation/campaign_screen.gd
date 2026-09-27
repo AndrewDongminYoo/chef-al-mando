@@ -43,6 +43,9 @@ var retry_service_button: Button
 var retry_save_button: Button
 var service_menu_button: Button
 var service_goal_button: Button
+## "다음 영업" beside "준비 다시 하기" on the closing analysis, so a passed service can move on
+## without reopening the result dialog.
+var analysis_next_button: Button
 var continue_button: Button
 var active_session: Variant = null
 var preferences: AppPreferences
@@ -284,6 +287,9 @@ func _refresh_strings() -> void:
 	if service_menu_button != null:
 		service_menu_button.text = tr("목록")
 		service_goal_button.text = tr("결과") if not last_result.is_empty() else tr("목표")
+	if active_service != null:
+		var ends_campaign: bool = selected_scenario_id == campaign.scenarios[-1].id
+		analysis_next_button.text = tr("엔딩 보기") if ends_campaign else tr("다음 영업")
 	_refresh_save_message()
 	if save_error_dialog.visible:
 		save_error_dialog.dialog_text = save_label.text
@@ -465,6 +471,12 @@ func _mount_service(scenario: Resource) -> void:
 	preferences.apply_to(service_goal_button)
 	header.move_child(service_goal_button, 1)
 	active_service.restart_button.pressed.connect(_clear_result)
+	analysis_next_button = _button("다음 영업", _result_action.bind("next"))
+	analysis_next_button.visible = false
+	var controls := active_service.restart_button.get_parent()
+	controls.add_child(analysis_next_button)
+	controls.move_child(analysis_next_button, active_service.restart_button.get_index() + 1)
+	preferences.apply_to(analysis_next_button)
 	last_result = {}
 
 
@@ -594,6 +606,9 @@ func _show_result() -> void:
 	retry_service_button.disabled = pending_save
 	if active_service != null:
 		active_service.restart_button.disabled = pending_save
+		analysis_next_button.text = next_button.text
+		analysis_next_button.visible = last_result.passed
+		analysis_next_button.disabled = pending_save
 	retry_save_button.visible = pending_save and not session_only
 	_refresh_result_text()
 	result_dialog.popup_centered_clamped(Vector2i(760, 400))
@@ -672,6 +687,7 @@ func _result_action(action: String) -> void:
 func _clear_result() -> void:
 	last_result = {}
 	service_goal_button.text = tr("목표")
+	analysis_next_button.visible = false
 
 
 func _show_ending() -> void:
