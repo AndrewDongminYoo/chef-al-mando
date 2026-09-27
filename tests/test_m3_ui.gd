@@ -88,6 +88,10 @@ func run(tree: SceneTree) -> void:
 		"a real failed retry does not offer next service"
 	)
 	expect(
+		not screen.get("analysis_next_button").visible,
+		"the analysis of a failed service offers only the preparation restart"
+	)
+	expect(
 		screen.get("progress").snapshot().records.first_shift.completed,
 		"the failed retry preserves the earlier completion"
 	)
@@ -246,7 +250,22 @@ func run(tree: SceneTree) -> void:
 			)
 		if index == 5:
 			expect(service.get("duty_buttons").size() == 4, "the service creates four employee controls")
-		screen.get("next_button").pressed.emit()
+		var analysis_next: Button = screen.get("analysis_next_button")
+		expect(
+			(
+				analysis_next.visible
+				and not analysis_next.disabled
+				and analysis_next.get_parent() == service.get("restart_button").get_parent()
+				and analysis_next.text == screen.get("next_button").text
+			),
+			"the analysis of a passed service offers the next action beside restart: " + scenario.id
+		)
+		# Alternate the two entry points so both reach the same next action.
+		if index % 2 == 0:
+			screen.get("result_dialog").hide()
+			analysis_next.pressed.emit()
+		else:
+			screen.get("next_button").pressed.emit()
 		await tree.process_frame
 	expect(
 		screen.get("ending_panel").visible and screen.get("active_service") == null,
@@ -418,6 +437,7 @@ func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String)
 			screen.get("next_button").disabled
 			and screen.get("retry_service_button").disabled
 			and service.get("restart_button").disabled
+			and screen.get("analysis_next_button").disabled
 		),
 		"pending saves disable next service and both restart controls"
 	)
@@ -453,6 +473,7 @@ func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String)
 			and not screen.get("next_button").disabled
 			and not screen.get("retry_service_button").disabled
 			and not service.get("restart_button").disabled
+			and not screen.get("analysis_next_button").disabled
 		),
 		"successful save retry restores navigation"
 	)
