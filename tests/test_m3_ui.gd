@@ -32,6 +32,15 @@ func run(tree: SceneTree) -> void:
 		"the campaign supplies its selected definition to the existing service"
 	)
 	expect(service.get("simulation").tick == 0, "selection starts in preparation without advancing service")
+	screen.call("_show_goal")
+	expect(
+		(
+			screen.get("goal_dialog").dialog_text.contains("시작 버튼")
+			and not screen.get("goal_dialog").dialog_text.contains("재개 버튼")
+		),
+		"the goal dialog in preparation points at Start, not the disabled Resume"
+	)
+	screen.get("goal_dialog").hide()
 	service.get("start_button").pressed.emit()
 	service.call("advance", 2.0)
 	screen.call("request_menu")
@@ -42,6 +51,12 @@ func run(tree: SceneTree) -> void:
 	screen.get("leave_dialog").canceled.emit()
 	screen.get("leave_dialog").hide()
 	expect(not service.call("is_running"), "cancelling exit does not resume the service")
+	screen.call("_show_goal")
+	expect(
+		screen.get("goal_dialog").dialog_text.contains("재개 버튼"),
+		"the goal dialog during a paused service points at Resume"
+	)
+	screen.get("goal_dialog").hide()
 	service.get("resume_button").pressed.emit()
 	service.call("advance", 298.0)
 	expect(
@@ -94,7 +109,28 @@ func run(tree: SceneTree) -> void:
 		var scenario: Resource = campaign.scenarios[index]
 		if index == 1:
 			expect(screen.call("select_scenario", scenario.id), "the next service is selectable after reopening")
-			screen.get("begin_button").pressed.emit()
+		else:
+			expect(
+				(
+					screen.get("active_service") == null
+					and screen.get("selected_scenario_id") == scenario.id
+					and screen.get("catalog_panel").visible
+				),
+				"the next action returns to the list with the next service selected: " + scenario.id
+			)
+			expect(
+				not screen.get("continue_button").visible,
+				"the list after next offers no Continue back to the finished service: " + scenario.id
+			)
+			var finished_id: String = campaign.scenarios[index - 1].id
+			screen.call("select_scenario", finished_id)
+			var reopenable: bool = screen.get("continue_button").visible
+			screen.call("select_scenario", scenario.id)
+			expect(
+				reopenable and not screen.get("continue_button").visible,
+				"Continue for the finished service returns only while that service is selected: " + finished_id
+			)
+		screen.get("begin_button").pressed.emit()
 		service = screen.get("active_service")
 		service.set_process(false)
 		await tree.process_frame
@@ -426,10 +462,15 @@ func _save_failure_navigation(tree: SceneTree, entry: String, file_path: String)
 		"a new store reads the retried completion from disk"
 	)
 	screen.get("next_button").pressed.emit()
+	expect(
+		screen.get("active_service") == null and screen.get("selected_scenario_id") == "lunch_prep",
+		"next selects the following service on the list after the save succeeds"
+	)
+	screen.get("begin_button").pressed.emit()
 	var next_service: Control = screen.get("active_service")
 	expect(
 		next_service != null and next_service != service and next_service.get("definitions").id == "lunch_prep",
-		"next service opens after the save succeeds"
+		"the selected next service opens from the list"
 	)
 	screen.queue_free()
 	await tree.process_frame
