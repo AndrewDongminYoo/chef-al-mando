@@ -111,7 +111,7 @@ func run(_tree: SceneTree) -> void:
 					true
 				)
 			)
-		if campaign.scenarios.find(scenario) >= 2:
+		if campaign.scenarios.find(scenario) >= 1:
 			var no_plan := Policies.run_policy(scenario)
 			expect(no_plan.accepted, "the no-plan comparison runs: " + scenario.id)
 			if no_plan.accepted:

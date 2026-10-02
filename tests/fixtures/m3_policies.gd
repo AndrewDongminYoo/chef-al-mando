@@ -181,7 +181,7 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 		"first_shift":
 			_add(policy, "set_prep", "prepped_vegetable", 2)
 		"lunch_prep":
-			_add(policy, "set_prep", "prepped_vegetable", 6)
+			_add(policy, "set_prep", "prepped_vegetable", 9)
 		"hot_queue":
 			_add(policy, "set_prep", "marinated_protein", 1)
 			_add(policy, "set_prep", "prepped_grain", 1)
@@ -221,7 +221,7 @@ static func alternative_policies(scenario_id: String) -> Array[Dictionary]:
 		"first_shift":
 			_add(policy, "set_purchase", "vegetable", 11)
 		"lunch_prep":
-			_add(policy, "set_purchase", "vegetable", 19)
+			_add(policy, "set_prep", "soup_base", 7)
 		"hot_queue":
 			policy = reference_policy(scenario_id)
 			_add(policy, "set_purchase", "protein", 5)

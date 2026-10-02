@@ -159,7 +159,7 @@ func _test_restore(campaign: Resource) -> void:
 	var file := FileAccess.open(target, FileAccess.WRITE)
 	file.store_string(
 		JSON.stringify(
-			{"schema_version": 2, "content_version": 7, "sim_version": 1, "records": {}, "active_session": old_session}
+			{"schema_version": 2, "content_version": 8, "sim_version": 1, "records": {}, "active_session": old_session}
 		)
 	)
 	file.close()
