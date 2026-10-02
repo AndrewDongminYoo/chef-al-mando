@@ -49,8 +49,7 @@
 - 시나리오는 기존 `order_recipe_ids`를 그대로 유지하며, 이것이 **시드 0의 기준 메뉴 순서**입니다.
   8개 시나리오 모두 이 배열을 가집니다.
 - 도착 tick은 지금처럼 두 방식 중 하나입니다.
-  `order_arrival_ticks` 배열이 있으면 그 값을, 없으면 `first_arrival_tick + arrival_interval_ticks × 순번`을 씁니다(`first_shift`, ~~`lunch_prep`~~).
-  2026-10-03부터 `lunch_prep`은 두 건씩 도착하는 배열을 쓰고, 간격 공식을 쓰는 영업은 `first_shift`뿐입니다([압력 영업 재조율](pressure-rebalance.md) 2026-10-03 정정 절).
+  `order_arrival_ticks` 배열이 있으면 그 값을, 없으면 `first_arrival_tick + arrival_interval_ticks × 순번`을 씁니다(`first_shift`, `lunch_prep`).
   생성기는 어느 방식이든 도착 tick을 바꾸지 않습니다.
 - 시나리오에 `forecast_slack: Dictionary[String, int]`를 추가합니다.
   키는 판매 메뉴 ID, 값은 기준 건수에서 위아래로 허용하는 폭입니다.
