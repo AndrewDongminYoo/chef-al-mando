@@ -115,7 +115,7 @@ func run(_tree: SceneTree) -> void:
 	for index: int in schedule.size():
 		expect(schedule[index].recipe_id == drawn[index], "order_schedule uses the drawn recipe per slot")
 		expect(schedule[index].arrival_tick == hot_queue.order_arrival_ticks[index], "arrival ticks never change")
-	var interval: Resource = campaign.scenario_for("first_shift").with_service_seed(104076537)
+	var interval: Resource = campaign.scenario_for("lunch_prep").with_service_seed(104076537)
 	var interval_schedule: Array = interval.order_schedule()
 	expect(
 		interval_schedule[3].arrival_tick == interval.first_arrival_tick + interval.arrival_interval_ticks * 3,
