@@ -3,9 +3,13 @@ extends "res://persistence/file_store.gd"
 const CampaignDef := preload("res://content/campaign_def.gd")
 const CampaignProgress := preload("res://sim/campaign_progress.gd")
 const ServiceSession := preload("res://persistence/service_session.gd")
-const VERSIONS := {"schema_version": 4, "content_version": 7, "sim_version": 1}
+const VERSIONS := {"schema_version": 4, "content_version": 8, "sim_version": 1}
 const LEGACY_SCHEMA_VERSION := 1
 const LEGACY_CONTENT_VERSION := 1
+## The last content version that changed a completion target. A document at or after it was written
+## under the current targets and already carries every legacy_completed marker its records need, so
+## its records are checked as current ones even when a later content version changed something else.
+const LAST_TARGET_CHANGE_CONTENT_VERSION := 7
 const READABLE_SCHEMA_VERSIONS: Array[int] = [1, 2, 3, 4]
 ## An autosave reads back the session it just validated and the two it wrote before, so three entries
 ## cover a save; the fourth is slack for a save_records call between autosaves.
@@ -208,7 +212,7 @@ func _read(target: String) -> Dictionary:
 			return _failure("future_version")
 		if key == "schema_version" and int(version) in READABLE_SCHEMA_VERSIONS:
 			continue
-		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5, 6]:
+		if key == "content_version" and int(version) in [LEGACY_CONTENT_VERSION, 2, 3, 4, 5, 6, 7]:
 			content_updated = true
 			continue
 		if version != VERSIONS[key]:
@@ -242,7 +246,7 @@ func _read(target: String) -> Dictionary:
 		var scenario: CampaignDef.ScenarioDef = null
 		if key is String:
 			scenario = _campaign.scenario_for(key)
-		if content_updated and scenario != null:
+		if content_updated and int(document.content_version) < LAST_TARGET_CHANGE_CONTENT_VERSION and scenario != null:
 			var record: Dictionary = records[key]
 			# A completion earned under an earlier content version's targets stays completed while it
 			# satisfies one target pair shipped at or before this document's own content_version;
@@ -287,11 +291,14 @@ func _read(target: String) -> Dictionary:
 	}
 
 
-func _content_update_restarts_session(source_content_version: int, _active_session: Dictionary) -> bool:
+func _content_update_restarts_session(source_content_version: int, active_session: Dictionary) -> bool:
 	# Content 5 keyed prep quantities by mise item, content 6 added missing_mise_ids with mixed
 	# consumption, and content 7 authored forecast_slack so a seeded session's schedule no longer
-	# matches its snapshot; no earlier session can restore.
-	return source_content_version < 7
+	# matches its snapshot; no earlier session can restore. Content 8 changed only lunch_prep's arrival
+	# ticks, so a content 7 session of any other service still restores.
+	if source_content_version < 7:
+		return true
+	return active_session.get("scenario_id") == "lunch_prep"
 
 
 # The caller's session always goes through a full restore: an in-memory session can hold what JSON

@@ -626,8 +626,8 @@ msgstr "Lunch preparation"
 msgid "프렙 배분"
 msgstr "Prep allocation"
 
-msgid "수프는 토마토 베이스와 불린 현미가 모두 있어야 손질을 건너뜁니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
-msgstr "Soup skips prep only when both the tomato base and the soaked brown rice are ready. Compare what to prepare with the same labor so that fewer orders wait."
+msgid "점심 주문이 약 10초마다 하나씩 들어옵니다. 기본 준비 그대로 시작하면 목표에 조금 못 미치니, 같은 노동량으로 무엇을 미리 준비할지 정하세요. 수프는 토마토 베이스와 불린 현미가 모두 있어야 손질을 건너뜁니다."
+msgstr "A lunch order arrives about every 10 seconds. Starting with the default preparation falls just short of the goal, so decide what to prepare with the same labor. Soup skips prep only when both the tomato base and the soaked brown rice are ready."
 
 msgid "화구 앞 대기"
 msgstr "Hot-station queue"

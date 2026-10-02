@@ -142,7 +142,9 @@ func _reader(arguments: Dictionary) -> void:
 	var saved_content_version: int = (
 		int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
 	)
-	if saved_content_version < CampaignStore.VERSIONS.content_version:
+	# An older content file may keep its session (content 8 keeps a content 7 session of every service but
+	# lunch_prep); M4_EXPECT_RESTART in tests/test_m4_restart.py decides which pass a run requires.
+	if saved_content_version < CampaignStore.VERSIONS.content_version and loaded.get("active_session") == null:
 		if (
 			not loaded.accepted
 			or loaded.reason != "content_updated"
@@ -225,7 +227,9 @@ func _interrupt_reader(arguments: Dictionary) -> void:
 	var saved_content_version: int = (
 		int(saved_document.get("content_version", 0)) if saved_document is Dictionary else 0
 	)
-	if saved_content_version < CampaignStore.VERSIONS.content_version:
+	# An older content file may keep its session (content 8 keeps a content 7 session of every service but
+	# lunch_prep); M4_EXPECT_RESTART in tests/test_m4_restart.py decides which pass a run requires.
+	if saved_content_version < CampaignStore.VERSIONS.content_version and primary.get("active_session") == null:
 		if (
 			not primary.accepted
 			or primary.reason != "content_updated"

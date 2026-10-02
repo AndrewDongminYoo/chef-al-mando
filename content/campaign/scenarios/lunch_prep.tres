@@ -61,7 +61,7 @@ work_position = Vector2i(9, 4)
 [resource]
 script = ExtResource("12_flbmd")
 display_name = "점심 전 준비"
-briefing = "수프는 토마토 베이스와 불린 현미가 모두 있어야 손질을 건너뜁니다. 같은 노동량으로 무엇을 미리 준비하면 기다리는 주문이 줄어들지 비교하세요."
+briefing = "점심 주문이 약 10초마다 하나씩 들어옵니다. 기본 준비 그대로 시작하면 목표에 조금 못 미치니, 같은 노동량으로 무엇을 미리 준비할지 정하세요. 수프는 토마토 베이스와 불린 현미가 모두 있어야 손질을 건너뜁니다."
 operation_problem = "프렙 배분"
 minimum_served = 14
 minimum_profit = 1000
@@ -83,5 +83,5 @@ purchases = Dictionary[String, int]({
 menu_ids = PackedStringArray("salad", "soup", "grain_salad")
 order_count = 18
 first_arrival_tick = 10
-arrival_interval_ticks = 150
+arrival_interval_ticks = 103
 prep_labor_capacity = 9

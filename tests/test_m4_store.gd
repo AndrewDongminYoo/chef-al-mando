@@ -74,7 +74,7 @@ func run(_tree: SceneTree) -> void:
 			migrated is Dictionary
 			and migrated.size() == 6
 			and migrated.schema_version == 4
-			and migrated.content_version == 7
+			and migrated.content_version == 8
 			and migrated.sim_version == 1
 			and migrated.has("records")
 			and migrated.has("active_session")
@@ -90,7 +90,7 @@ func run(_tree: SceneTree) -> void:
 	)
 	var session := _later_session(campaign, 1)
 	var schema_two := {
-		"schema_version": 2, "content_version": 7, "sim_version": 1, "records": records, "active_session": session
+		"schema_version": 2, "content_version": 8, "sim_version": 1, "records": records, "active_session": session
 	}
 	_write(file_path, JSON.stringify(schema_two))
 	loaded = CampaignStore.new(campaign, file_path).load_records()
@@ -289,7 +289,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	)
 	var version_two_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_two_target))
 	expect(
-		version_two_migrated is Dictionary and version_two_migrated.content_version == 7,
+		version_two_migrated is Dictionary and version_two_migrated.content_version == 8,
 		"a migrated version 2 record writes the current content version"
 	)
 	var version_three_target := directory + "/content_version_three.json"
@@ -326,7 +326,7 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	)
 	var version_three_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_three_target))
 	expect(
-		version_three_migrated is Dictionary and version_three_migrated.content_version == 7,
+		version_three_migrated is Dictionary and version_three_migrated.content_version == 8,
 		"a migrated version 3 record writes the current content version"
 	)
 	var version_three_hot_queue_target := directory + "/content_version_three_hot_queue.json"
@@ -391,12 +391,12 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	)
 	expect(
 		CampaignStore.new(campaign, version_four_target).save_records(current_records).accepted,
-		"the next write upgrades a version 4 record to content version 7"
+		"the next write upgrades a version 4 record to content version 8"
 	)
 	var version_four_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_four_target))
 	expect(
-		version_four_migrated is Dictionary and version_four_migrated.content_version == 7,
-		"a migrated version 4 record writes content version 7"
+		version_four_migrated is Dictionary and version_four_migrated.content_version == 8,
+		"a migrated version 4 record writes content version 8"
 	)
 	var version_five_target := directory + "/content_version_five.json"
 	var version_five_session := _scenario_session(campaign, "lunch_prep")
@@ -430,12 +430,12 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	)
 	expect(
 		CampaignStore.new(campaign, version_five_target).save_records(current_records).accepted,
-		"the next write upgrades a version 5 record to content version 7"
+		"the next write upgrades a version 5 record to content version 8"
 	)
 	var version_five_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_five_target))
 	expect(
-		version_five_migrated is Dictionary and version_five_migrated.content_version == 7,
-		"a migrated version 5 record writes content version 7"
+		version_five_migrated is Dictionary and version_five_migrated.content_version == 8,
+		"a migrated version 5 record writes content version 8"
 	)
 	var version_six_target := directory + "/content_version_six.json"
 	var version_six_session := _scenario_session(campaign, "lunch_prep")
@@ -469,12 +469,45 @@ func _test_content_update(campaign: Resource, directory: String) -> void:
 	)
 	expect(
 		CampaignStore.new(campaign, version_six_target).save_records(current_records).accepted,
-		"the next write upgrades a version 6 record to content version 7"
+		"the next write upgrades a version 6 record to content version 8"
 	)
 	var version_six_migrated: Variant = JSON.parse_string(FileAccess.get_file_as_string(version_six_target))
 	expect(
-		version_six_migrated is Dictionary and version_six_migrated.content_version == 7,
-		"a migrated version 6 record writes content version 7"
+		version_six_migrated is Dictionary and version_six_migrated.content_version == 8,
+		"a migrated version 6 record writes content version 8"
+	)
+	var version_seven_target := directory + "/content_version_seven.json"
+	var version_seven_document := {
+		"schema_version": 4,
+		"content_version": 7,
+		"sim_version": 1,
+		"records": current_records,
+		"attempts": {},
+		"active_session": _scenario_session(campaign, "lunch_prep")
+	}
+	_write(version_seven_target, JSON.stringify(version_seven_document))
+	loaded = CampaignStore.new(campaign, version_seven_target).load_records()
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session == null
+		),
+		"content 8 restarts a version 7 lunch_prep session because its arrival ticks changed"
+	)
+	version_seven_document["active_session"] = _scenario_session(campaign, "first_shift")
+	_write(version_seven_target, JSON.stringify(version_seven_document))
+	loaded = CampaignStore.new(campaign, version_seven_target).load_records()
+	expect(
+		(
+			loaded.accepted
+			and loaded.reason == "content_updated"
+			and loaded.records == current_records
+			and loaded.active_session is Dictionary
+			and loaded.active_session.get("scenario_id") == "first_shift"
+		),
+		"a version 7 session of a service that content 8 did not change still restores"
 	)
 	var version_three_corrupt_target := directory + "/content_version_three_corrupt_session.json"
 	var corrupt_session: Dictionary = active_session.duplicate(true)
@@ -680,11 +713,11 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	expect(
 		(
 			migrated is Dictionary
-			and migrated.content_version == 7
+			and migrated.content_version == 8
 			and migrated.records.hot_queue.size() == 4
 			and migrated.records.hot_queue.legacy_completed == true
 		),
-		"the upgraded content 7 file carries the hot queue legacy marker"
+		"the upgraded content 8 file carries the hot queue legacy marker"
 	)
 	loaded = CampaignStore.new(campaign, target).load_records()
 	expect(
@@ -808,13 +841,13 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 		),
 		"an old hot queue best profit above the current cap writes and reloads unchanged"
 	)
-	var current_above_cap_target := directory + "/content_version_seven_hot_queue_above_cap.json"
+	var current_above_cap_target := directory + "/content_version_eight_hot_queue_above_cap.json"
 	_write(
 		current_above_cap_target,
 		JSON.stringify(
 			{
 				"schema_version": 4,
-				"content_version": 7,
+				"content_version": 8,
 				"sim_version": 1,
 				"records": kept_records,
 				"attempts": {},
@@ -826,7 +859,7 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	expect(
 		loaded.accepted and loaded.reason == "loaded" and loaded.records == kept_records,
 		# gdlint: ignore=max-line-length
-		"a content 7 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version"
+		"a content 8 file keeps an old hot queue best profit under the content 6 cap because the bound is by service, not by file version"
 	)
 	var above_legacy_cap_target := directory + "/content_version_six_hot_queue_above_legacy_cap.json"
 	var above_legacy_cap_records := old_target_records.duplicate(true)
@@ -889,6 +922,25 @@ func _test_raised_targets(campaign: Resource, directory: String) -> void:
 	expect(
 		not loaded.accepted and loaded.reason == "corrupt_records",
 		"a content 7 file cannot claim a hot queue completion at the content 6 targets without the marker"
+	)
+	var marked_seven_target := directory + "/content_version_seven_marked_hot_queue.json"
+	_write(
+		marked_seven_target,
+		JSON.stringify(
+			{
+				"schema_version": 4,
+				"content_version": 7,
+				"sim_version": 1,
+				"records": marked_records,
+				"attempts": {},
+				"active_session": null
+			}
+		)
+	)
+	loaded = CampaignStore.new(campaign, marked_seven_target).load_records()
+	expect(
+		loaded.accepted and loaded.reason == "content_updated" and loaded.records == marked_records,
+		"a content 7 file keeps a hot queue completion that already carries the legacy marker"
 	)
 	var premarked_target := directory + "/content_version_six_premarked_hot_queue.json"
 	_write(
@@ -1236,7 +1288,7 @@ func _test_reserved_input_json_recovery(campaign: Resource, directory: String) -
 		JSON.stringify(
 			{
 				"schema_version": 2,
-				"content_version": 7,
+				"content_version": 8,
 				"sim_version": 1,
 				"records": {},
 				"active_session": valid_session
@@ -1300,7 +1352,7 @@ func _test_task_path_json_recovery(campaign: Resource, directory: String) -> voi
 		JSON.stringify(
 			{
 				"schema_version": 2,
-				"content_version": 7,
+				"content_version": 8,
 				"sim_version": 1,
 				"records": {},
 				"active_session": valid_session
@@ -1378,7 +1430,7 @@ func _test_movement_and_result_json_recovery(campaign: Resource, directory: Stri
 			_moving_reserved_session(campaign) if corruption == "progress" else _waiting_result_session(campaign)
 		)
 		var document := {
-			"schema_version": 2, "content_version": 7, "sim_version": 1, "records": {}, "active_session": valid_session
+			"schema_version": 2, "content_version": 8, "sim_version": 1, "records": {}, "active_session": valid_session
 		}
 		var valid_text := JSON.stringify(document)
 		var corrupted: Variant = JSON.parse_string(valid_text)

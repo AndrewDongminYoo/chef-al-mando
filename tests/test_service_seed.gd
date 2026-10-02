@@ -507,7 +507,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	var five_field_session := six_field_session.duplicate(true)
 	five_field_session.erase("service_seed")
 	var legacy_session_document := {
-		"schema_version": 3, "content_version": 7, "sim_version": 1, "records": {}, "active_session": five_field_session
+		"schema_version": 3, "content_version": 8, "sim_version": 1, "records": {}, "active_session": five_field_session
 	}
 	file = FileAccess.open(file_path, FileAccess.WRITE)
 	file.store_string(JSON.stringify(legacy_session_document))
@@ -551,7 +551,7 @@ func _test_store_schema(campaign: Resource) -> void:
 	)
 	var seeded_session_document := {
 		"schema_version": 4,
-		"content_version": 7,
+		"content_version": 8,
 		"sim_version": 1,
 		"records": {},
 		"active_session": six_field_session,
