@@ -103,10 +103,13 @@ Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 �
 
 2026-10-03 운영자가 업로드 키스토어(`~/Development/release-android.jks`)와 서비스 계정 키를 지정했습니다.
 비밀번호는 저장소, 문서, 메모리에 적지 않고, 셸에서 Keychain을 읽어 넘깁니다.
+`build`는 AAB의 서명 인증서를 이 키의 SHA-256 지문(`84:10:5B:BF:…:C3:97:E5`, 전체 값은 `scripts/release-android.sh`가 소유)과 비교하므로, 다른 키로 서명한 빌드는 기록되지 않습니다.
 
 ```bash
 security add-generic-password -a "$USER" -s mac-setup.ANDROID_UPLOAD_KEYSTORE_PASSWORD -w  # 한 번, 입력 프롬프트로 저장
-GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$(security find-generic-password -a "$USER" -s mac-setup.ANDROID_UPLOAD_KEYSTORE_PASSWORD -w)"
+GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$HOME/Development/release-android.jks GODOT_ANDROID_KEYSTORE_RELEASE_USER=donminzzi \
+  GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$(security find-generic-password -a "$USER" -s mac-setup.ANDROID_UPLOAD_KEYSTORE_PASSWORD -w)" \
+  bash scripts/release-android.sh build  # 변수를 명령 앞에 붙여 그 실행에만 넘깁니다
 ```
 
 Android 실기기 검증은 [AGENTS.md](../../AGENTS.md)에 보류로 남아 있으므로, Play로 받은 Android 참가자의 세션이 첫 Android 실기기 실행이 됩니다.

@@ -23,6 +23,9 @@ fi
 
 package="kr.donminzzi.chefalmando"
 target_sdk=36
+# The upload key the operator named on 2026-10-03 (release-android.jks, alias donminzzi). Play binds the first
+# upload to this certificate, so a build signed by any other key fails here.
+upload_cert_sha256="84:10:5B:BF:5B:C0:3D:7C:1A:E8:16:2D:76:8D:1F:44:C1:09:4C:21:53:63:57:0C:F9:0D:AF:6E:38:C3:97:E5"
 release_dir="$repo_dir/build/android-release"
 aab_path="$release_dir/chef-al-mando.aab"
 # build records the commit it checked and the AAB hash; upload refuses any other commit or a changed AAB.
@@ -73,6 +76,12 @@ if [[ $1 == build ]]; then
 	signature="$("$jarsigner" -verify "$aab_path")"
 	if ! grep -q 'jar verified' <<<"$signature"; then
 		echo "FAIL: the AAB signature does not verify" >&2
+		exit 1
+	fi
+	# jarsigner -verify accepts any valid signer, so compare the signer certificate with the pinned upload key.
+	certificate="$("$(/usr/libexec/java_home -v 17)/bin/keytool" -printcert -jarfile "$aab_path")"
+	if ! grep -Eq "SHA256: $upload_cert_sha256\$" <<<"$certificate"; then
+		echo "FAIL: the AAB is not signed with the upload key ($upload_cert_sha256)" >&2
 		exit 1
 	fi
 	grep -E 'versionCode|versionName' <<<"$manifest" | head -n 2
