@@ -2,7 +2,7 @@
 
 [스토어 테스트 배포](store-distribution.md) §1의 결정에 따라 `donminzzi.kr` 하위 도메인에 게시할 개인정보 처리방침과 지원 페이지의 문안입니다.
 게시 위치, 호스팅, 연결은 운영자가 정합니다.
-`[게시자 이름]`, `[연락처 이메일]`, `[시행일]`은 운영자가 채우며, 임의의 값을 넣지 않습니다.
+`[게시자 이름]`, `[연락처 이메일]`, `[시행일]`, `[보관 기간]`은 운영자가 채우며, 임의의 값을 넣지 않습니다.
 
 ## 문안의 근거 (2026-10-03, `662cd27` 기준)
 
@@ -24,9 +24,10 @@
 
 시행일: [시행일]
 
-[게시자 이름](이하 "개발자")은 Chef al Mando(이하 "게임")를 이용하는 분의 개인정보를 수집하지 않습니다.
+[게시자 이름](이하 "개발자")은 Chef al Mando(이하 "게임")를 이용하는 분의 개인정보를 게임 안에서 수집하지 않습니다.
+개발자가 받는 정보는 아래 4항의 테스트 피드백과 5항의 문의뿐입니다.
 
-1. 수집하는 개인정보
+1. 게임이 수집하는 정보
    게임은 이름, 연락처, 기기 식별자, 위치를 포함한 어떤 개인정보도 수집하지 않으며, 계정 가입이 없습니다.
 2. 기기에 저장하는 정보
    게임은 진행을 이어 가기 위해 다음 정보를 기기 안의 앱 전용 저장 공간에만 저장합니다.
@@ -39,12 +40,15 @@
 
 3. 네트워크와 제3자
    게임은 인터넷에 연결하지 않으며, 광고, 분석 도구, 외부 서비스를 사용하지 않습니다.
-   개발자는 누구에게도 개인정보를 제공하지 않습니다.
+   개발자는 4항과 5항으로 받은 정보를 제3자에게 제공하지 않습니다.
 4. 테스트 배포
    TestFlight나 Google Play 테스트로 게임을 받는 경우, Apple과 Google은 각자의 개인정보 처리방침에 따라 테스터 정보를 처리합니다.
-   TestFlight는 테스터가 보낸 피드백과 충돌 정보, 설치 정보를 개발자에게 전달할 수 있으며, 개발자는 이 정보를 게임의 문제 해결에만 사용합니다.
+   TestFlight는 테스터가 보낸 피드백(의견과 스크린샷), 충돌 정보, 설치와 사용 기록을 개발자에게 전달할 수 있고, 이메일로 초대받은 테스터라면 초대에 쓴 이름과 이메일 주소도 개발자가 알게 됩니다.
+   개발자는 이 정보를 테스트 운영과 게임의 문제 해결에만 사용하고, [보관 기간]이 지나면 삭제합니다.
 5. 문의
-   개인정보와 관련한 문의는 [연락처 이메일]로 보내 주세요.
+   [연락처 이메일]로 문의하면 개발자는 보낸 분의 이메일 주소와 문의 내용(적어 주신 기기, OS, 앱 버전 포함)을 받습니다.
+   개발자는 이 정보를 답변과 문제 해결에만 사용하고, [보관 기간]이 지나면 삭제합니다.
+   개인정보와 관련한 요청도 같은 주소로 보내 주세요.
 6. 변경
    이 방침이 바뀌면 이 페이지에 새 시행일과 함께 게시합니다.
 
@@ -54,9 +58,10 @@
 
 Effective date: [시행일]
 
-[게시자 이름] ("the developer") does not collect personal information from people who play Chef al Mando ("the game").
+[게시자 이름] ("the developer") does not collect personal information inside Chef al Mando ("the game").
+The only information the developer receives is the test feedback in section 4 and the messages in section 5.
 
-1. Information we collect
+1. Information the game collects
    The game collects no personal information, including names, contact details, device identifiers, or location, and it has no accounts.
 2. Information stored on your device
    To let you continue playing, the game stores the following only in its own app storage on your device.
@@ -69,12 +74,15 @@ Effective date: [시행일]
 
 3. Network and third parties
    The game does not connect to the internet and uses no advertising, analytics, or external services.
-   The developer shares no personal information with anyone.
+   The developer does not share the information received under sections 4 and 5 with third parties.
 4. Test distribution
    If you get the game through TestFlight or a Google Play test, Apple and Google process tester information under their own privacy policies.
-   TestFlight may share feedback, crash reports, and installation information you send with the developer, who uses it only to fix problems in the game.
+   TestFlight may send the developer the feedback you submit (comments and screenshots), crash reports, and installation and usage records; if you were invited by email, the developer also knows the name and email address used for the invitation.
+   The developer uses this information only to run the test and fix problems in the game, and deletes it after [보관 기간].
 5. Contact
-   Send privacy questions to [연락처 이메일].
+   If you email [연락처 이메일], the developer receives your email address and your message, including any device, OS, and app version details you include.
+   The developer uses this only to reply and fix problems, and deletes it after [보관 기간].
+   Send privacy requests to the same address.
 6. Changes
    If this policy changes, the new version will be posted on this page with a new effective date.
 
