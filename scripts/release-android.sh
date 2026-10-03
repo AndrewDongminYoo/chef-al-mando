@@ -52,10 +52,16 @@ if [[ $1 == build ]]; then
 	fi
 	sdk_dir="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 	aapt2="$(find "$sdk_dir/build-tools" -name aapt2 -type f | sort | tail -n 1)"
-	manifest="$("$aapt2" dump xmltree --file base/manifest/AndroidManifest.xml "$aab_path")"
+	# aapt2 cannot open an AAB, but it reads a proto-format APK: the base module's manifest at the root
+	# next to its resources.pb.
+	proto_dir="$release_dir/manifest-check"
+	mkdir -p "$proto_dir"
+	unzip -q -j -o "$aab_path" base/manifest/AndroidManifest.xml base/resources.pb -d "$proto_dir"
+	(cd "$proto_dir" && zip -q -X proto.apk AndroidManifest.xml resources.pb)
+	manifest="$("$aapt2" dump xmltree --file AndroidManifest.xml "$proto_dir/proto.apk")"
 	problems=()
 	grep -q "package=\"$package\"" <<<"$manifest" || problems+=("package is not $package")
-	grep -Eq "targetSdkVersion\\(0x[0-9a-f]+\\)=$target_sdk\$" <<<"$manifest" || problems+=("targetSdkVersion is not $target_sdk")
+	grep -Eq "targetSdkVersion\\(0x[0-9a-f]+\\)=$target_sdk " <<<"$manifest" || problems+=("targetSdkVersion is not $target_sdk")
 	if grep -q 'android.permission.INTERNET' <<<"$manifest"; then
 		problems+=("INTERNET permission is declared")
 	fi
