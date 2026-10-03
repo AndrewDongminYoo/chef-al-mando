@@ -47,6 +47,9 @@ if [[ $1 == build ]]; then
 	fi
 	rm -rf "$release_dir"
 	mkdir -p "$release_dir"
+	# android/ is ignored by git, so the clean-checkout check cannot see edits there, and Godot never overwrites
+	# an installed template; remove it so every signed AAB comes from a freshly installed template.
+	rm -rf "$repo_dir/android"
 	"$godot_bin" --headless --path "$repo_dir" --install-android-build-template \
 		--export-release "Android Play Store" "$aab_path" 2>&1 | tee "$release_dir/export.log"
 	if [[ ! -f $aab_path ]] || grep -Eq '(^|[[:space:]])(SCRIPT ERROR:|ERROR:)' "$release_dir/export.log"; then

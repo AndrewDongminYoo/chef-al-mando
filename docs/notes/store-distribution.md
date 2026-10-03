@@ -79,7 +79,8 @@ iOS 빌드 번호 1은 사용했으므로 다음 업로드 전에 "iOS App Store
 
 `export_presets.cfg`의 "Android Play Store" preset이 패키지 `kr.donminzzi.chefalmando`, 표시 이름, 표시 버전, `version/code`, Gradle AAB 출력과 `target_sdk` 36을 소유합니다.
 Google Play는 2026-08-31부터 새 앱과 업데이트에 API 36(Android 16) 이상을 요구합니다([요구 사항](https://developer.android.com/google/play/requirements/target-sdk), 2026-10-03 확인).
-Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 만들므로 `build`가 매번 `--install-android-build-template`로 `android/`(이미 `.gitignore`에 있음)를 설치합니다.
+Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 만들므로 `build`가 매번 `android/`(이미 `.gitignore`에 있음)를 지우고 `--install-android-build-template`로 새로 설치합니다.
+Godot은 이미 설치된 템플릿을 덮어쓰지 않고, git이 무시하는 폴더는 변경 사항 없는 checkout 검사에 잡히지 않으므로, 지우지 않으면 그 안에 남은 수정이 서명된 AAB에 들어갈 수 있습니다.
 
 ### 4.1 순서
 
