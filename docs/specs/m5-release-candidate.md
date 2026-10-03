@@ -64,3 +64,16 @@ headless 완주는 렌더링·터치·실제 네트워크 차단을 검사하지
 개인 계정의 `chef-al-mando`를 대상으로 Oracle에서 `release candidate`, `offline upgrade`, `signed builds`, `save update`를 조회했습니다.
 결과는 `[no precedent found]`이며 블루프린트와 현재 export·M4 검사를 기준으로 범위를 정했습니다.
 [Godot 라이선스 안내](https://docs.godotengine.org/en/stable/about/complying_with_licenses.html)와 [Engine API](https://docs.godotengine.org/en/stable/classes/class_engine.html)의 런타임 고지 조회 방식을 사용합니다.
+
+## 2026-10-03 정정
+
+운영자는 2026-10-03에 플레이테스트 빌드를 운영자 폰 대신 TestFlight와 Google Play 테스트 트랙으로 배포하는 준비를 지시했고, 출시 앱 ID와 배포 채널을 정했습니다.
+결정 내용과 절차는 [스토어 테스트 배포](../notes/store-distribution.md)가 소유합니다.
+
+- §1의 "앱 ID, 버전, 서명 계정은 변경하지 않습니다"는 이 지시의 범위에서 풀립니다.
+  개발 preset은 그대로 두고, 출시 ID `kr.donminzzi.chefalmando`와 그 버전을 가진 "iOS App Store" preset을 추가했습니다.
+- §1의 "스토어 등록·업로드·배포는 별도 승인 대상"은 유지합니다.
+  스토어 앱 등록은 운영자가 하고, 업로드는 운영자가 지정한 자격 증명으로 실행 전에 알린 뒤 진행합니다.
+- §3 마지막 문단의 미확정 항목 가운데 배포 채널과 출시 앱 ID는 정해졌습니다.
+  표시 버전과 빌드 번호 규칙은 [스토어 테스트 배포](../notes/store-distribution.md) §3에 있습니다.
+  Android 기준 기기, 지원 연락처, 공개 개인정보 안내의 정확한 주소는 아직 정하지 않았습니다.
