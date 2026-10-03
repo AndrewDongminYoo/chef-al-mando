@@ -58,14 +58,38 @@ TestFlight로 받은 앱은 Apple이 다시 서명하므로 실행 파일의 SHA
 - 업로드 전에 preset의 번호를 올리는 커밋을 먼저 만들고, 그 커밋의 변경 없는 checkout에서 빌드합니다.
 - 한 번 업로드한 번호는 다시 쓰지 않습니다.
 
-## 4. Android (다음 PR)
+## 4. Android (Play 내부 테스트)
 
-Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 만듭니다.
-`--install-android-build-template`로 `android/`(이미 `.gitignore`에 있음)를 만들고, `kr.donminzzi.chefalmandoplaytest` 패키지의 테스트 preset으로 AAB를 내보낸 뒤 `fastlane supply`로 내부 테스트 트랙에 올리는 형태입니다.
-시작 전에 정할 것이 두 가지입니다.
+`export_presets.cfg`의 "Android Playtest" preset이 패키지 `kr.donminzzi.chefalmandoplaytest`, 표시 이름, 표시 버전, `version/code`, Gradle AAB 출력과 `target_sdk` 36을 소유합니다.
+Google Play는 2026-08-31부터 새 앱과 업데이트에 API 36(Android 16) 이상을 요구합니다([요구 사항](https://developer.android.com/google/play/requirements/target-sdk), 2026-10-03 확인).
+Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 만들므로 `build`가 매번 `--install-android-build-template`로 `android/`(이미 `.gitignore`에 있음)를 설치합니다.
 
-- 업로드 키스토어: 운영자가 직접 만들지, 생성을 맡길지와 보관 위치. 비밀번호는 Keychain에만 둡니다.
-- Play 서비스 계정 JSON의 경로. 개인 계정의 키여야 합니다.
+### 4.1 순서
 
-Play의 새 앱은 첫 빌드를 Play Console에서 직접 올려야 `fastlane supply` 업로드가 가능합니다([supply 문서](https://docs.fastlane.tools/actions/supply/), 2026-10-03 확인).
+1. 운영자: Play Console에서 `kr.donminzzi.chefalmandoplaytest` 앱을 만듭니다(무료 여부는 이 패키지에만 적용되고 출시 패키지와 무관합니다).
+2. `bash scripts/release-android.sh build`: 로컬에서만 동작합니다.
+   변경 사항이 없는 checkout에서 서명된 AAB를 내보내고, manifest의 패키지, `targetSdkVersion` 36, `INTERNET` 권한 없음과 서명을 검사한 뒤 commit, 버전, AAB SHA-256을 출력하고 `build/android-release/built-record`에 기록합니다.
+3. 운영자: 첫 AAB는 Play Console의 내부 테스트 트랙에 직접 올립니다.
+   Play의 새 앱은 첫 빌드를 Play Console에서 올려야 `fastlane supply` 업로드가 가능합니다([supply 문서](https://docs.fastlane.tools/actions/supply/), 2026-10-03 확인).
+4. 두 번째 빌드부터 `bash scripts/release-android.sh upload`: 기록된 commit이 HEAD와 다르거나 AAB가 바뀌었으면 거부하고, 통과하면 내부 테스트 트랙에 올립니다.
+   외부에 쓰는 단계이므로 실행 전에 운영자에게 알립니다.
+5. 운영자: 내부 테스트의 테스터 이메일 목록과 참여 링크를 관리합니다.
+
+### 4.2 자격 증명
+
+| 변수                                      | 값                                   |
+| ----------------------------------------- | ------------------------------------ |
+| `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`     | 업로드 키스토어(`.jks`)의 절대 경로  |
+| `GODOT_ANDROID_KEYSTORE_RELEASE_USER`     | 키 별칭                              |
+| `GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD` | 키스토어 비밀번호                    |
+| `SUPPLY_JSON_KEY`                         | Play 서비스 계정 JSON 키의 절대 경로 |
+
+2026-10-03 운영자가 업로드 키스토어(`~/Development/release-android.jks`)와 서비스 계정 키를 지정했습니다.
+비밀번호는 저장소, 문서, 메모리에 적지 않고, 셸에서 Keychain을 읽어 넘깁니다.
+
+```bash
+security add-generic-password -a "$USER" -s mac-setup.ANDROID_UPLOAD_KEYSTORE_PASSWORD -w  # 한 번, 입력 프롬프트로 저장
+GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$(security find-generic-password -a "$USER" -s mac-setup.ANDROID_UPLOAD_KEYSTORE_PASSWORD -w)"
+```
+
 Android 실기기 검증은 [AGENTS.md](../../AGENTS.md)에 보류로 남아 있으므로, Play로 받은 Android 참가자의 세션이 첫 Android 실기기 실행이 됩니다.
