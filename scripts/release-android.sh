@@ -76,9 +76,15 @@ if [[ $1 == build ]]; then
 		exit 1
 	fi
 	jarsigner="$(/usr/libexec/java_home -v 17)/bin/jarsigner"
-	signature="$("$jarsigner" -verify "$aab_path")"
+	signature="$("$jarsigner" -verify "$aab_path" 2>&1)"
 	if ! grep -q 'jar verified' <<<"$signature"; then
 		echo "FAIL: the AAB signature does not verify" >&2
+		exit 1
+	fi
+	# Without -strict, jarsigner still prints "jar verified" when a member was added after signing; the expected
+	# warnings for a self-signed upload key without a timestamp are allowed, an unsigned member is not.
+	if grep -q 'unsigned entries' <<<"$signature"; then
+		echo "FAIL: the AAB contains unsigned entries" >&2
 		exit 1
 	fi
 	# jarsigner -verify accepts any valid signer, so compare the signer certificate with the pinned upload key.
