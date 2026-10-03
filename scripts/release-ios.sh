@@ -24,6 +24,8 @@ release_dir="$repo_dir/build/ios-release"
 project_path="$release_dir/chef_al_mando.xcodeproj"
 archive_path="$release_dir/chef_al_mando.xcarchive"
 app_path="$archive_path/Products/Applications/chef_al_mando.app"
+# build writes the commit it checked here; upload refuses an archive from any other commit.
+built_commit_file="$release_dir/built-commit"
 
 if [[ $1 == build ]]; then
 	rm -rf "$release_dir"
@@ -55,6 +57,7 @@ PY
 	codesign --verify --deep --strict "$app_path"
 	echo "commit $(git rev-parse HEAD)"
 	shasum -a 256 "$app_path/chef_al_mando.pck"
+	git rev-parse HEAD >"$built_commit_file"
 	echo "PASS: archived $bundle_id; run release-ios.sh upload to send it to App Store Connect"
 	exit 0
 fi
@@ -65,8 +68,12 @@ for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH; do
 		exit 1
 	fi
 done
-if [[ ! -f $ASC_KEY_PATH || ! -d $archive_path ]]; then
-	echo "FAIL: the API key file or the archive from release-ios.sh build is missing" >&2
+if [[ ! -f $ASC_KEY_PATH || ! -d $archive_path || ! -f $built_commit_file ]]; then
+	echo "FAIL: the API key file or the checked archive from release-ios.sh build is missing" >&2
+	exit 1
+fi
+if [[ "$(cat "$built_commit_file")" != "$(git rev-parse HEAD)" ]]; then
+	echo "FAIL: the archive was built from $(cat "$built_commit_file"), not HEAD; run release-ios.sh build again" >&2
 	exit 1
 fi
 export_options="$release_dir/ExportOptions.plist"
