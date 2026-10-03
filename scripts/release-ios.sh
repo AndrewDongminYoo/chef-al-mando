@@ -13,7 +13,9 @@ if [[ $# -ne 1 || ($1 != build && $1 != upload) ]]; then
 	echo "FAIL: usage is release-ios.sh build|upload" >&2
 	exit 1
 fi
-if [[ -n "$(git status --porcelain)" ]]; then
+# A separate assignment lets set -e stop the script when git itself fails.
+changes="$(git status --porcelain)"
+if [[ -n $changes ]]; then
 	echo "FAIL: the release build needs a checkout without changes" >&2
 	exit 1
 fi
@@ -24,8 +26,13 @@ release_dir="$repo_dir/build/ios-release"
 project_path="$release_dir/chef_al_mando.xcodeproj"
 archive_path="$release_dir/chef_al_mando.xcarchive"
 app_path="$archive_path/Products/Applications/chef_al_mando.app"
-# build writes the commit it checked here; upload refuses an archive from any other commit.
-built_commit_file="$release_dir/built-commit"
+# build records the commit it checked and a hash of every archive file; upload refuses any other commit or
+# an archive that changed after the checks.
+built_record="$release_dir/built-record"
+
+archive_hash() {
+	(cd "$archive_path" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d " " -f 1)
+}
 
 if [[ $1 == build ]]; then
 	rm -rf "$release_dir"
@@ -57,7 +64,8 @@ PY
 	codesign --verify --deep --strict "$app_path"
 	echo "commit $(git rev-parse HEAD)"
 	shasum -a 256 "$app_path/chef_al_mando.pck"
-	git rev-parse HEAD >"$built_commit_file"
+	checked_hash="$(archive_hash)"
+	printf "%s %s\n" "$(git rev-parse HEAD)" "$checked_hash" >"$built_record"
 	echo "PASS: archived $bundle_id; run release-ios.sh upload to send it to App Store Connect"
 	exit 0
 fi
@@ -68,12 +76,15 @@ for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH; do
 		exit 1
 	fi
 done
-if [[ ! -f $ASC_KEY_PATH || ! -d $archive_path || ! -f $built_commit_file ]]; then
+if [[ ! -f $ASC_KEY_PATH || ! -d $archive_path || ! -f $built_record ]]; then
 	echo "FAIL: the API key file or the checked archive from release-ios.sh build is missing" >&2
 	exit 1
 fi
-if [[ "$(cat "$built_commit_file")" != "$(git rev-parse HEAD)" ]]; then
-	echo "FAIL: the archive was built from $(cat "$built_commit_file"), not HEAD; run release-ios.sh build again" >&2
+read -r built_commit built_hash <"$built_record"
+head_commit="$(git rev-parse HEAD)"
+current_hash="$(archive_hash)"
+if [[ $built_commit != "$head_commit" || $built_hash != "$current_hash" ]]; then
+	echo "FAIL: the archive does not match the one release-ios.sh build checked at HEAD; run release-ios.sh build again" >&2
 	exit 1
 fi
 export_options="$release_dir/ExportOptions.plist"

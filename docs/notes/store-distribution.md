@@ -27,7 +27,8 @@ Play를 분리한 이유는 Google Play 도움말의 "Once your app has been off
 2. 운영자: App Store Connect에서 그 번들 ID로 새 앱을 만듭니다(기본 언어 한국어, 이름과 SKU는 운영자가 정함).
 3. `bash scripts/release-ios.sh build`: 로컬에서만 동작합니다.
    변경 사항이 없는 checkout에서 release export, archive를 만들고, archive된 앱의 번들 ID, 수출 규정 선언, 불필요 권한 키 제거, 서명을 검사한 뒤 commit, 버전, PCK SHA-256을 출력합니다.
-4. `bash scripts/release-ios.sh upload`: Apple Developer 포털에 배포 프로비저닝 프로필을 만들고(`-allowProvisioningUpdates`) App Store Connect에 업로드합니다.
+   검사를 통과하면 그 commit과 archive 전체의 해시를 `build/ios-release/built-record`에 기록합니다.
+4. `bash scripts/release-ios.sh upload`: 기록된 commit이 HEAD와 다르거나 archive가 검사 뒤에 바뀌었으면 거부합니다. 통과하면 Apple Developer 포털에 배포 프로비저닝 프로필을 만들고(`-allowProvisioningUpdates`) App Store Connect에 업로드합니다.
    외부에 쓰는 단계이므로 실행 전에 운영자에게 알립니다.
 5. 운영자: TestFlight에서 테스트 그룹을 정합니다.
    내부 그룹은 App Store Connect 사용자만 들어갈 수 있고 심사 없이 바로 설치됩니다.
