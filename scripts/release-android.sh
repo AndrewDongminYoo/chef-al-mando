@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Builds and uploads the Google Play internal test build of the "Android Playtest" preset.
+# Builds and uploads the Google Play internal test build of the "Android Play Store" preset.
 #   release-android.sh build   local only: installs the Gradle build template, exports a signed AAB and checks it
 #   release-android.sh upload  uploads the checked AAB to the Play internal test track
 # build reads the upload keystore from GODOT_ANDROID_KEYSTORE_RELEASE_PATH, _USER and _PASSWORD; upload reads the
@@ -21,10 +21,10 @@ if [[ -n $changes ]]; then
 	exit 1
 fi
 
-package="kr.donminzzi.chefalmandoplaytest"
+package="kr.donminzzi.chefalmando"
 target_sdk=36
 release_dir="$repo_dir/build/android-release"
-aab_path="$release_dir/chef-al-mando-playtest.aab"
+aab_path="$release_dir/chef-al-mando.aab"
 # build records the commit it checked and the AAB hash; upload refuses any other commit or a changed AAB.
 built_record="$release_dir/built-record"
 
@@ -45,7 +45,7 @@ if [[ $1 == build ]]; then
 	rm -rf "$release_dir"
 	mkdir -p "$release_dir"
 	"$godot_bin" --headless --path "$repo_dir" --install-android-build-template \
-		--export-release "Android Playtest" "$aab_path" 2>&1 | tee "$release_dir/export.log"
+		--export-release "Android Play Store" "$aab_path" 2>&1 | tee "$release_dir/export.log"
 	if [[ ! -f $aab_path ]] || grep -Eq '(^|[[:space:]])(SCRIPT ERROR:|ERROR:)' "$release_dir/export.log"; then
 		echo "FAIL: the AAB export failed; see $release_dir/export.log" >&2
 		exit 1

@@ -9,12 +9,22 @@
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | 출시 앱 ID      | `kr.donminzzi.chefalmando`. 개발 앱(`kr.donminzzi.chefalmandodev`)과 플레이테스트 앱(`kr.donminzzi.chefalmandoplaytest`)은 그대로 남습니다. |
 | iOS 테스트 채널 | 출시 ID의 TestFlight. App Store는 무료 앱을 나중에 유료로 바꿀 수 있습니다.                                                                 |
-| Play 테스트     | 플레이테스트 패키지 `kr.donminzzi.chefalmandoplaytest`. 출시 패키지는 가격이 정해진 뒤 처음 등록합니다.                                     |
+| Play 테스트     | 출시 패키지 `kr.donminzzi.chefalmando` 하나. 첫 업로드 전에 유료로 설정하고, 플레이테스트는 내부 테스트로 진행합니다.                       |
 | 정책 페이지     | `donminzzi.kr` 하위 도메인. 문안은 [정책 페이지 초안](store-policy-pages.md)에 있고, 호스팅과 DNS는 운영자가 연결합니다.                    |
 | 업로드 자격     | 운영자가 지정하는 개인 계정의 기존 키. `~/.private_keys`에는 다른 팀의 키도 있으므로, 지정받지 않은 키는 쓰지 않습니다.                     |
 
-Play를 분리한 이유는 Google Play 도움말의 "Once your app has been offered for free, the app can't be changed to paid"입니다([도움말](https://support.google.com/googleplay/android-developer/answer/6334373), 2026-10-03 확인).
-이 문장이 테스트 트랙 배포에도 적용되는지는 도움말에 적혀 있지 않으므로, 6,600원 가설이 검증되기 전에는 출시 패키지를 무료로 노출하지 않습니다.
+Google Play는 "Once your app has been offered for free, the app can't be changed to paid"이므로([도움말](https://support.google.com/googleplay/android-developer/answer/6334373), 2026-10-03 확인), 출시 패키지를 처음부터 유료로 둡니다.
+유료에서 무료로 바꾸거나 금액을 바꾸는 것은 나중에도 가능하므로, 첫 가격은 6,600원 가설을 확정하지 않는 임시값입니다.
+Play Console도 "게시 전까지는 앱을 유료에서 무료로 변경할 수 있습니다"라고 안내합니다(2026-10-03 운영자 화면).
+같은 날 처음에는 Play 테스트를 플레이테스트 패키지로 분리하기로 했다가, 출시 패키지 하나를 유료로 두고 테스트하는 운영자의 제안으로 바꿨습니다.
+Play 앱의 패키지 이름은 처음 올린 AAB가 정하므로, 첫 업로드 전에 정했습니다.
+
+유료 앱의 테스터 비용은 트랙마다 다릅니다([도움말](https://support.google.com/googleplay/android-developer/answer/9845334), 2026-10-03 확인).
+
+- 내부 테스트: "For paid apps, testers can install your internal test version for free." 5명 플레이테스트는 내부 테스트로 진행합니다.
+- 비공개·공개 테스트: "Testers must purchase paid apps when participating in open or closed tests."
+  2023-11-13 이후 만든 개인 계정은 프로덕션 신청 전에 앱마다 12명 이상이 14일 연속 참여한 비공개 테스트가 필요합니다([도움말](https://support.google.com/googleplay/android-developer/answer/14151465)).
+  라이선스 테스터는 테스트 결제 수단으로 돈을 내지 않고 구매하지만([결제 테스트](https://developer.android.com/google/play/billing/test)), 문서가 다루는 대상은 앱 안의 상품과 구독이므로 유료 앱 자체도 무료가 되는지는 비공개 테스트를 시작할 때 테스터 한 명으로 확인합니다.
 
 ## 2. iOS (TestFlight)
 
@@ -67,13 +77,13 @@ iOS 빌드 번호 1은 사용했으므로 다음 업로드 전에 "iOS App Store
 
 ## 4. Android (Play 내부 테스트)
 
-`export_presets.cfg`의 "Android Playtest" preset이 패키지 `kr.donminzzi.chefalmandoplaytest`, 표시 이름, 표시 버전, `version/code`, Gradle AAB 출력과 `target_sdk` 36을 소유합니다.
+`export_presets.cfg`의 "Android Play Store" preset이 패키지 `kr.donminzzi.chefalmando`, 표시 이름, 표시 버전, `version/code`, Gradle AAB 출력과 `target_sdk` 36을 소유합니다.
 Google Play는 2026-08-31부터 새 앱과 업데이트에 API 36(Android 16) 이상을 요구합니다([요구 사항](https://developer.android.com/google/play/requirements/target-sdk), 2026-10-03 확인).
 Play는 새 앱에 AAB를 요구하고, Godot은 Gradle 빌드에서만 AAB를 만들므로 `build`가 매번 `--install-android-build-template`로 `android/`(이미 `.gitignore`에 있음)를 설치합니다.
 
 ### 4.1 순서
 
-1. 운영자: Play Console에서 `kr.donminzzi.chefalmandoplaytest` 앱을 만듭니다(무료 여부는 이 패키지에만 적용되고 출시 패키지와 무관합니다).
+1. 운영자: Play Console에서 앱을 만들고 첫 업로드 전에 모든 국가·지역의 가격을 유료로 설정합니다(2026-10-03 "Chef Al Mando" 앱을 유료로 만들어 둠).
 2. `bash scripts/release-android.sh build`: 로컬에서만 동작합니다.
    변경 사항이 없는 checkout에서 서명된 AAB를 내보내고, manifest의 패키지, `targetSdkVersion` 36, `INTERNET` 권한 없음과 서명을 검사한 뒤 commit, 버전, AAB SHA-256을 출력하고 `build/android-release/built-record`에 기록합니다.
 3. 운영자: 첫 AAB는 Play Console의 내부 테스트 트랙에 직접 올립니다.
