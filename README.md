@@ -154,3 +154,4 @@ GODOT_BIN="$GODOT_BIN" bash scripts/export-ios.sh
 ```
 
 `export-ios.sh`는 Godot이 만든 Xcode 프로젝트에서 사용하지 않는 카메라·마이크·사진 보관함 설명 키를 제거합니다.
+TestFlight 빌드와 업로드는 `scripts/release-ios.sh build|upload`이며, 절차와 자격 증명은 [스토어 테스트 배포](docs/notes/store-distribution.md)에 있습니다.

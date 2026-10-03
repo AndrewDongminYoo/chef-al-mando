@@ -110,6 +110,12 @@ xcrun devicectl device uninstall app --device <device> kr.donminzzi.chefalmandop
 xcrun devicectl device install app --device <device> build/ios-playtest-derived/Build/Products/Debug-iphoneos/chef_al_mando.app
 ```
 
+**2026-10-03 정정:** 운영자는 세션 빌드를 운영자 폰에 직접 설치하는 대신 TestFlight와 Google Play 테스트 트랙으로 배포하기로 했습니다([스토어 테스트 배포](../notes/store-distribution.md)).
+스토어 빌드로 진행하는 세션에서는 참가자가 자기 기기에 테스트 초대로 설치하며, 처음 설치한 상태가 저장 없는 상태입니다.
+Apple과 Google이 앱을 다시 서명하므로 빌드 식별은 소스 commit, 표시 버전, 빌드 번호, PCK SHA-256이고 실행 파일 해시는 비교하지 않습니다.
+Android 참가자의 세션은 [AGENTS.md](../../AGENTS.md)가 보류해 둔 Android 실기기 실행의 첫 사례가 되므로, 그 세션에서 나온 차단 문제는 플랫폼 문제로 따로 기록합니다.
+스토어 빌드가 준비되기 전에는 위의 직접 설치 절차를 그대로 씁니다.
+
 ### 5.2 도입
 
 규칙을 설명하지 않습니다.
