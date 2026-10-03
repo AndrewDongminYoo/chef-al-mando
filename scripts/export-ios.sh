@@ -16,9 +16,17 @@ if [[ $actual_version != "$expected_version" ]]; then
 	exit 1
 fi
 
+# IOS_EXPORT_PRESET and IOS_EXPORT_MODE select the store build ("iOS App Store", release); the
+# defaults keep the development export.
+preset="${IOS_EXPORT_PRESET:-iOS}"
+mode="${IOS_EXPORT_MODE:-debug}"
+if [[ $mode != debug && $mode != release ]]; then
+	echo "FAIL: IOS_EXPORT_MODE must be debug or release (found $mode)" >&2
+	exit 1
+fi
 project_path="${1:-$repo_dir/build/ios/chef_al_mando.xcodeproj}"
 mkdir -p "$(dirname "$project_path")"
-"$godot_bin" --headless --path "$repo_dir" --export-debug iOS "$project_path"
+"$godot_bin" --headless --path "$repo_dir" "--export-$mode" "$preset" "$project_path"
 
 project_name="$(basename "$project_path" .xcodeproj)"
 application_dir="$(dirname "$project_path")/$project_name"

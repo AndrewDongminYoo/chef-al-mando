@@ -15,7 +15,7 @@ import sys
 args = sys.argv[1:]
 if "--version" in args:
     print(os.environ["TEST_ENGINE_VERSION"])
-elif "--export-debug" in args:
+elif "--export-debug" in args or "--export-release" in args:
     project = Path(args[-1])
     name = project.stem
     application = project.parent / name
@@ -83,6 +83,35 @@ class IOSExportTests(unittest.TestCase):
             self.assertNotIn(key, info)
             self.assertNotIn(key, localized)
         self.assertIn("--export-debug iOS " + str(project), self.export_log.read_text())
+
+    def run_export(self, project, **extra_env):
+        return subprocess.run(
+            ["bash", str(self.root / "scripts/export-ios.sh"), str(project)],
+            env=dict(
+                os.environ,
+                GODOT_BIN=str(self.engine),
+                TEST_ENGINE_VERSION=(self.root / ".godot-version").read_text().strip(),
+                TEST_EXPORT_LOG=str(self.export_log),
+                **extra_env,
+            ),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    def test_release_export_uses_the_named_preset_and_strips_keys(self):
+        project = self.root / "build/ios-release/chef_al_mando.xcodeproj"
+        result = self.run_export(project, IOS_EXPORT_PRESET="iOS App Store", IOS_EXPORT_MODE="release")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--export-release iOS App Store " + str(project), self.export_log.read_text())
+        with (self.root / "build/ios-release/chef_al_mando/chef_al_mando-Info.plist").open("rb") as source:
+            self.assertNotIn("NSCameraUsageDescription", plistlib.load(source))
+
+    def test_unknown_export_mode_fails_before_exporting(self):
+        result = self.run_export(self.root / "build/ios/chef_al_mando.xcodeproj", IOS_EXPORT_MODE="profile")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("IOS_EXPORT_MODE must be debug or release", result.stderr)
+        self.assertFalse(self.export_log.exists())
 
     def test_missing_output_fails(self):
         result = subprocess.run(
